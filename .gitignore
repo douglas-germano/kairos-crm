@@ -1,0 +1,38 @@
+# macOS
+.DS_Store
+._*
+
+# Local editor/agent settings
+.claude/settings.local.json
+
+# Environment/secrets
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.Python
+.venv/
+venv/
+env/
+
+# Flask / logs
+*.log
+instance/
+
+# Build/cache
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+dist/
+build/
+*.egg-info/
+
+# Node/frontend future artifacts
+node_modules/
+.next/
+out/
+coverage/
