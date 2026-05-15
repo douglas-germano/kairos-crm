@@ -26,10 +26,10 @@ class WhatsAppService:
         :param text: conteúdo da mensagem
         """
         url = f"{self.api_url}/message/sendText/{self.instance_name}"
+        # Formato Evolution API v2: number sem sufixo, campo "text" direto
         payload = {
-            "number": f"{to}@s.whatsapp.net",
-            "options": {"delay": 1200, "presence": "composing"},
-            "textMessage": {"text": text},
+            "number": to,
+            "text": text,
         }
         try:
             resp = requests.post(url, json=payload, headers=self.headers, timeout=15)
