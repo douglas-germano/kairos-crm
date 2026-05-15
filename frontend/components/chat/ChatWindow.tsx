@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import useSWR from "swr";
-import { AlertCircle, Bot, CircleSlash, MoreHorizontal, X } from "lucide-react";
+import { AlertCircle, Bot, CircleSlash, MoreHorizontal, RefreshCw, X } from "lucide-react";
 import { apiFetch, swrFetcher } from "@/lib/api";
+import { useAuth } from "@/hooks/useAuth";
+import { useSocket } from "@/hooks/useSocket";
 import type { Conversation, Message } from "@/lib/types";
 import { ChannelIcon } from "@/components/ui/ChannelIcon";
 import { Toggle } from "@/components/ui/Toggle";
@@ -17,26 +19,48 @@ type Props = {
 };
 
 export function ChatWindow({ conversation, onConversationChange }: Props) {
-  const { data: messages = [], mutate } = useSWR<Message[]>(
+  const { workspace } = useAuth(false);
+  const { data: messages = [], mutate, error } = useSWR<Message[]>(
     conversation ? `/api/messages/${conversation.id}` : null,
     swrFetcher,
-    { refreshInterval: 12000 }
+    { refreshInterval: 5000 }
   );
   const [sendError, setSendError] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Scroll para o final sempre que as mensagens mudarem
+  // Scroll suave ao final quando chegam mensagens novas
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Scroll imediato ao trocar de conversa (sem animação)
+  // Scroll imediato ao trocar de conversa
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [conversation?.id]);
+
+  // Escuta evento new_message do SocketIO e atualiza mensagens em tempo real
+  const handleNewMessage = useCallback(
+    (payload: unknown) => {
+      const p = payload as { conversation_id?: number };
+      if (p?.conversation_id === conversation?.id) {
+        void mutate();
+      }
+    },
+    [conversation?.id, mutate]
+  );
+
+  const socketHandlers = useMemo(
+    () => ({
+      onNewMessage: handleNewMessage,
+      onAgentResponseSent: handleNewMessage,
+    }),
+    [handleNewMessage]
+  );
+
+  useSocket(workspace?.id, socketHandlers);
 
   async function toggleAi(checked: boolean) {
     if (!conversation) return;
@@ -105,12 +129,21 @@ export function ChatWindow({ conversation, onConversationChange }: Props) {
         </div>
       </header>
 
-      {/* Área de mensagens — 1fr em altura fixa = scroll funciona */}
-      <div
-        ref={scrollRef}
-        className="scrollbar-thin overflow-y-auto bg-[#f6f7f8] p-4"
-      >
-        {messages.length === 0 ? (
+      {/* Mensagens */}
+      <div ref={scrollRef} className="scrollbar-thin overflow-y-auto bg-[#f6f7f8] p-4">
+        {error ? (
+          <div className="flex h-full min-h-60 flex-col items-center justify-center gap-3 text-center">
+            <AlertCircle size={32} className="text-brand-red" />
+            <p className="text-sm font-semibold text-brand-charcoal">Erro ao carregar mensagens</p>
+            <p className="text-xs text-brand-grey">{String(error?.message ?? error)}</p>
+            <button
+              onClick={() => void mutate()}
+              className="flex items-center gap-1.5 rounded-tight bg-white px-3 py-1.5 text-xs font-semibold border border-black/10 hover:bg-[#f6f7f8]"
+            >
+              <RefreshCw size={13} /> Tentar novamente
+            </button>
+          </div>
+        ) : messages.length === 0 ? (
           <div className="flex h-full min-h-60 items-center justify-center text-center">
             <div>
               <Bot className="mx-auto mb-3 text-brand-red" size={32} />
@@ -122,7 +155,6 @@ export function ChatWindow({ conversation, onConversationChange }: Props) {
             {messages.map((message) => (
               <MessageBubble key={message.id} message={message} />
             ))}
-            {/* Âncora invisível para scrollIntoView */}
             <div ref={bottomRef} />
           </div>
         )}
