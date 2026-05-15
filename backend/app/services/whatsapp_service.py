@@ -46,6 +46,27 @@ class WhatsAppService:
             )
             raise
 
+    def send_audio(self, to: str, audio_b64: str) -> dict:
+        """
+        Envia áudio como nota de voz (PTT) via Evolution API v2.
+        :param to: número no formato 5565999999999
+        :param audio_b64: áudio codificado em base64
+        """
+        url = f"{self.api_url}/message/sendWhatsAppAudio/{self.instance_name}"
+        payload = {
+            "number": to,
+            "audio": audio_b64,
+            "encoding": True,
+        }
+        try:
+            resp = requests.post(url, json=payload, headers=self.headers, timeout=30)
+            resp.raise_for_status()
+            logger.info("Áudio WhatsApp enviado", extra={"to": to, "instance": self.instance_name})
+            return resp.json()
+        except requests.RequestException as exc:
+            logger.error("Falha ao enviar áudio WhatsApp", extra={"to": to, "error": str(exc)})
+            raise
+
     def send_media(self, to: str, media_url: str, caption: str = "", media_type: str = "image") -> dict:
         """
         Envia mídia (image, audio, video, document).

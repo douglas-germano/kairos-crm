@@ -70,18 +70,27 @@ def _handle_message(instance_name: str, msg_data: dict):
         logger.warning("remoteJid inválido", extra={"remote_jid": remote_jid})
         return
 
-    # Extrai texto da mensagem (suporta conversation e extendedTextMessage)
+    # Extrai conteúdo da mensagem (texto ou áudio)
     message_obj = msg_data.get("message", {})
+    push_name = msg_data.get("pushName", phone_number)
+
     text = (
         message_obj.get("conversation")
         or message_obj.get("extendedTextMessage", {}).get("text")
         or ""
     )
-    push_name = msg_data.get("pushName", phone_number)
+    audio_b64 = (
+        message_obj.get("audioMessage", {}).get("base64")
+        or message_obj.get("pttMessage", {}).get("base64")
+        or ""
+    )
 
-    if not text:
-        logger.debug("Mensagem sem texto ignorada", extra={"jid": remote_jid})
+    if not text and not audio_b64:
+        logger.debug("Mensagem sem conteúdo suportado ignorada", extra={"jid": remote_jid})
         return
+
+    content = text or audio_b64
+    content_type = "text" if text else "audio"
 
     # Encontra a integração WhatsApp pela instance_name
     integration = _find_integration(instance_name)
@@ -140,8 +149,8 @@ def _handle_message(instance_name: str, msg_data: dict):
     msg = Message(
         conversation_id=conversation.id,
         direction="inbound",
-        content=text,
-        content_type="text",
+        content=content,
+        content_type=content_type,
         status="delivered",
         external_id=external_id,
     )

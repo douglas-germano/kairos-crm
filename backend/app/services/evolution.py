@@ -74,9 +74,10 @@ def create_instance(instance_name: str, webhook_url: str) -> dict:
         "readMessages": False,
         "alwaysOnline": True,
         "webhook": {
+            "enabled": True,
             "url": webhook_url,
             "byEvents": False,
-            "base64": False,
+            "base64": True,
             "events": [
                 "MESSAGES_UPSERT",
                 "CONNECTION_UPDATE",
@@ -108,6 +109,20 @@ def connection_state(instance_name: str) -> dict:
 def delete_instance(instance_name: str) -> dict:
     """Remove / desconecta permanentemente uma instância."""
     return _request("DELETE", f"/instance/delete/{instance_name}")
+
+
+def set_webhook(instance_name: str, webhook_url: str) -> dict:
+    """Atualiza (ou cria) a configuração de webhook de uma instância existente."""
+    payload = {
+        "webhook": {
+            "enabled": True,
+            "url": webhook_url,
+            "byEvents": False,
+            "base64": True,
+            "events": ["MESSAGES_UPSERT", "CONNECTION_UPDATE", "QRCODE_UPDATED"],
+        }
+    }
+    return _request("POST", f"/webhook/set/{instance_name}", json=payload)
 
 
 def fetch_instance(instance_name: str) -> dict | None:

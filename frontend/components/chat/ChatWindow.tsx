@@ -71,13 +71,13 @@ export function ChatWindow({ conversation, onConversationChange }: Props) {
     onConversationChange();
   }
 
-  async function sendMessage(content: string) {
+  async function sendMessage(content: string, contentType = "text") {
     if (!conversation) return;
     setSendError(null);
     try {
       await apiFetch<Message>(`/api/messages/${conversation.id}`, {
         method: "POST",
-        body: JSON.stringify({ content }),
+        body: JSON.stringify({ content, content_type: contentType }),
       });
     } catch (err: unknown) {
       setSendError(err instanceof Error ? err.message : "Falha ao enviar mensagem");
@@ -171,7 +171,7 @@ export function ChatWindow({ conversation, onConversationChange }: Props) {
         </div>
       )}
 
-      <MessageInput onSend={sendMessage} />
+      <MessageInput onSend={(content, type) => sendMessage(content, type)} />
     </section>
   );
 }

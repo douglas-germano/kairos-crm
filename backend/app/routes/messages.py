@@ -55,8 +55,9 @@ def send_message(conversation_id: int):
         return jsonify({"error": "Workspace não encontrado", "code": "NO_WORKSPACE"}), 404
 
     data = request.get_json() or {}
-    text = data.get("content", "").strip()
-    if not text:
+    content = data.get("content", "").strip()
+    content_type = data.get("content_type", "text")
+    if not content:
         return jsonify({"error": "content é obrigatório", "code": "MISSING_CONTENT"}), 400
 
     conv = Conversation.query.filter_by(
@@ -73,8 +74,8 @@ def send_message(conversation_id: int):
     msg = Message(
         conversation_id=conv.id,
         direction="outbound",
-        content=text,
-        content_type="text",
+        content=content,
+        content_type=content_type,
         status="sent",
         external_id=None,
     )
@@ -88,13 +89,16 @@ def send_message(conversation_id: int):
             if channel == "whatsapp":
                 from app.services.whatsapp_service import get_whatsapp_service
                 svc = get_whatsapp_service(integration)
-                result = svc.send_text(contact.external_id, text)
+                if content_type == "audio":
+                    result = svc.send_audio(contact.external_id, content)
+                else:
+                    result = svc.send_text(contact.external_id, content)
                 ext_id = result.get("key", {}).get("id") if isinstance(result, dict) else None
                 msg.external_id = ext_id
             elif channel == "instagram":
                 from app.services.instagram_service import get_instagram_service
                 svc = get_instagram_service(integration)
-                result = svc.send_text(contact.external_id, text)
+                result = svc.send_text(contact.external_id, content)
                 ext_id = result.get("message_id") if isinstance(result, dict) else None
                 msg.external_id = ext_id
             db.session.commit()
