@@ -36,7 +36,7 @@ def list_messages(conversation_id: int):
     before_id = request.args.get("before_id", type=int)
     limit = min(int(request.args.get("limit", 50)), 100)
 
-    query = conv.messages
+    query = Message.query.filter_by(conversation_id=conv.id)
     if before_id:
         query = query.filter(Message.id < before_id)
     query = query.order_by(Message.id.desc()).limit(limit)

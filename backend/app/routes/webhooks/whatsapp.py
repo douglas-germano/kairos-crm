@@ -33,7 +33,8 @@ def receive():
 def _handle_connection_update(instance_name: str, data: dict):
     """Atualiza o status da integração quando a conexão WhatsApp muda."""
     state = data.get("state", "")  # open | close | connecting
-    integration = _find_integration(instance_name)
+    # Busca por qualquer status — o evento pode chegar enquanto ainda é "pending"
+    integration = _find_integration_any_status(instance_name)
     if not integration:
         return
 
@@ -165,10 +166,19 @@ def _handle_message(instance_name: str, msg_data: dict):
 
 
 def _find_integration(instance_name: str) -> Integration | None:
-    """Busca integração ativa pelo instance_name armazenado em meta."""
+    """Busca integração ativa pelo instance_name — usada para processar mensagens."""
     integrations = Integration.query.filter_by(
         channel="whatsapp", status="active"
     ).all()
+    for integ in integrations:
+        if integ.meta and integ.meta.get("instance_name") == instance_name:
+            return integ
+    return None
+
+
+def _find_integration_any_status(instance_name: str) -> Integration | None:
+    """Busca integração por instance_name independente do status — usada para atualizar conexão."""
+    integrations = Integration.query.filter_by(channel="whatsapp").all()
     for integ in integrations:
         if integ.meta and integ.meta.get("instance_name") == instance_name:
             return integ
