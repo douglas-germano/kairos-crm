@@ -7,23 +7,49 @@ from app.models import Integration, Contact, Conversation, Message
 logger = logging.getLogger(__name__)
 bp = Blueprint("webhook_whatsapp", __name__)
 
+# Eventos que atualizam o status de conexão
+_CONNECTION_EVENTS = {"connection.update", "CONNECTION_UPDATE"}
+
 
 @bp.post("/whatsapp")
 def receive():
-    """Recebe mensagens do WhatsApp via Evolution API webhooks."""
+    """Recebe mensagens e eventos do WhatsApp via Evolution API webhooks."""
     data = request.get_json(silent=True) or {}
 
-    event = data.get("event")
-    if event != "messages.upsert":
-        return jsonify({"status": "ignored"}), 200
-
+    event = data.get("event", "")
     instance_name = data.get("instance")
-    msg_data = data.get("data", {})
 
-    _handle_message(instance_name, msg_data)
+    if event == "messages.upsert":
+        _handle_message(instance_name, data.get("data", {}))
+    elif event in _CONNECTION_EVENTS:
+        _handle_connection_update(instance_name, data.get("data", {}))
+    else:
+        logger.debug("Evento WhatsApp ignorado", extra={"event": event})
 
     # Retorna 200 imediatamente — processamento pesado vai para a fila
     return jsonify({"status": "ok"}), 200
+
+
+def _handle_connection_update(instance_name: str, data: dict):
+    """Atualiza o status da integração quando a conexão WhatsApp muda."""
+    state = data.get("state", "")  # open | close | connecting
+    integration = _find_integration(instance_name)
+    if not integration:
+        return
+
+    new_status = {
+        "open": "active",
+        "close": "inactive",
+        "connecting": "pending",
+    }.get(state)
+
+    if new_status and integration.status != new_status:
+        integration.status = new_status
+        db.session.commit()
+        logger.info(
+            "Status WhatsApp atualizado via CONNECTION_UPDATE",
+            extra={"instance": instance_name, "state": state, "status": new_status},
+        )
 
 
 def _handle_message(instance_name: str, msg_data: dict):

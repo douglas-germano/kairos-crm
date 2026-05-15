@@ -14,10 +14,12 @@ from alembic import context
 from dotenv import load_dotenv
 load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
 
-# Configura logging do Alembic a partir do alembic.ini
+# Configura logging do Alembic a partir do alembic.ini (só se o arquivo existir)
 config = context.config
 if config.config_file_name is not None:
-    fileConfig(config.config_file_name)
+    from pathlib import Path
+    if Path(config.config_file_name).exists():
+        fileConfig(config.config_file_name)
 
 # Sobrescreve a URL com DATABASE_URL do ambiente
 database_url = os.environ.get("DATABASE_URL")

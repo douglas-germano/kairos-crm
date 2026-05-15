@@ -87,3 +87,34 @@ def me():
         .all()
     )
     return jsonify({"user": user.to_dict(), "workspaces": [w.to_dict() for w in workspaces]})
+
+
+@bp.patch("/me")
+@jwt_required()
+def update_me():
+    user_id = int(get_jwt_identity())
+    user = db.session.get(User, user_id)
+    if not user:
+        return jsonify({"error": "Usuário não encontrado", "code": "NOT_FOUND"}), 404
+
+    data = request.get_json() or {}
+
+    if "name" in data and data["name"].strip():
+        user.name = data["name"].strip()
+
+    if "email" in data and data["email"].strip():
+        existing = User.query.filter_by(email=data["email"]).first()
+        if existing and existing.id != user_id:
+            return jsonify({"error": "E-mail já está em uso", "code": "EMAIL_EXISTS"}), 409
+        user.email = data["email"].strip()
+
+    if "password" in data:
+        current = data.get("current_password", "")
+        if not current or not user.check_password(current):
+            return jsonify({"error": "Senha atual incorreta", "code": "INVALID_PASSWORD"}), 400
+        if len(data["password"]) < 8:
+            return jsonify({"error": "Nova senha deve ter ao menos 8 caracteres", "code": "PASSWORD_TOO_SHORT"}), 400
+        user.set_password(data["password"])
+
+    db.session.commit()
+    return jsonify({"user": user.to_dict()})

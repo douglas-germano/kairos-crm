@@ -1,0 +1,92 @@
+@import "reactflow/dist/style.css";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --red: #e60000;
+  --red-dark: #ac1811;
+  --charcoal: #25282b;
+  --grey: #7e7e7e;
+  --neutral: #f2f2f2;
+  --white: #ffffff;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background: #f6f7f8;
+  color: var(--charcoal);
+  font-family: Inter, "Helvetica Neue", Arial, sans-serif;
+  font-smoothing: antialiased;
+  -webkit-font-smoothing: antialiased;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.display-title {
+  font-weight: 800;
+  line-height: 1.08;
+  letter-spacing: 0;
+}
+
+.red-band {
+  height: 48px;
+  background: var(--red);
+}
+
+.focus-ring:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 2px var(--red);
+}
+
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: #bebebe transparent;
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: #bebebe;
+  border-radius: 32px;
+}
+
+.react-flow__node {
+  border-radius: 6px;
+  border: 1px solid rgba(37, 40, 43, 0.16);
+  box-shadow: none;
+  font-family: Inter, "Helvetica Neue", Arial, sans-serif;
+}
+
+.react-flow__handle {
+  width: 9px;
+  height: 9px;
+  border: 2px solid #ffffff;
+  background: var(--red);
+}
