@@ -8,9 +8,9 @@ from .extensions import db, migrate, jwt, socketio, init_redis
 
 def create_app():
     app = Flask(__name__)
-    CORS(app, resources={r"/*": {"origins": ["http://localhost:3001", "http://localhost:3000"]}})
     cfg = get_config()
     app.config.from_object(cfg)
+    CORS(app, resources={r"/*": {"origins": app.config["CORS_ORIGINS"]}})
 
     _setup_logging(app)
 
