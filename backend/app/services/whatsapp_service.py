@@ -83,11 +83,13 @@ class WhatsAppService:
 def get_whatsapp_service(integration) -> "WhatsAppService":
     """
     Constrói um WhatsAppService a partir de um objeto Integration.
-    As credenciais ficam em integration.get_credentials().
+    Usa fallback para variáveis de ambiente se as credentials estiverem vazias
+    (pode ocorrer se a integração foi criada antes de um bug fix).
     """
+    from flask import current_app
     creds = integration.get_credentials()
     meta = integration.meta or {}
-    api_url = creds.get("api_url") or ""
-    api_key = creds.get("api_key") or ""
+    api_url = creds.get("api_url") or current_app.config.get("EVOLUTION_API_URL", "")
+    api_key = creds.get("api_key") or current_app.config.get("EVOLUTION_API_KEY", "")
     instance_name = meta.get("instance_name") or creds.get("instance_name") or ""
     return WhatsAppService(api_url=api_url, api_key=api_key, instance_name=instance_name)

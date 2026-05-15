@@ -69,7 +69,20 @@ def send_message(conversation_id: int):
         workspace_id=workspace_id, channel=channel, status="active"
     ).first()
 
-    ext_id = None
+    # Salva a mensagem antes de enviar — o operador vê o que digitou independente do resultado
+    msg = Message(
+        conversation_id=conv.id,
+        direction="outbound",
+        content=text,
+        content_type="text",
+        status="sent",
+        external_id=None,
+    )
+    db.session.add(msg)
+    conv.last_message_at = datetime.now(timezone.utc)
+    db.session.commit()
+
+    # Tenta enviar pelo canal — falhas não removem a mensagem do banco
     if integration:
         try:
             if channel == "whatsapp":
@@ -77,26 +90,18 @@ def send_message(conversation_id: int):
                 svc = get_whatsapp_service(integration)
                 result = svc.send_text(contact.external_id, text)
                 ext_id = result.get("key", {}).get("id") if isinstance(result, dict) else None
+                msg.external_id = ext_id
             elif channel == "instagram":
                 from app.services.instagram_service import get_instagram_service
                 svc = get_instagram_service(integration)
                 result = svc.send_text(contact.external_id, text)
                 ext_id = result.get("message_id") if isinstance(result, dict) else None
+                msg.external_id = ext_id
+            db.session.commit()
         except Exception as exc:
             logger.error("Falha ao enviar mensagem pelo canal", extra={"channel": channel, "error": str(exc)})
-            return jsonify({"error": "Falha ao enviar mensagem", "code": "SEND_FAILED"}), 502
-
-    msg = Message(
-        conversation_id=conv.id,
-        direction="outbound",
-        content=text,
-        content_type="text",
-        status="sent",
-        external_id=ext_id,
-    )
-    db.session.add(msg)
-    conv.last_message_at = datetime.now(timezone.utc)
-    db.session.commit()
+            msg.status = "failed"
+            db.session.commit()
 
     # Emite evento real-time
     try:

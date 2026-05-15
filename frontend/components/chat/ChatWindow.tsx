@@ -1,7 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import useSWR from "swr";
-import { Bot, CircleSlash, MoreHorizontal } from "lucide-react";
+import { AlertCircle, Bot, CircleSlash, MoreHorizontal, X } from "lucide-react";
 import { apiFetch, swrFetcher } from "@/lib/api";
 import type { Conversation, Message } from "@/lib/types";
 import { ChannelIcon } from "@/components/ui/ChannelIcon";
@@ -16,27 +17,37 @@ type Props = {
 };
 
 export function ChatWindow({ conversation, onConversationChange }: Props) {
-  const { data: messages = [], mutate } = useSWR<Message[]>(conversation ? `/api/messages/${conversation.id}` : null, swrFetcher, {
-    refreshInterval: 12000
-  });
+  const { data: messages = [], mutate } = useSWR<Message[]>(
+    conversation ? `/api/messages/${conversation.id}` : null,
+    swrFetcher,
+    { refreshInterval: 12000 }
+  );
+  const [sendError, setSendError] = useState<string | null>(null);
 
   async function toggleAi(checked: boolean) {
     if (!conversation) return;
     await apiFetch(`/api/conversations/${conversation.id}/ai`, {
       method: "PATCH",
-      body: JSON.stringify({ ai_enabled: checked })
+      body: JSON.stringify({ ai_enabled: checked }),
     });
     onConversationChange();
   }
 
   async function sendMessage(content: string) {
     if (!conversation) return;
-    await apiFetch<Message>(`/api/messages/${conversation.id}`, {
-      method: "POST",
-      body: JSON.stringify({ content })
-    });
-    await mutate();
-    onConversationChange();
+    setSendError(null);
+    try {
+      await apiFetch<Message>(`/api/messages/${conversation.id}`, {
+        method: "POST",
+        body: JSON.stringify({ content }),
+      });
+    } catch (err: unknown) {
+      setSendError(err instanceof Error ? err.message : "Falha ao enviar mensagem");
+    } finally {
+      // Atualiza mensagens independente do resultado — mensagem pode ter sido salva
+      await mutate();
+      onConversationChange();
+    }
   }
 
   if (!conversation) {
@@ -45,13 +56,18 @@ export function ChatWindow({ conversation, onConversationChange }: Props) {
         <div className="max-w-md text-center">
           <CircleSlash className="mx-auto mb-4 text-brand-red" size={34} />
           <h2 className="text-2xl font-light">Selecione uma conversa</h2>
-          <p className="mt-2 text-sm text-brand-grey">A janela de atendimento mostra o historico, o canal e o controle de IA por conversa.</p>
+          <p className="mt-2 text-sm text-brand-grey">
+            A janela de atendimento mostra o histórico, o canal e o controle de IA por conversa.
+          </p>
         </div>
       </section>
     );
   }
 
-  const name = conversation.contact?.name || conversation.contact?.external_id || `Conversa #${conversation.id}`;
+  const name =
+    conversation.contact?.name ||
+    conversation.contact?.external_id ||
+    `Conversa #${conversation.id}`;
 
   return (
     <section className="grid min-h-[calc(100vh-96px)] grid-rows-[auto_1fr_auto] bg-white">
@@ -61,12 +77,14 @@ export function ChatWindow({ conversation, onConversationChange }: Props) {
             <ChannelIcon channel={conversation.channel} className="h-9 w-9" />
             <div>
               <h2 className="text-sm font-black">{name}</h2>
-              <div className="mt-1 text-xs text-brand-grey">Ultima atividade: {formatDateTime(conversation.last_message_at)}</div>
+              <div className="mt-1 text-xs text-brand-grey">
+                Última atividade: {formatDateTime(conversation.last_message_at)}
+              </div>
             </div>
           </div>
           <div className="flex items-center gap-3">
             <Toggle checked={conversation.ai_enabled} onChange={toggleAi} label="IA ativa" />
-            <button className="focus-ring rounded-tight bg-[#f6f7f8] p-2" aria-label="Mais opcoes">
+            <button className="focus-ring rounded-tight bg-[#f6f7f8] p-2" aria-label="Mais opções">
               <MoreHorizontal size={18} />
             </button>
           </div>
@@ -85,6 +103,17 @@ export function ChatWindow({ conversation, onConversationChange }: Props) {
           messages.map((message) => <MessageBubble key={message.id} message={message} />)
         )}
       </div>
+
+      {/* Banner de erro de envio — não crashea a página */}
+      {sendError && (
+        <div className="flex items-center gap-2 border-t border-red-200 bg-red-50 px-4 py-2 text-xs text-red-700">
+          <AlertCircle size={14} className="shrink-0" />
+          <span className="flex-1">{sendError}</span>
+          <button onClick={() => setSendError(null)} aria-label="Fechar erro">
+            <X size={14} />
+          </button>
+        </div>
+      )}
 
       <MessageInput onSend={sendMessage} />
     </section>
