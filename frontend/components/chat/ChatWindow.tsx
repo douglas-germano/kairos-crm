@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import useSWR from "swr";
 import { AlertCircle, Bot, CircleSlash, MoreHorizontal, X } from "lucide-react";
 import { apiFetch, swrFetcher } from "@/lib/api";
@@ -23,6 +23,20 @@ export function ChatWindow({ conversation, onConversationChange }: Props) {
     { refreshInterval: 12000 }
   );
   const [sendError, setSendError] = useState<string | null>(null);
+  const bottomRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Scroll para o final sempre que as mensagens mudarem
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  // Scroll imediato ao trocar de conversa (sem animação)
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [conversation?.id]);
 
   async function toggleAi(checked: boolean) {
     if (!conversation) return;
@@ -44,7 +58,6 @@ export function ChatWindow({ conversation, onConversationChange }: Props) {
     } catch (err: unknown) {
       setSendError(err instanceof Error ? err.message : "Falha ao enviar mensagem");
     } finally {
-      // Atualiza mensagens independente do resultado — mensagem pode ter sido salva
       await mutate();
       onConversationChange();
     }
@@ -52,7 +65,7 @@ export function ChatWindow({ conversation, onConversationChange }: Props) {
 
   if (!conversation) {
     return (
-      <section className="flex min-h-[calc(100vh-96px)] items-center justify-center bg-white p-6">
+      <section className="flex h-[calc(100vh-96px)] items-center justify-center bg-white p-6">
         <div className="max-w-md text-center">
           <CircleSlash className="mx-auto mb-4 text-brand-red" size={34} />
           <h2 className="text-2xl font-light">Selecione uma conversa</h2>
@@ -70,7 +83,8 @@ export function ChatWindow({ conversation, onConversationChange }: Props) {
     `Conversa #${conversation.id}`;
 
   return (
-    <section className="grid min-h-[calc(100vh-96px)] grid-rows-[auto_1fr_auto] bg-white">
+    <section className="grid h-[calc(100vh-96px)] grid-rows-[auto_1fr_auto] bg-white">
+      {/* Header */}
       <header className="border-b border-black/10 p-3">
         <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
           <div className="flex items-center gap-3">
@@ -91,20 +105,30 @@ export function ChatWindow({ conversation, onConversationChange }: Props) {
         </div>
       </header>
 
-      <div className="scrollbar-thin space-y-3 overflow-y-auto bg-[#f6f7f8] p-4">
+      {/* Área de mensagens — 1fr em altura fixa = scroll funciona */}
+      <div
+        ref={scrollRef}
+        className="scrollbar-thin overflow-y-auto bg-[#f6f7f8] p-4"
+      >
         {messages.length === 0 ? (
-          <div className="flex h-full min-h-80 items-center justify-center text-center">
+          <div className="flex h-full min-h-60 items-center justify-center text-center">
             <div>
               <Bot className="mx-auto mb-3 text-brand-red" size={32} />
-              <p className="text-sm text-brand-grey">Sem mensagens carregadas para esta conversa.</p>
+              <p className="text-sm text-brand-grey">Sem mensagens nesta conversa.</p>
             </div>
           </div>
         ) : (
-          messages.map((message) => <MessageBubble key={message.id} message={message} />)
+          <div className="space-y-3">
+            {messages.map((message) => (
+              <MessageBubble key={message.id} message={message} />
+            ))}
+            {/* Âncora invisível para scrollIntoView */}
+            <div ref={bottomRef} />
+          </div>
         )}
       </div>
 
-      {/* Banner de erro de envio — não crashea a página */}
+      {/* Erro de envio */}
       {sendError && (
         <div className="flex items-center gap-2 border-t border-red-200 bg-red-50 px-4 py-2 text-xs text-red-700">
           <AlertCircle size={14} className="shrink-0" />
