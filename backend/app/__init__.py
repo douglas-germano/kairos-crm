@@ -21,18 +21,6 @@ def create_app():
     socketio.init_app(app)
     init_redis(app)
 
-    # Auto-migrate on startup
-    with app.app_context():
-        from alembic.config import Config
-        from alembic import command
-        import os
-        alembic_cfg = Config(os.path.join(os.path.dirname(__file__), "..", "alembic.ini"))
-        alembic_cfg.set_main_option("sqlalchemy.url", app.config["SQLALCHEMY_DATABASE_URI"])
-        try:
-            command.upgrade(alembic_cfg, "head")
-        except Exception as e:
-            app.logger.warning(f"Migration skipped: {e}")
-
     # Blueprints
     from .routes.auth import bp as auth_bp
     from .routes.conversations import bp as conversations_bp
