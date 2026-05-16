@@ -1,0 +1,15 @@
+# dependencies
+node_modules/
+
+# build outputs
+.next/
+.vercel/
+out/
+
+# env files
+.env
+.env.local
+.env.*.local
+
+# pnpm
+.pnpm-store/

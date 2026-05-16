@@ -6,7 +6,10 @@
     "dev": "next dev",
     "build": "next build",
     "lint": "next lint",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "pages:build": "npx @cloudflare/next-on-pages",
+    "pages:preview": "wrangler pages dev .vercel/output/static",
+    "pages:deploy": "pnpm pages:build && wrangler pages deploy --project-name kairos-crm-frontend"
   },
   "dependencies": {
     "clsx": "^2.1.1",
@@ -20,6 +23,8 @@
     "tailwind-merge": "^2.5.5"
   },
   "devDependencies": {
+    "@cloudflare/next-on-pages": "^1",
+    "wrangler": "^3",
     "@types/node": "^20.17.10",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
