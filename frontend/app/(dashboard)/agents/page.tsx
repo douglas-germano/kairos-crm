@@ -64,34 +64,34 @@ export default function AgentsPage() {
           </Button>
         }
       />
-      <div className="p-4 sm:p-5">
+      <div className="section-pad">
         <section className="grid gap-4 xl:grid-cols-2">
-          {isLoading ? <div className="text-sm text-brand-grey">Carregando agentes...</div> : null}
+          {isLoading ? <div className="body-muted">Carregando agentes...</div> : null}
           {agents.map((agent) => (
-            <article key={agent.id} className="overflow-hidden rounded-card border border-black/10 bg-white">
-              <div className="flex items-start justify-between gap-4 border-b border-black/10 bg-[#fbfbfb] p-4">
+            <article key={agent.id} className="surface-card overflow-hidden rounded-panel">
+              <div className="flex items-start justify-between gap-4 border-b border-brand-line bg-white p-4">
                 <div className="flex min-w-0 items-center gap-3">
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-card bg-brand-red text-white">
+                  <span className="icon-tile icon-tile-red">
                     <Bot size={19} />
                   </span>
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
-                      <h2 className="truncate text-base font-black">{agent.name}</h2>
+                      <h2 className="card-title truncate">{agent.name}</h2>
                       <Badge tone={agent.enabled ? "green" : "neutral"}>{agent.enabled ? "Ativo" : "Pausado"}</Badge>
                     </div>
-                    <p className="mt-1 truncate text-xs text-brand-grey">{agent.model}</p>
+                    <p className="ui-meta mt-1 truncate">{agent.model}</p>
                   </div>
                 </div>
                 <Toggle checked={agent.enabled} onChange={(checked) => void toggleAgent(agent, checked)} />
               </div>
 
               <div className="grid gap-4 p-4">
-                <div className="rounded-card border border-black/10 bg-[#f6f7f8] p-3">
-                  <div className="mb-2 flex items-center gap-2 text-xs font-bold uppercase text-brand-grey">
+                <div className="surface-soft rounded-card p-3">
+                  <div className="ui-label mb-2 flex items-center gap-2">
                     <Brain size={14} />
                     Prompt do agente
                   </div>
-                  <p className="line-clamp-3 min-h-12 text-sm leading-relaxed text-brand-charcoal">
+                  <p className="ui-body line-clamp-3 min-h-12">
                     {agent.system_prompt || "Sem prompt definido. Configure uma personalidade e regras de atendimento para melhorar as respostas."}
                   </p>
                 </div>
@@ -106,7 +106,7 @@ export default function AgentsPage() {
                           </Badge>
                         ))
                       ) : (
-                        <span className="text-xs text-brand-grey">Nenhum</span>
+                        <span className="ui-meta">Nenhum</span>
                       )}
                     </div>
                   </ConfigStat>
@@ -114,12 +114,12 @@ export default function AgentsPage() {
                     <div className="mt-2 text-lg font-black">{agent.temperature.toFixed(1)}</div>
                   </ConfigStat>
                   <ConfigStat icon={<Sparkles size={15} />} label="Status">
-                    <div className="mt-2 text-sm font-bold">{agent.enabled ? "Respondendo" : "Pausado"}</div>
+                    <div className="item-title mt-2">{agent.enabled ? "Respondendo" : "Pausado"}</div>
                   </ConfigStat>
                 </div>
 
-                <div className="flex items-center justify-between gap-3 border-t border-black/10 pt-4">
-                  <div className="text-xs text-brand-grey">Edite o fluxo para definir gatilhos, mensagens e IA.</div>
+                <div className="flex items-center justify-between gap-3 border-t border-brand-line pt-4">
+                  <div className="ui-meta">Edite o fluxo para definir gatilhos, mensagens e IA.</div>
                   <Link href={`/agents/${agent.id}/editor`}>
                     <Button variant="ghost">
                       <Workflow size={17} />
@@ -131,12 +131,12 @@ export default function AgentsPage() {
             </article>
           ))}
           {!isLoading && agents.length === 0 ? (
-            <div className="rounded-card border border-dashed border-black/20 bg-white p-8 text-center">
-              <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-card bg-brand-neutral">
+            <div className="surface-card rounded-panel border-dashed p-8 text-center">
+              <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-card bg-brand-canvas">
                 <Bot size={22} />
               </div>
-              <h2 className="text-base font-black">Nenhum agente criado</h2>
-              <p className="mx-auto mt-2 max-w-sm text-sm text-brand-grey">Crie um agente para configurar canais, prompt e fluxo visual de atendimento.</p>
+              <h2 className="card-title">Nenhum agente criado</h2>
+              <p className="body-muted mx-auto mt-2 max-w-sm">Crie um agente para configurar canais, prompt e fluxo visual de atendimento.</p>
               <Button className="mt-5" onClick={() => setShowForm(true)}>
                 <Plus size={17} />
                 Novo agente
@@ -147,16 +147,16 @@ export default function AgentsPage() {
       </div>
 
       {showForm ? (
-        <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4">
-          <form onSubmit={createAgent} className="w-full max-w-3xl overflow-hidden rounded-card bg-white">
-            <div className="border-b border-black/10 bg-[#fbfbfb] p-5">
+        <div className="fixed inset-0 z-50 grid place-items-center bg-brand-charcoal/55 p-4 backdrop-blur-sm">
+          <form onSubmit={createAgent} className="surface-card w-full max-w-3xl overflow-hidden rounded-panel bg-white">
+            <div className="border-b border-brand-line bg-white p-5">
               <div className="flex items-center gap-3">
-                <span className="flex h-10 w-10 items-center justify-center rounded-card bg-brand-red text-white">
+                <span className="icon-tile icon-tile-red">
                   <Bot size={19} />
                 </span>
                 <div>
-                  <h2 className="text-xl font-black">Novo agente</h2>
-                  <p className="text-sm text-brand-grey">Defina nome, canais e comportamento inicial.</p>
+                  <h2 className="heading-md">Novo agente</h2>
+                  <p className="body-muted">Defina nome, canais e comportamento inicial.</p>
                 </div>
               </div>
             </div>
@@ -177,7 +177,7 @@ export default function AgentsPage() {
                 </FieldLabel>
               </div>
 
-              <aside className="space-y-4 rounded-card border border-black/10 bg-[#f6f7f8] p-4">
+              <aside className="surface-soft space-y-4 rounded-card p-4">
                 <FieldLabel title="Canais" description="Onde este agente pode responder.">
                   <div className="grid gap-2">
                     {(["whatsapp", "instagram"] as Channel[]).map((channel) => (
@@ -185,8 +185,8 @@ export default function AgentsPage() {
                         type="button"
                         key={channel}
                         onClick={() => toggleChannel(channel)}
-                        className={`flex h-10 items-center justify-between rounded-tight border px-3 text-sm font-bold ${
-                          channels.includes(channel) ? "border-brand-red bg-white text-brand-red" : "border-black/10 bg-white text-brand-charcoal"
+                        className={`focus-ring flex h-10 items-center justify-between rounded-card border px-3 text-sm font-bold ${
+                          channels.includes(channel) ? "border-brand-red bg-white text-brand-red" : "border-brand-line bg-white text-brand-ink"
                         }`}
                       >
                         <span>{channel === "whatsapp" ? "WhatsApp" : "Instagram"}</span>
@@ -206,16 +206,16 @@ export default function AgentsPage() {
                     onChange={(event) => setTemperature(Number(event.target.value))}
                     className="w-full accent-brand-red"
                   />
-                  <div className="mt-2 flex items-center justify-between text-xs text-brand-grey">
+                  <div className="ui-meta mt-2 flex items-center justify-between">
                     <span>Direto</span>
-                    <strong className="text-brand-charcoal">{temperature.toFixed(1)}</strong>
+                    <strong className="text-brand-ink">{temperature.toFixed(1)}</strong>
                     <span>Criativo</span>
                   </div>
                 </FieldLabel>
               </aside>
             </div>
 
-            <div className="flex justify-end gap-3 border-t border-black/10 bg-[#fbfbfb] p-4">
+            <div className="flex justify-end gap-3 border-t border-brand-line bg-brand-canvas p-4">
               <Button type="button" variant="ghost" onClick={() => setShowForm(false)}>
                 Cancelar
               </Button>
@@ -230,8 +230,8 @@ export default function AgentsPage() {
 
 function ConfigStat({ icon, label, children }: { icon: React.ReactNode; label: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-card border border-black/10 bg-white p-3">
-      <div className="flex items-center gap-2 text-xs font-bold uppercase text-brand-grey">
+    <div className="surface-soft rounded-card p-3">
+      <div className="ui-label flex items-center gap-2">
         {icon}
         {label}
       </div>
@@ -243,8 +243,8 @@ function ConfigStat({ icon, label, children }: { icon: React.ReactNode; label: s
 function FieldLabel({ title, description, children }: { title: string; description?: string; children: React.ReactNode }) {
   return (
     <label className="block">
-      <span className="text-sm font-black text-brand-charcoal">{title}</span>
-      {description ? <span className="mb-2 mt-1 block text-xs text-brand-grey">{description}</span> : null}
+      <span className="item-title">{title}</span>
+      {description ? <span className="body-muted mb-2 mt-1 block">{description}</span> : null}
       {children}
     </label>
   );

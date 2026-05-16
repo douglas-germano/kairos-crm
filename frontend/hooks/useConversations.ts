@@ -11,6 +11,6 @@ export function useConversations(channel?: Channel | "all", status?: string) {
   const query = params.toString();
 
   return useSWR<ConversationPage>(`/api/conversations${query ? `?${query}` : ""}`, swrFetcher, {
-    refreshInterval: 15000
+    refreshInterval: 1000
   });
 }

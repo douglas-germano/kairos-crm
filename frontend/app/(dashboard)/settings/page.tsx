@@ -10,6 +10,7 @@ import {
   KeyRound,
   Link2,
   Loader2,
+  LogOut,
   Phone,
   Power,
   QrCode,
@@ -22,6 +23,7 @@ import { PageHeader } from "@/components/layout/AppShell";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Input } from "@/components/ui/Input";
+import { useAuth } from "@/hooks/useAuth";
 import { apiFetch, API_URL, swrFetcher } from "@/lib/api";
 import type { Integration, Workspace } from "@/lib/types";
 
@@ -102,12 +104,12 @@ function WhatsAppConnectCard({ onConnected }: { onConnected: () => void }) {
 
   if (phase === "idle" || phase === "error") return (
     <div className="flex flex-col items-center gap-4 py-8 text-center">
-      <span className="flex h-14 w-14 items-center justify-center rounded-full bg-[#f6f7f8]">
-        <Phone size={28} className="text-brand-grey" />
+      <span className="flex h-14 w-14 items-center justify-center rounded-full bg-brand-canvas">
+        <Phone size={28} className="text-brand-muted" />
       </span>
       <div>
-        <div className="text-sm font-semibold">Nenhum número conectado</div>
-        <div className="mt-1 text-xs text-brand-grey">Gere o QR code e escaneie com o WhatsApp para vincular</div>
+        <div className="item-title">Nenhum número conectado</div>
+        <div className="body-muted mt-1">Gere o QR code e escaneie com o WhatsApp para vincular</div>
       </div>
       {phase === "error" && <p className="text-xs text-red-600">{errorMsg}</p>}
       <Button onClick={handleConnect} id="btn-wa-connect"><QrCode size={17} />Gerar QR Code</Button>
@@ -117,7 +119,7 @@ function WhatsAppConnectCard({ onConnected }: { onConnected: () => void }) {
   if (phase === "loading") return (
     <div className="flex flex-col items-center gap-3 py-10 text-center">
       <Loader2 size={32} className="animate-spin text-brand-red" />
-      <div className="text-sm text-brand-grey">Gerando QR code...</div>
+      <div className="body-muted">Gerando QR code...</div>
     </div>
   );
 
@@ -127,8 +129,8 @@ function WhatsAppConnectCard({ onConnected }: { onConnected: () => void }) {
         <CheckCircle2 size={28} className="text-green-600" />
       </span>
       <div>
-        <div className="text-sm font-bold text-green-700">WhatsApp Conectado!</div>
-        <div className="mt-1 font-mono text-xs text-brand-grey">{instanceName}</div>
+        <div className="item-title text-green-700">WhatsApp Conectado!</div>
+        <div className="ui-meta mt-1 font-mono">{instanceName}</div>
       </div>
     </div>
   );
@@ -140,27 +142,27 @@ function WhatsAppConnectCard({ onConnected }: { onConnected: () => void }) {
   return (
     <div className="flex flex-col items-center gap-4">
       <div className="text-center">
-        <div className="text-sm font-semibold">Escaneie com o WhatsApp</div>
-        <div className="mt-0.5 text-xs text-brand-grey">Abra o WhatsApp → Dispositivos Conectados → Conectar Dispositivo</div>
+        <div className="item-title">Escaneie com o WhatsApp</div>
+        <div className="body-muted mt-0.5">Abra o WhatsApp → Dispositivos Conectados → Conectar Dispositivo</div>
       </div>
       {qrSrc ? (
         <div className="relative">
-          <img src={qrSrc} alt="QR Code WhatsApp" className="h-52 w-52 rounded-tight border border-black/10 object-contain p-2" />
+          <img src={qrSrc} alt="QR Code WhatsApp" className="h-52 w-52 rounded-card border border-brand-line object-contain p-2" />
           <span className="absolute -right-1.5 -top-1.5 flex h-4 w-4">
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75" />
             <span className="relative inline-flex h-4 w-4 rounded-full bg-green-500" />
           </span>
         </div>
       ) : (
-        <div className="flex h-52 w-52 items-center justify-center rounded-tight border border-black/10">
+        <div className="flex h-52 w-52 items-center justify-center rounded-card border border-brand-line">
           <QrCode size={48} className="text-brand-neutral" />
         </div>
       )}
-      <div className="flex items-center gap-2 text-xs text-brand-grey">
+      <div className="ui-meta flex items-center gap-2">
         <Loader2 size={13} className="animate-spin" />
         Aguardando conexão... ({countdown}s)
       </div>
-      <button onClick={handleRefreshQr} className="flex items-center gap-1.5 text-xs text-brand-grey hover:text-brand-charcoal" id="btn-wa-refresh-qr">
+      <button onClick={handleRefreshQr} className="ui-meta flex items-center gap-1.5 hover:text-brand-ink" id="btn-wa-refresh-qr">
         <RefreshCw size={13} />Atualizar QR code
       </button>
     </div>
@@ -178,13 +180,13 @@ function WhatsAppActiveCard({ integration, onDisconnect }: { integration: Integr
   }
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center gap-3 rounded-tight bg-green-50 p-3">
+      <div className="flex items-center gap-3 rounded-card bg-green-50 p-3">
         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-green-100">
           <Wifi size={18} className="text-green-600" />
         </span>
         <div className="min-w-0">
-          <div className="text-xs font-bold text-green-700">Conectado e ativo</div>
-          <div className="truncate font-mono text-xs text-green-600">{String(integration.meta?.instance_name || "")}</div>
+          <div className="ui-label text-green-700">Conectado e ativo</div>
+          <div className="ui-meta truncate font-mono text-green-600">{String(integration.meta?.instance_name || "")}</div>
         </div>
       </div>
       <Button variant="ghost" onClick={handleDisconnect} disabled={disconnecting} className="w-full" id="btn-wa-disconnect">
@@ -209,15 +211,15 @@ function InstagramSection({ integration, onDisconnect }: { integration: Integrat
   }
 
   return (
-    <div className="rounded-card border border-black/10 bg-white p-5">
+    <div className="surface-card rounded-panel p-5">
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-2.5">
-          <span className="flex h-9 w-9 items-center justify-center rounded-tight bg-gradient-to-br from-[#f9ce34] via-[#ee2a7b] to-[#6228d7] text-white">
+          <span className="flex h-9 w-9 items-center justify-center rounded-card bg-gradient-to-br from-[#f9ce34] via-[#ee2a7b] to-[#6228d7] text-white">
             <Instagram size={18} />
           </span>
           <div>
-            <h3 className="text-sm font-black">Instagram</h3>
-            <p className="text-xs text-brand-grey">Meta Graph API</p>
+            <h3 className="item-title">Instagram</h3>
+            <p className="ui-meta">Meta Graph API</p>
           </div>
         </div>
         <Badge tone={connected ? "green" : "neutral"}>{connected ? "ativo" : integration?.status || "inativo"}</Badge>
@@ -225,13 +227,13 @@ function InstagramSection({ integration, onDisconnect }: { integration: Integrat
 
       {connected && integration ? (
         <div className="flex flex-col gap-4">
-          <div className="flex items-center gap-3 rounded-tight bg-green-50 p-3">
+          <div className="flex items-center gap-3 rounded-card bg-green-50 p-3">
             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-green-100">
               <CheckCircle2 size={18} className="text-green-600" />
             </span>
             <div className="min-w-0">
-              <div className="text-xs font-bold text-green-700">{String(integration.meta?.page_name || "Página conectada")}</div>
-              <div className="truncate font-mono text-xs text-green-600">ID: {String(integration.meta?.ig_user_id || "")}</div>
+              <div className="ui-label text-green-700">{String(integration.meta?.page_name || "Página conectada")}</div>
+              <div className="ui-meta truncate font-mono text-green-600">ID: {String(integration.meta?.ig_user_id || "")}</div>
             </div>
           </div>
           <Button variant="ghost" onClick={handleDisconnect} disabled={disconnecting} className="w-full" id="btn-ig-disconnect">
@@ -241,12 +243,12 @@ function InstagramSection({ integration, onDisconnect }: { integration: Integrat
         </div>
       ) : (
         <div className="flex flex-col items-center gap-4 py-8 text-center">
-          <span className="flex h-14 w-14 items-center justify-center rounded-full bg-[#f6f7f8]">
-            <Instagram size={28} className="text-brand-grey" />
+          <span className="flex h-14 w-14 items-center justify-center rounded-full bg-brand-canvas">
+            <Instagram size={28} className="text-brand-muted" />
           </span>
           <div>
-            <div className="text-sm font-semibold">Nenhuma conta conectada</div>
-            <div className="mt-1 text-xs text-brand-grey">Autorize via Meta para receber e enviar mensagens do Instagram</div>
+            <div className="item-title">Nenhuma conta conectada</div>
+            <div className="body-muted mt-1">Autorize via Meta para receber e enviar mensagens do Instagram</div>
           </div>
           <a href={`${API_URL}/api/integrations/instagram/auth`}>
             <Button id="btn-ig-connect"><ExternalLink size={17} />Conectar com Meta</Button>
@@ -259,7 +261,7 @@ function InstagramSection({ integration, onDisconnect }: { integration: Integrat
 
 // ─── Section: Perfil ──────────────────────────────────────────────────────────
 
-function PerfilSection({ user, onSaved }: { user: UserData | undefined; onSaved: () => void }) {
+function PerfilSection({ user, onSaved, onLogout }: { user: UserData | undefined; onSaved: () => void; onLogout: () => void }) {
   const [name, setName] = useState<string | undefined>(undefined);
   const [email, setEmail] = useState<string | undefined>(undefined);
   const [currentPassword, setCurrentPassword] = useState("");
@@ -304,12 +306,31 @@ function PerfilSection({ user, onSaved }: { user: UserData | undefined; onSaved:
 
   return (
     <div className="space-y-4">
+      <section className="surface-card rounded-panel p-5">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex min-w-0 items-center gap-3">
+            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-brand-charcoal text-sm font-black text-white">
+              {user?.name?.[0]?.toUpperCase() || "K"}
+            </span>
+            <div className="min-w-0">
+              <p className="eyebrow mb-1">Conta</p>
+              <h2 className="card-title truncate">{user?.name || "Operador"}</h2>
+              <p className="body-muted truncate">{user?.email || "Sem e-mail carregado"}</p>
+            </div>
+          </div>
+          <Button type="button" variant="ghost" onClick={onLogout} className="border-red-200 text-brand-red hover:bg-red-50 sm:self-center">
+            <LogOut size={16} />
+            Sair da conta
+          </Button>
+        </div>
+      </section>
+
       {/* Info */}
-      <form onSubmit={handleSaveInfo} className="rounded-card border border-black/10 bg-white p-5">
-        <h2 className="mb-4 text-base font-black">Informações pessoais</h2>
+      <form onSubmit={handleSaveInfo} className="surface-card rounded-panel p-5">
+        <h2 className="card-title mb-4">Informações pessoais</h2>
         <div className="space-y-3">
           <div className="space-y-1">
-            <label className="text-[11px] font-bold uppercase text-brand-grey">Nome</label>
+            <label className="ui-label">Nome</label>
             <Input
               value={name ?? user?.name ?? ""}
               onChange={(e) => setName(e.target.value)}
@@ -317,7 +338,7 @@ function PerfilSection({ user, onSaved }: { user: UserData | undefined; onSaved:
             />
           </div>
           <div className="space-y-1">
-            <label className="text-[11px] font-bold uppercase text-brand-grey">E-mail</label>
+            <label className="ui-label">E-mail</label>
             <Input
               type="email"
               value={email ?? user?.email ?? ""}
@@ -338,14 +359,14 @@ function PerfilSection({ user, onSaved }: { user: UserData | undefined; onSaved:
       </form>
 
       {/* Senha */}
-      <form onSubmit={handleSavePassword} className="rounded-card border border-black/10 bg-white p-5">
+      <form onSubmit={handleSavePassword} className="surface-card rounded-panel p-5">
         <div className="mb-4 flex items-center gap-2">
-          <KeyRound size={16} className="text-brand-grey" />
-          <h2 className="text-base font-black">Alterar senha</h2>
+          <KeyRound size={16} className="text-brand-muted" />
+          <h2 className="card-title">Alterar senha</h2>
         </div>
         <div className="space-y-3">
           <div className="space-y-1">
-            <label className="text-[11px] font-bold uppercase text-brand-grey">Senha atual</label>
+            <label className="ui-label">Senha atual</label>
             <Input
               type="password"
               value={currentPassword}
@@ -354,7 +375,7 @@ function PerfilSection({ user, onSaved }: { user: UserData | undefined; onSaved:
             />
           </div>
           <div className="space-y-1">
-            <label className="text-[11px] font-bold uppercase text-brand-grey">Nova senha</label>
+            <label className="ui-label">Nova senha</label>
             <Input
               type="password"
               value={newPassword}
@@ -400,11 +421,11 @@ function WorkspaceSection({ workspace, onSaved }: { workspace: Workspace | undef
   }
 
   return (
-    <form onSubmit={handleSave} className="rounded-card border border-black/10 bg-white p-5">
-      <h2 className="mb-4 text-base font-black">Workspace</h2>
+    <form onSubmit={handleSave} className="surface-card rounded-panel p-5">
+      <h2 className="card-title mb-4">Workspace</h2>
       <div className="space-y-4">
         <div className="space-y-1">
-          <label className="text-[11px] font-bold uppercase text-brand-grey">Nome do Workspace</label>
+          <label className="ui-label">Nome do Workspace</label>
           <Input
             value={name ?? workspace?.name ?? ""}
             onChange={(e) => setName(e.target.value)}
@@ -413,14 +434,14 @@ function WorkspaceSection({ workspace, onSaved }: { workspace: Workspace | undef
         </div>
 
         {workspace && (
-          <div className="grid grid-cols-2 gap-4 rounded-tight bg-[#f6f7f8] p-3">
+          <div className="grid grid-cols-2 gap-4 rounded-card bg-brand-canvas p-3">
             <div>
-              <div className="text-[11px] font-bold uppercase text-brand-grey">Plano</div>
-              <div className="mt-0.5 text-sm font-semibold capitalize">{workspace.plan}</div>
+              <div className="ui-label">Plano</div>
+              <div className="item-title mt-0.5 capitalize">{workspace.plan}</div>
             </div>
             <div>
-              <div className="text-[11px] font-bold uppercase text-brand-grey">Membro desde</div>
-              <div className="mt-0.5 text-sm font-semibold">
+              <div className="ui-label">Membro desde</div>
+              <div className="item-title mt-0.5">
                 {new Date(workspace.created_at).toLocaleDateString("pt-BR")}
               </div>
             </div>
@@ -464,15 +485,15 @@ function CanaisSection({
   return (
     <div className="space-y-4">
       {/* WhatsApp */}
-      <div className="rounded-card border border-black/10 bg-white p-5">
+      <div className="surface-card rounded-panel p-5">
         <div className="mb-4 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <span className="flex h-9 w-9 items-center justify-center rounded-tight bg-[#25D366] text-white">
+            <span className="flex h-9 w-9 items-center justify-center rounded-card bg-[#25D366] text-white">
               <Phone size={18} />
             </span>
             <div>
-              <h3 className="text-sm font-black">WhatsApp</h3>
-              <p className="text-xs text-brand-grey">Evolution API</p>
+              <h3 className="item-title">WhatsApp</h3>
+              <p className="ui-meta">Evolution API</p>
             </div>
           </div>
           <Badge tone={waConnected ? "green" : "neutral"}>
@@ -496,35 +517,35 @@ function CanaisSection({
 
 function WebhooksSection() {
   return (
-    <div className="rounded-card border border-black/10 bg-white p-5">
-      <h2 className="mb-4 text-base font-black">Webhooks</h2>
+    <div className="surface-card rounded-panel p-5">
+      <h2 className="card-title mb-4">Webhooks</h2>
       <div className="space-y-5">
         <div>
           <div className="mb-2 flex items-center gap-1.5">
             <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#25D366] text-white">
               <Phone size={11} />
             </span>
-            <span className="text-xs font-bold">WhatsApp</span>
+            <span className="ui-label text-brand-ink">WhatsApp</span>
           </div>
-          <p className="break-all rounded-tight bg-[#f6f7f8] p-3 font-mono text-xs text-brand-charcoal">
+          <p className="ui-meta break-all rounded-card bg-brand-canvas p-3 font-mono text-brand-ink">
             {API_URL}/webhooks/whatsapp
           </p>
-          <p className="mt-1.5 text-[11px] text-brand-grey">
+          <p className="ui-meta mt-1.5">
             Configurado automaticamente ao conectar via QR code.
           </p>
         </div>
 
-        <div className="border-t border-black/10 pt-5">
+        <div className="border-t border-brand-line pt-5">
           <div className="mb-2 flex items-center gap-1.5">
             <span className="flex h-5 w-5 items-center justify-center rounded-full bg-gradient-to-br from-[#f9ce34] via-[#ee2a7b] to-[#6228d7] text-white">
               <Instagram size={11} />
             </span>
-            <span className="text-xs font-bold">Instagram</span>
+            <span className="ui-label text-brand-ink">Instagram</span>
           </div>
-          <p className="break-all rounded-tight bg-[#f6f7f8] p-3 font-mono text-xs text-brand-charcoal">
+          <p className="ui-meta break-all rounded-card bg-brand-canvas p-3 font-mono text-brand-ink">
             {API_URL}/webhooks/instagram
           </p>
-          <p className="mt-1.5 text-[11px] text-brand-grey">
+          <p className="ui-meta mt-1.5">
             Configure no Facebook Developers junto com o verify token do backend.
           </p>
         </div>
@@ -537,6 +558,7 @@ function WebhooksSection() {
 
 export default function SettingsPage() {
   const [activeSection, setActiveSection] = useState<Section>("perfil");
+  const { logout } = useAuth(true);
 
   const { data: meData, mutate: mutateMe } = useSWR<{ user: UserData }>(
     "/auth/me",
@@ -564,7 +586,7 @@ export default function SettingsPage() {
         description="Perfil, workspace, canais e webhooks."
       />
 
-      <div className="flex min-h-0 gap-0 p-4 sm:p-5">
+      <div className="section-pad flex min-h-0 gap-0">
         {/* ── Sidebar nav ───────────────────────────────────────── */}
         <nav className="mr-5 hidden w-44 shrink-0 md:block">
           <ul className="space-y-0.5">
@@ -573,10 +595,10 @@ export default function SettingsPage() {
                 <button
                   onClick={() => setActiveSection(item.id)}
                   className={[
-                    "flex w-full items-center gap-2.5 rounded-tight px-3 py-2.5 text-sm font-medium transition-colors",
+                    "focus-ring flex w-full items-center gap-2.5 rounded-card px-3 py-2.5 text-sm font-bold transition-colors",
                     activeSection === item.id
-                      ? "bg-brand-red text-white"
-                      : "text-brand-charcoal hover:bg-black/5",
+                      ? "bg-red-50 text-brand-red"
+                      : "text-brand-muted hover:bg-white hover:text-brand-ink",
                   ].join(" ")}
                 >
                   {item.icon}
@@ -588,7 +610,7 @@ export default function SettingsPage() {
         </nav>
 
         {/* ── Mobile tab strip ──────────────────────────────────── */}
-        <div className="mb-4 -mx-4 flex overflow-x-auto border-b border-black/10 px-4 md:hidden">
+        <div className="mb-4 -mx-4 flex overflow-x-auto border-b border-brand-line px-4 md:hidden">
           {NAV_ITEMS.map((item) => (
             <button
               key={item.id}
@@ -597,7 +619,7 @@ export default function SettingsPage() {
                 "flex shrink-0 items-center gap-1.5 border-b-2 px-3 pb-3 text-xs font-semibold transition-colors",
                 activeSection === item.id
                   ? "border-brand-red text-brand-red"
-                  : "border-transparent text-brand-grey hover:text-brand-charcoal",
+                  : "border-transparent text-brand-muted hover:text-brand-ink",
               ].join(" ")}
             >
               {item.icon}
@@ -609,7 +631,7 @@ export default function SettingsPage() {
         {/* ── Content ───────────────────────────────────────────── */}
         <div className="min-w-0 flex-1">
           {activeSection === "perfil" && (
-            <PerfilSection user={meData?.user} onSaved={() => mutateMe()} />
+            <PerfilSection user={meData?.user} onSaved={() => mutateMe()} onLogout={logout} />
           )}
           {activeSection === "workspace" && (
             <WorkspaceSection workspace={workspace} onSaved={() => mutateWorkspace()} />

@@ -3,19 +3,19 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Bot, ChevronDown, LogOut, MessageSquareText, PanelLeftClose, PanelLeftOpen, Settings } from "lucide-react";
+import { ChevronRight, ChevronsLeft, ChevronsRight, CircleUserRound, MessagesSquare, SlidersHorizontal, Sparkles } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 
 const nav = [
-  { href: "/conversations", label: "Conversas", icon: MessageSquareText },
-  { href: "/agents", label: "Agentes", icon: Bot },
-  { href: "/settings", label: "Configuracoes", icon: Settings }
+  { href: "/conversations", label: "Conversas", icon: MessagesSquare },
+  { href: "/agents", label: "Agentes", icon: Sparkles },
+  { href: "/settings", label: "Configurações", icon: SlidersHorizontal },
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const { user, workspace, logout } = useAuth(true);
+  const { user } = useAuth(true);
   const [collapsed, setCollapsed] = useState(false);
 
   useEffect(() => {
@@ -32,30 +32,46 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="min-h-screen bg-[#f6f7f8] text-brand-charcoal">
-      <aside className={cn("fixed inset-y-0 left-0 z-30 hidden border-r border-black/10 bg-white transition-[width] duration-200 lg:block", collapsed ? "w-[76px]" : "w-[248px]")}>
+    <div className="app-canvas text-brand-charcoal">
+      <aside className={cn("fixed inset-y-0 left-0 z-30 hidden border-r border-brand-line bg-white/95 shadow-[8px_0_30px_rgba(15,23,42,0.04)] backdrop-blur transition-[width] duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] lg:flex lg:flex-col", collapsed ? "w-[76px]" : "w-[256px]")}>
+        <button
+          type="button"
+          onClick={toggleSidebar}
+          className="focus-ring absolute -right-3 top-8 z-40 flex h-7 w-7 items-center justify-center rounded-full border border-brand-line bg-white text-brand-muted shadow-[0_10px_28px_rgba(15,23,42,0.14)] transition duration-200 hover:-translate-y-0.5 hover:border-brand-charcoal/20 hover:text-brand-ink"
+          aria-label={collapsed ? "Expandir sidebar" : "Recolher sidebar"}
+          title={collapsed ? "Expandir sidebar" : "Recolher sidebar"}
+        >
+          {collapsed ? <ChevronsRight size={15} /> : <ChevronsLeft size={15} />}
+        </button>
         <div className="flex h-full flex-col">
-          <div className={cn("flex h-24 items-center border-b border-black/10 px-4", collapsed ? "flex-col justify-center gap-4 py-4" : "justify-between")}>
-            <Link href="/conversations" className={cn("flex min-w-0 items-center gap-3", collapsed && "justify-center")}>
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-tight bg-brand-red text-sm font-black text-white">K</span>
-              {!collapsed ? (
-                <div className="min-w-0">
-                  <div className="truncate text-sm font-black leading-none">KairosCRM</div>
-                  <div className="mt-1 truncate text-[11px] text-brand-grey">CRM de atendimento</div>
-                </div>
-              ) : null}
+          <div className="flex h-16 items-center border-b border-brand-line px-4">
+            <Link href="/conversations" className="relative flex h-10 w-full items-center justify-center overflow-hidden">
+              <span
+                className={cn(
+                  "absolute left-1/2 top-1/2 font-serif text-3xl font-bold leading-none text-brand-red transition duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]",
+                  collapsed
+                    ? "-translate-x-1/2 -translate-y-1/2 scale-100 opacity-100"
+                    : "-translate-x-[74px] -translate-y-1/2 scale-90 opacity-0"
+                )}
+                aria-hidden={!collapsed}
+              >
+                K
+              </span>
+              <span
+                className={cn(
+                  "absolute left-1/2 top-1/2 overflow-hidden font-serif text-[22px] font-bold leading-none text-brand-ink transition duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]",
+                  collapsed
+                    ? "-translate-x-[40px] -translate-y-1/2 scale-95 opacity-0"
+                    : "-translate-x-1/2 -translate-y-1/2 scale-100 opacity-100"
+                )}
+                aria-hidden={collapsed}
+              >
+                  Kairos
+              </span>
             </Link>
-            <button
-              type="button"
-              onClick={toggleSidebar}
-              className="focus-ring flex h-8 w-8 shrink-0 items-center justify-center rounded-tight text-brand-grey hover:bg-brand-neutral hover:text-brand-charcoal"
-              aria-label={collapsed ? "Expandir sidebar" : "Recolher sidebar"}
-            >
-              {collapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
-            </button>
           </div>
 
-          <nav className={cn("flex-1 px-3 py-3", collapsed && "px-2")}>
+          <nav className={cn("flex-1 py-4 transition-[padding] duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]", collapsed ? "px-2" : "px-3")}>
             {nav.map((item) => {
               const Icon = item.icon;
               const active = pathname.startsWith(item.href);
@@ -65,42 +81,56 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   href={item.href}
                   title={collapsed ? item.label : undefined}
                   className={cn(
-                    "mb-1 flex h-10 items-center rounded-tight text-sm font-semibold transition",
+                    "mb-1 flex h-11 items-center overflow-hidden rounded-card text-sm font-bold transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]",
                     collapsed ? "justify-center px-0" : "gap-3 px-3",
-                    active ? "bg-brand-red text-white" : "text-brand-charcoal hover:bg-brand-neutral"
+                    active ? "bg-red-50 text-brand-red" : "text-brand-muted hover:bg-brand-canvas hover:text-brand-ink"
                   )}
                 >
-                  <Icon size={18} />
-                  {!collapsed ? item.label : null}
+                  <Icon className="shrink-0" size={18} />
+                  <span className={cn(
+                    "overflow-hidden whitespace-nowrap transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]",
+                    collapsed ? "w-0 translate-x-2 opacity-0" : "w-32 translate-x-0 opacity-100"
+                  )}>
+                    {item.label}
+                  </span>
                 </Link>
               );
             })}
           </nav>
 
-          <div className={cn("border-t border-black/10 p-3", collapsed && "px-2")}>
-            <div className={cn("mb-2 flex items-center px-2 py-1", collapsed ? "justify-center px-0" : "gap-2")}>
-              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-neutral text-xs font-black">
-                {user?.name?.[0]?.toUpperCase() || "K"}
-              </span>
-              {!collapsed ? <div className="min-w-0">
-                <div className="truncate text-xs font-bold">{user?.name || "Operador"}</div>
-                <div className="truncate text-[11px] text-brand-grey">{user?.email || ""}</div>
-              </div> : null}
-            </div>
-            <button
-              onClick={logout}
-              title={collapsed ? "Sair" : undefined}
-              className={cn("focus-ring flex h-9 w-full items-center rounded-tight text-sm font-semibold text-brand-grey hover:bg-brand-neutral", collapsed ? "justify-center px-0" : "gap-2 px-2")}
+          <div className={cn("border-t border-brand-line p-3 transition-[padding] duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]", collapsed && "px-2")}>
+            <Link
+              href="/settings"
+              title={collapsed ? "Perfil e configuracoes" : undefined}
+              className={cn(
+                "focus-ring flex min-h-12 w-full items-center overflow-hidden rounded-card text-sm font-bold transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]",
+                pathname.startsWith("/settings") ? "bg-red-50 text-brand-red" : "text-brand-muted hover:bg-brand-canvas hover:text-brand-ink",
+                collapsed ? "justify-center px-0" : "gap-2.5 px-2"
+              )}
             >
-              <LogOut size={17} />
-              {!collapsed ? "Sair" : null}
-            </button>
+              <span className={cn(
+                "flex h-9 w-9 shrink-0 items-center justify-center rounded-full ring-1",
+                pathname.startsWith("/settings") ? "bg-red-100 text-brand-red ring-red-200" : "bg-brand-canvas text-brand-ink ring-brand-line"
+              )}>
+                {user?.name?.[0]?.toUpperCase() || <CircleUserRound size={17} />}
+              </span>
+              <span className={cn(
+                "min-w-0 flex-1 overflow-hidden text-left transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]",
+                collapsed ? "w-0 translate-x-2 opacity-0" : "w-[120px] translate-x-0 opacity-100"
+              )}>
+                <span className="block truncate text-xs font-extrabold">{user?.name || "Operador"}</span>
+                <span className={cn("block truncate text-[11px] font-medium", pathname.startsWith("/settings") ? "text-brand-red/70" : "text-brand-muted")}>
+                  Perfil e ajustes
+                </span>
+              </span>
+              <ChevronRight size={13} className={cn("shrink-0 transition-all duration-500", collapsed ? "w-0 opacity-0" : "opacity-60")} />
+            </Link>
           </div>
         </div>
       </aside>
 
-      <div className={cn("transition-[padding-left] duration-200", collapsed ? "lg:pl-[76px]" : "lg:pl-[248px]")}>
-        <main>{children}</main>
+      <div className={cn("h-screen overflow-hidden transition-[padding-left] duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]", collapsed ? "lg:pl-[76px]" : "lg:pl-[256px]")}>
+        <main className="h-full overflow-y-auto">{children}</main>
       </div>
     </div>
   );
@@ -118,16 +148,12 @@ export function PageHeader({
   action?: React.ReactNode;
 }) {
   return (
-    <div className="flex h-24 items-center border-b border-black/10 bg-white px-4 sm:px-7">
-      <div className="flex w-full flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-        <div>
-          <div className="mb-0.5 text-[11px] font-bold uppercase text-brand-grey">
-            {eyebrow}
-          </div>
-          <h1 className="display-title text-xl">{title}</h1>
-          {description ? <p className="mt-0.5 max-w-2xl text-xs text-brand-grey">{description}</p> : null}
+    <div className="flex h-16 items-center border-b border-brand-line bg-white/80 px-4 backdrop-blur sm:px-7">
+      <div className="flex w-full items-center justify-between gap-4">
+        <div className="min-w-0">
+          <h1 className="truncate text-lg font-black leading-none text-brand-ink">{title}</h1>
         </div>
-        {action}
+        {action ? <div className="shrink-0">{action}</div> : null}
       </div>
     </div>
   );

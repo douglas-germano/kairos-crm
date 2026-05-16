@@ -14,16 +14,23 @@ const config: Config = {
           red: "#e60000",
           redDark: "#ac1811",
           charcoal: "#25282b",
+          ink: "#151719",
           grey: "#7e7e7e",
-          neutral: "#f2f2f2"
+          muted: "#6f7680",
+          line: "#e3e6ea",
+          neutral: "#f2f2f2",
+          canvas: "#f5f6f8"
         }
       },
       borderRadius: {
         tight: "2px",
-        card: "6px"
+        card: "8px",
+        panel: "12px"
       },
       boxShadow: {
-        focus: "inset 0 0 0 1px rgba(230, 0, 0, 0.55)"
+        focus: "0 0 0 3px rgba(230, 0, 0, 0.16), 0 0 0 1px rgba(230, 0, 0, 0.9)",
+        card: "0 1px 2px rgba(15, 23, 42, 0.04), 0 16px 40px rgba(15, 23, 42, 0.06)",
+        lift: "0 18px 48px rgba(15, 23, 42, 0.12)"
       }
     }
   },

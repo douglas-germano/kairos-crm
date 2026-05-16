@@ -59,10 +59,10 @@ export default function AgentEditorPage() {
       {flow ? (
         <FlowEditor flow={flow} onSaved={(updated) => void mutate(flows.map((item) => (item.id === updated.id ? updated : item)), false)} />
       ) : (
-        <div className="flex min-h-[calc(100vh-96px)] items-center justify-center p-6 text-center">
-          <div>
-            <h2 className="text-3xl font-light">Nenhum fluxo criado</h2>
-            <p className="mt-2 max-w-md text-sm text-brand-grey">Crie um fluxo principal para este agente e configure os nodes de automacao.</p>
+        <div className="flex min-h-[calc(100vh-112px)] items-center justify-center p-6 text-center">
+          <div className="surface-card rounded-panel p-8">
+            <h2 className="heading-xl">Nenhum fluxo criado</h2>
+            <p className="body-muted mt-2 max-w-md">Crie um fluxo principal para este agente e configure os nodes de automacao.</p>
             <Button className="mt-6" onClick={() => void createFlow()}>
               <Plus size={17} />
               Criar fluxo

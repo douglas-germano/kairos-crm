@@ -15,22 +15,22 @@ export function FlowNode({ data, type }: NodeProps) {
   const summary = String(data?.message || data?.system_prompt || data?.url || data?.description || "Configure este passo no painel lateral.");
 
   return (
-    <div className="min-w-56 overflow-hidden rounded-card border border-black/10 bg-white">
+    <div className="min-w-56 overflow-hidden rounded-card border border-brand-line bg-white">
       <Handle type="target" position={Position.Top} className="!bg-brand-charcoal" />
-      <div className="border-b border-black/10 bg-[#fbfbfb] px-3 py-2">
+      <div className="border-b border-brand-line bg-brand-canvas px-3 py-2">
         <div className="flex items-center gap-2">
           <span className={`flex h-8 w-8 items-center justify-center rounded-card text-white ${meta.color}`}>
             <Icon size={16} />
           </span>
           <div className="min-w-0">
-            <div className="truncate text-sm font-black text-brand-charcoal">{String(data?.label || meta.label)}</div>
-            <div className="text-[10px] font-bold uppercase text-brand-grey">{meta.label}</div>
+            <div className="item-title truncate">{String(data?.label || meta.label)}</div>
+            <div className="ui-label text-[10px]">{meta.label}</div>
           </div>
         </div>
       </div>
       <div className="p-3">
-        <p className="line-clamp-2 max-w-56 text-xs leading-relaxed text-brand-grey">{summary}</p>
-        <span className={`mt-3 inline-flex rounded-[32px] px-2 py-1 text-[10px] font-bold uppercase ${meta.soft}`}>
+        <p className="body-muted line-clamp-2 max-w-56">{summary}</p>
+        <span className={`mt-3 inline-flex rounded-[32px] px-2 py-1 text-[10px] font-extrabold uppercase ${meta.soft}`}>
           {type}
         </span>
       </div>

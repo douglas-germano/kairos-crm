@@ -1,10 +1,10 @@
 "use client";
 
-import { Bot, CheckCircle2 } from "lucide-react";
+import { useState } from "react";
+import { Bot, MessageSquare, Search } from "lucide-react";
 import type { Channel, Conversation } from "@/lib/types";
 import { ChannelIcon } from "@/components/ui/ChannelIcon";
-import { Badge } from "@/components/ui/Badge";
-import { cn, formatDateTime, initials } from "@/lib/utils";
+import { cn, formatRelativeTime, initials } from "@/lib/utils";
 
 type Props = {
   conversations: Conversation[];
@@ -12,78 +12,235 @@ type Props = {
   onSelect: (conversation: Conversation) => void;
   channel: Channel | "all";
   onChannelChange: (channel: Channel | "all") => void;
+  isLoading?: boolean;
 };
 
-const filters: Array<{ label: string; value: Channel | "all" }> = [
+const FILTERS: Array<{ label: string; value: Channel | "all" }> = [
   { label: "Todos", value: "all" },
   { label: "WhatsApp", value: "whatsapp" },
-  { label: "Instagram", value: "instagram" }
+  { label: "Instagram", value: "instagram" },
 ];
 
-export function ConversationList({ conversations, selectedId, onSelect, channel, onChannelChange }: Props) {
+const AVATAR_PALETTES = [
+  "bg-blue-100 text-blue-700",
+  "bg-violet-100 text-violet-700",
+  "bg-emerald-100 text-emerald-700",
+  "bg-orange-100 text-orange-700",
+  "bg-pink-100 text-pink-700",
+  "bg-teal-100 text-teal-700",
+];
+
+function avatarColor(name: string) {
+  return AVATAR_PALETTES[(name.charCodeAt(0) || 0) % AVATAR_PALETTES.length];
+}
+
+export function ConversationList({
+  conversations,
+  selectedId,
+  onSelect,
+  channel,
+  onChannelChange,
+  isLoading,
+}: Props) {
+  const [search, setSearch] = useState("");
+
+  const filtered = search.trim()
+    ? conversations.filter((c) => {
+        const name = (c.contact?.name ?? c.contact?.external_id ?? "").toLowerCase();
+        return name.includes(search.toLowerCase());
+      })
+    : conversations;
+
+  const openCount = conversations.filter((c) => c.status === "open").length;
+  const aiCount = conversations.filter((c) => c.ai_enabled).length;
+
   return (
-    <section className="grid min-h-[calc(100vh-96px)] border-r border-black/10 bg-white grid-rows-[auto_1fr]">
-      <aside className="border-b border-black/10 p-3">
-        <div className="mb-2 flex items-center justify-between">
-          <div className="text-xs font-black uppercase text-brand-grey">Inbox</div>
-          <span className="text-xs font-semibold text-brand-grey">{conversations.length} conversas</span>
+    <section className="flex h-full flex-col overflow-hidden border-r border-brand-line bg-white/95">
+      {/* Header */}
+      <div className="border-b border-brand-line px-4 pb-4 pt-5">
+        <div className="mb-3 flex items-center justify-between">
+          <div>
+            <p className="eyebrow mb-1">Atendimento</p>
+            <h2 className="heading-md">Inbox</h2>
+            <p className="ui-meta mt-1">{conversations.length} conversas</p>
+          </div>
+          <div className="flex gap-2">
+            <Pill label="Abertas" value={openCount} tone="green" />
+            <Pill label="IA" value={aiCount} tone="red" />
+          </div>
         </div>
-        <div className="flex gap-2 overflow-auto">
-          {filters.map((filter) => (
+
+        {/* Search */}
+        <div className="relative mb-3">
+          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-muted" />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Buscar conversa..."
+            className="focus-ring w-full rounded-card border border-brand-line bg-brand-canvas py-2.5 pl-9 pr-3 text-sm font-medium placeholder:text-brand-muted"
+          />
+        </div>
+
+        {/* Channel filters */}
+        <div className="flex gap-1.5">
+          {FILTERS.map((f) => (
             <button
-              key={filter.value}
-              onClick={() => onChannelChange(filter.value)}
+              key={f.value}
+              onClick={() => onChannelChange(f.value)}
               className={cn(
-                "focus-ring flex shrink-0 items-center gap-2 rounded-tight px-2.5 py-2 text-xs font-bold",
-                channel === filter.value ? "bg-brand-red text-white" : "bg-[#f6f7f8] text-brand-charcoal hover:bg-brand-neutral"
+                "focus-ring rounded-card px-3 py-1.5 text-[11px] font-extrabold transition",
+                channel === f.value
+                  ? "bg-brand-charcoal text-white"
+                  : "bg-brand-canvas text-brand-muted hover:bg-brand-neutral hover:text-brand-ink"
               )}
             >
-              <span className="h-2 w-2 rounded-full bg-current" />
-              {filter.label}
+              {f.label}
             </button>
           ))}
         </div>
-      </aside>
+      </div>
 
-      <div className="scrollbar-thin max-h-[calc(100vh-162px)] overflow-y-auto">
-        {conversations.length === 0 ? (
-          <div className="p-6 text-sm text-brand-grey">Nenhuma conversa encontrada para o filtro atual.</div>
-        ) : null}
-        {conversations.map((conversation) => {
-          const name = conversation.contact?.name || conversation.contact?.external_id || `Conversa #${conversation.id}`;
-          const active = selectedId === conversation.id;
-          return (
-            <button
+      {/* List */}
+      <div className="flex-1 overflow-y-auto scrollbar-thin">
+        {isLoading ? (
+          <LoadingSkeleton />
+        ) : filtered.length === 0 ? (
+          <EmptyState search={search} />
+        ) : (
+          filtered.map((conversation) => (
+            <ConversationItem
               key={conversation.id}
+              conversation={conversation}
+              active={selectedId === conversation.id}
               onClick={() => onSelect(conversation)}
-              className={cn(
-                "focus-ring w-full border-b border-black/10 p-3 text-left transition hover:bg-brand-neutral",
-                active ? "border-l-4 border-l-brand-red bg-[#fff7f7]" : "border-l-4 border-l-transparent bg-white"
-              )}
-            >
-              <div className="mb-2 flex items-start justify-between gap-3">
-                <div className="flex min-w-0 items-center gap-3">
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#eef0f2] text-sm font-black text-brand-charcoal">
-                    {initials(name)}
-                  </span>
-                  <div className="min-w-0">
-                    <div className="truncate text-sm font-black text-brand-charcoal">{name}</div>
-                    <div className="mt-1 flex items-center gap-2 text-[11px] text-brand-grey">
-                      <ChannelIcon channel={conversation.channel} className="h-5 w-5" />
-                      {conversation.channel === "whatsapp" ? "WhatsApp" : "Instagram"}
-                    </div>
-                  </div>
-                </div>
-                {conversation.ai_enabled ? <Bot className="shrink-0 text-brand-red" size={16} /> : <CheckCircle2 className="shrink-0 text-brand-grey" size={16} />}
-              </div>
-              <div className="flex items-center justify-between gap-2">
-                <Badge tone={conversation.status === "open" ? "green" : "neutral"}>{conversation.status}</Badge>
-                <span className="text-xs text-brand-grey">{formatDateTime(conversation.last_message_at)}</span>
-              </div>
-            </button>
-          );
-        })}
+            />
+          ))
+        )}
       </div>
     </section>
+  );
+}
+
+function ConversationItem({
+  conversation,
+  active,
+  onClick,
+}: {
+  conversation: Conversation;
+  active: boolean;
+  onClick: () => void;
+}) {
+  const name =
+    conversation.contact?.name ||
+    conversation.contact?.external_id ||
+    `Conversa #${conversation.id}`;
+
+  const palette = avatarColor(name);
+  const statusOpen = conversation.status === "open";
+
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        "focus-ring w-full border-b border-brand-line/70 px-4 py-3.5 text-left transition-colors",
+        active
+          ? "border-l-4 border-l-brand-red bg-red-50/80"
+          : "border-l-4 border-l-transparent bg-white hover:bg-brand-canvas"
+      )}
+    >
+      <div className="flex items-start gap-3">
+        {/* Avatar */}
+        <span
+          className={cn(
+            "flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-black",
+            palette
+          )}
+        >
+          {initials(name)}
+        </span>
+
+        <div className="min-w-0 flex-1">
+          {/* Row 1: name + time */}
+          <div className="flex items-center justify-between gap-2">
+            <span className="item-title truncate">{name}</span>
+            <span className="ui-meta shrink-0">
+              {formatRelativeTime(conversation.last_message_at)}
+            </span>
+          </div>
+
+          {/* Row 2: channel + badges */}
+          <div className="mt-1 flex items-center gap-2">
+            <ChannelIcon channel={conversation.channel} className="h-3.5 w-3.5 shrink-0" />
+            <span className="ui-meta">
+              {conversation.channel === "whatsapp" ? "WhatsApp" : "Instagram"}
+            </span>
+
+            <span className="ml-auto flex items-center gap-1.5">
+              {conversation.ai_enabled && (
+                <span className="flex items-center gap-0.5 rounded-[32px] bg-red-50 px-1.5 py-0.5 text-[10px] font-extrabold text-brand-red">
+                  <Bot size={9} />
+                  IA
+                </span>
+              )}
+              <span
+                className={cn(
+                  "h-2 w-2 rounded-full",
+                  statusOpen ? "bg-emerald-400" : "bg-brand-grey/40"
+                )}
+                title={statusOpen ? "Aberta" : conversation.status}
+              />
+            </span>
+          </div>
+        </div>
+      </div>
+    </button>
+  );
+}
+
+function Pill({ label, value, tone }: { label: string; value: number; tone: "green" | "red" }) {
+  return (
+    <div
+      className={cn(
+        "flex items-center gap-1 rounded-card px-2 py-1 text-[10px] font-extrabold",
+        tone === "green" ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-brand-red"
+      )}
+    >
+      <span>{value}</span>
+      <span className="text-[10px] opacity-70">{label}</span>
+    </div>
+  );
+}
+
+function EmptyState({ search }: { search: string }) {
+  return (
+    <div className="flex flex-col items-center justify-center gap-3 py-16 text-center">
+      <MessageSquare size={32} className="text-brand-muted/40" />
+      <div>
+        <p className="item-title">
+          {search ? "Nenhum resultado" : "Sem conversas"}
+        </p>
+        <p className="ui-meta mt-1">
+          {search
+            ? `Nenhuma conversa com "${search}"`
+            : "Quando clientes enviarem mensagens, elas aparecerão aqui."}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function LoadingSkeleton() {
+  return (
+    <div className="divide-y divide-black/[0.06]">
+      {Array.from({ length: 6 }).map((_, i) => (
+        <div key={i} className="flex items-start gap-3 px-4 py-3">
+          <div className="h-9 w-9 shrink-0 animate-pulse rounded-full bg-slate-100" />
+          <div className="flex-1 space-y-2 pt-1">
+            <div className="h-3 w-2/3 animate-pulse rounded bg-slate-100" />
+            <div className="h-2.5 w-1/3 animate-pulse rounded bg-slate-100" />
+          </div>
+        </div>
+      ))}
+    </div>
   );
 }

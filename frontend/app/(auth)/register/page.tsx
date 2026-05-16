@@ -34,12 +34,12 @@ export default function RegisterPage() {
         <Input placeholder="Nome do operador" value={name} onChange={(event) => setName(event.target.value)} required />
         <Input type="email" placeholder="email@empresa.com" value={email} onChange={(event) => setEmail(event.target.value)} required />
         <Input type="password" placeholder="Senha" value={password} onChange={(event) => setPassword(event.target.value)} required minLength={6} />
-        {error ? <p className="rounded-tight border border-brand-red px-3 py-2 text-sm font-semibold text-brand-red">{error}</p> : null}
+        {error ? <p className="rounded-card border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-brand-red">{error}</p> : null}
         <Button type="submit" className="w-full" disabled={loading}>
           {loading ? "Criando..." : "Criar workspace"}
         </Button>
       </form>
-      <p className="mt-6 text-sm text-brand-grey">
+      <p className="mt-6 text-sm text-brand-muted">
         Ja tem conta?{" "}
         <Link className="font-bold text-brand-red underline" href="/login">
           Entrar

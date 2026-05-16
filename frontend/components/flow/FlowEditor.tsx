@@ -92,38 +92,38 @@ export function FlowEditor({ flow, onSaved }: { flow: Flow; onSaved: (flow: Flow
   }
 
   return (
-    <div className="grid h-[calc(100vh-96px)] grid-cols-[260px_1fr_340px] bg-[#f6f7f8]">
-      <aside className="border-r border-black/10 bg-white">
-        <div className="border-b border-black/10 p-4">
-          <div className="text-sm font-black">Blocos do fluxo</div>
-          <p className="mt-1 text-xs leading-relaxed text-brand-grey">Adicione etapas e conecte os blocos no canvas.</p>
+    <div className="grid h-[calc(100vh-112px)] grid-cols-[280px_1fr_360px] app-canvas">
+      <aside className="border-r border-brand-line bg-white/95">
+        <div className="border-b border-brand-line p-4">
+          <div className="heading-md">Blocos do fluxo</div>
+          <p className="body-muted mt-1">Adicione etapas e conecte os blocos no canvas.</p>
         </div>
         <div className="space-y-2 p-3">
           {palette.map((item) => (
             <button
               key={item.type}
               onClick={() => addNode(item.type, item.label, item.description)}
-              className="focus-ring flex w-full items-start gap-3 rounded-card border border-black/10 bg-white p-3 text-left transition hover:border-brand-red/40 hover:bg-red-50"
+              className="focus-ring surface-soft flex w-full items-start gap-3 rounded-card p-3 text-left transition hover:border-brand-red/40 hover:bg-red-50"
             >
               <SmallNodeIcon type={item.type} />
               <span className="min-w-0">
-                <span className="block text-sm font-black">{item.label}</span>
-                <span className="mt-1 block text-xs leading-relaxed text-brand-grey">{item.description}</span>
+                <span className="item-title block">{item.label}</span>
+                <span className="body-muted mt-1 block">{item.description}</span>
               </span>
             </button>
           ))}
         </div>
       </aside>
 
-      <section className="relative overflow-hidden bg-[#eef0f2]">
-        <div className="absolute left-5 right-5 top-5 z-10 flex items-center justify-between rounded-card border border-black/10 bg-white/95 p-3 backdrop-blur">
+      <section className="relative overflow-hidden bg-[#eef1f4]">
+        <div className="surface-card absolute left-5 right-5 top-5 z-10 flex items-center justify-between rounded-panel p-3 backdrop-blur">
           <div className="flex min-w-0 items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-card bg-brand-red text-white">
+            <div className="icon-tile icon-tile-red">
               <Zap size={17} />
             </div>
             <div className="min-w-0">
-              <Input value={name} onChange={(event) => setName(event.target.value)} className="h-9 w-72 border-transparent bg-[#f6f7f8] py-2 font-bold" />
-              <div className="mt-1 text-xs text-brand-grey">{nodes.length} blocos · {edges.length} conexoes</div>
+              <Input value={name} onChange={(event) => setName(event.target.value)} className="h-9 w-72 border-transparent bg-brand-canvas py-2 font-bold" />
+              <div className="ui-meta mt-1">{nodes.length} blocos · {edges.length} conexoes</div>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -151,21 +151,21 @@ export function FlowEditor({ flow, onSaved }: { flow: Flow; onSaved: (flow: Flow
         </ReactFlow>
       </section>
 
-      <aside className="border-l border-black/10 bg-white">
-        <div className="border-b border-black/10 p-4">
-          <div className="flex items-center gap-2 text-sm font-black">
+      <aside className="border-l border-brand-line bg-white/95">
+        <div className="border-b border-brand-line p-4">
+          <div className="item-title flex items-center gap-2">
             <Zap size={15} className="text-brand-red" />
             Propriedades
           </div>
-          <p className="mt-1 text-xs text-brand-grey">Edite o bloco selecionado.</p>
+          <p className="ui-meta mt-1">Edite o bloco selecionado.</p>
         </div>
         {selectedNode ? (
           <div className="space-y-4 p-4">
-            <div className="flex items-center gap-3 rounded-card border border-black/10 bg-[#f6f7f8] p-3">
+            <div className="surface-soft flex items-center gap-3 rounded-card p-3">
               <SmallNodeIcon type={selectedNode.type || "MessageNode"} />
               <div className="min-w-0">
-                <div className="truncate text-sm font-black">{String(selectedNode.data?.label || selectedNode.type)}</div>
-                <div className="text-xs text-brand-grey">{selectedNode.type}</div>
+                <div className="item-title truncate">{String(selectedNode.data?.label || selectedNode.type)}</div>
+                <div className="ui-meta">{selectedNode.type}</div>
               </div>
             </div>
 
@@ -188,7 +188,7 @@ export function FlowEditor({ flow, onSaved }: { flow: Flow; onSaved: (flow: Flow
                   <select
                     value={String(selectedNode.data?.condition_type || "contains")}
                     onChange={(event) => updateSelectedData("condition_type", event.target.value)}
-                    className="focus-ring h-11 w-full rounded-tight border border-[#333333] bg-white px-3 text-sm"
+                    className="focus-ring h-11 w-full rounded-card border border-brand-line bg-white px-3 text-sm"
                   >
                     <option value="contains">Contem</option>
                     <option value="equals">Igual</option>
@@ -207,7 +207,7 @@ export function FlowEditor({ flow, onSaved }: { flow: Flow; onSaved: (flow: Flow
               </Field>
             ) : null}
 
-            <div className="rounded-card border border-black/10 bg-[#fbfbfb] p-3 text-xs leading-relaxed text-brand-grey">
+            <div className="surface-soft body-muted rounded-card p-3">
               Conecte este bloco arrastando a alca inferior para o proximo passo. Em condicoes, use saidas true/false no canvas.
             </div>
 
@@ -218,10 +218,10 @@ export function FlowEditor({ flow, onSaved }: { flow: Flow; onSaved: (flow: Flow
           </div>
         ) : (
           <div className="p-4">
-            <div className="rounded-card border border-dashed border-black/20 bg-[#f6f7f8] p-6 text-center">
+            <div className="surface-soft rounded-card border-dashed p-6 text-center">
               <Zap className="mx-auto mb-3 text-brand-red" size={24} />
-              <p className="text-sm font-bold">Selecione um bloco</p>
-              <p className="mt-1 text-xs leading-relaxed text-brand-grey">Clique em qualquer bloco no canvas para editar nome, mensagem, condicoes ou webhook.</p>
+              <p className="item-title">Selecione um bloco</p>
+              <p className="body-muted mt-1">Clique em qualquer bloco no canvas para editar nome, mensagem, condicoes ou webhook.</p>
             </div>
           </div>
         )}
@@ -233,7 +233,7 @@ export function FlowEditor({ flow, onSaved }: { flow: Flow; onSaved: (flow: Flow
 function Field({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <label className="block">
-      <span className="mb-2 block text-xs font-bold uppercase text-brand-grey">{title}</span>
+      <span className="ui-label mb-2 block">{title}</span>
       {children}
     </label>
   );

@@ -114,21 +114,21 @@ export function MessageInput({ onSend, disabled }: Props) {
     `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
 
   return (
-    <form onSubmit={onSubmit} className="border-t border-black/10 bg-white p-3">
+    <form onSubmit={onSubmit} className="border-t border-brand-line bg-white/95 p-3 backdrop-blur">
       <div className="mx-auto flex max-w-4xl items-end gap-2">
         {recording ? (
           // Estado de gravação
           <>
-            <div className="flex flex-1 items-center gap-3 rounded-tight border border-brand-red bg-red-50 px-3 py-2.5">
+            <div className="flex flex-1 items-center gap-3 rounded-card border border-red-200 bg-red-50 px-3 py-2.5">
               <span className="flex h-2 w-2 rounded-full bg-brand-red animate-pulse" />
-              <span className="text-sm font-semibold text-brand-red">{formatTime(recordingSeconds)}</span>
-              <span className="text-xs text-brand-grey">Gravando...</span>
+              <span className="item-title text-brand-red">{formatTime(recordingSeconds)}</span>
+              <span className="ui-meta">Gravando...</span>
             </div>
             {/* Cancelar */}
             <button
               type="button"
               onClick={cancelRecording}
-              className="focus-ring flex h-10 w-10 items-center justify-center rounded-tight border border-black/10 text-brand-grey hover:bg-[#f6f7f8]"
+              className="focus-ring flex h-10 w-10 items-center justify-center rounded-card border border-brand-line text-brand-muted hover:bg-brand-canvas"
               title="Cancelar"
             >
               <MicOff size={18} />
@@ -138,7 +138,7 @@ export function MessageInput({ onSend, disabled }: Props) {
               type="button"
               onClick={stopRecording}
               disabled={loading}
-              className="focus-ring flex h-10 w-10 items-center justify-center rounded-tight bg-brand-red text-white hover:opacity-90 disabled:opacity-50"
+              className="focus-ring flex h-10 w-10 items-center justify-center rounded-card bg-brand-red text-white hover:bg-brand-redDark disabled:opacity-50"
               title="Parar e enviar"
             >
               {loading ? (
@@ -163,14 +163,14 @@ export function MessageInput({ onSend, disabled }: Props) {
               disabled={disabled || loading}
               placeholder="Responder ao cliente..."
               rows={1}
-              className="focus-ring min-h-[42px] flex-1 resize-none rounded-tight border border-black/20 px-3 py-2.5 text-sm"
+              className="focus-ring min-h-[44px] flex-1 resize-none rounded-card border border-brand-line bg-brand-canvas px-3.5 py-2.5 text-sm font-medium text-brand-ink placeholder:text-brand-muted"
             />
             {/* Microfone */}
             <button
               type="button"
               onClick={() => void startRecording()}
               disabled={disabled || loading || content.trim().length > 0}
-              className="focus-ring flex h-10 w-10 items-center justify-center rounded-tight border border-black/10 text-brand-grey hover:bg-[#f6f7f8] disabled:opacity-30"
+              className="focus-ring flex h-10 w-10 items-center justify-center rounded-card border border-brand-line text-brand-muted hover:bg-brand-canvas disabled:opacity-30"
               title="Gravar áudio"
             >
               <Mic size={18} />
