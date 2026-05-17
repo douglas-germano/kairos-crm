@@ -11,13 +11,12 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
-    "@next/swc-darwin-arm64": "^15.3.3",
+    "@xyflow/react": "^12.6.4",
     "clsx": "^2.1.1",
     "lucide-react": "^0.468.0",
-    "next": "^15.3.3",
+    "next": "^15.5.18",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
-    "reactflow": "^11.11.4",
     "socket.io-client": "^4.8.1",
     "swr": "^2.2.5",
     "tailwind-merge": "^2.5.5"
