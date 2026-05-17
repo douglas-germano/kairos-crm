@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import "@xyflow/react/dist/style.css";
 import { ReactFlow, addEdge, Background, Connection, Controls, Edge, MiniMap, Node, useEdgesState, useNodesState } from "@xyflow/react";
 import { Bot, GitBranch, MessageSquare, Radio, Save, Trash2, Webhook, Zap } from "lucide-react";
 import { Button } from "@/components/ui/Button";
