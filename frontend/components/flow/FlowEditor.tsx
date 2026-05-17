@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import ReactFlow, { addEdge, Background, Connection, Controls, Edge, MiniMap, Node, useEdgesState, useNodesState } from "reactflow";
+import "@xyflow/react/dist/style.css";
+import { ReactFlow, addEdge, Background, Connection, Controls, Edge, MiniMap, Node, useEdgesState, useNodesState } from "@xyflow/react";
 import { Bot, GitBranch, MessageSquare, Radio, Save, Trash2, Webhook, Zap } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Toggle } from "@/components/ui/Toggle";
@@ -35,7 +36,7 @@ export function FlowEditor({ flow, onSaved }: { flow: Flow; onSaved: (flow: Flow
 
   const selectedNode = useMemo(() => nodes.find((node) => node.id === selectedNodeId), [nodes, selectedNodeId]);
 
-  const onConnect = useCallback((connection: Connection) => setEdges((current) => addEdge(connection, current)), [setEdges]);
+  const onConnect = useCallback((connection: Connection) => setEdges((current: Edge[]) => addEdge(connection, current)), [setEdges]);
 
   async function save() {
     setSaving(true);
@@ -67,7 +68,7 @@ export function FlowEditor({ flow, onSaved }: { flow: Flow; onSaved: (flow: Flow
 
   function addNode(type: string, label: string, description: string) {
     const id = `${type}-${Date.now()}`;
-    setNodes((current) => [
+    setNodes((current: Node[]) => [
       ...current,
       {
         id,
@@ -81,13 +82,13 @@ export function FlowEditor({ flow, onSaved }: { flow: Flow; onSaved: (flow: Flow
 
   function updateSelectedData(field: string, value: string) {
     if (!selectedNodeId) return;
-    setNodes((current) => current.map((node) => (node.id === selectedNodeId ? { ...node, data: { ...node.data, [field]: value } } : node)));
+    setNodes((current: Node[]) => current.map((node) => (node.id === selectedNodeId ? { ...node, data: { ...node.data, [field]: value } } : node)));
   }
 
   function deleteSelectedNode() {
     if (!selectedNodeId) return;
-    setNodes((current) => current.filter((node) => node.id !== selectedNodeId));
-    setEdges((current) => current.filter((edge) => edge.source !== selectedNodeId && edge.target !== selectedNodeId));
+    setNodes((current: Node[]) => current.filter((node) => node.id !== selectedNodeId));
+    setEdges((current: Edge[]) => current.filter((edge) => edge.source !== selectedNodeId && edge.target !== selectedNodeId));
     setSelectedNodeId(null);
   }
 
@@ -141,7 +142,7 @@ export function FlowEditor({ flow, onSaved }: { flow: Flow; onSaved: (flow: Flow
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
           nodeTypes={nodeTypes}
-          onNodeClick={(_, node) => setSelectedNodeId(node.id)}
+          onNodeClick={(_: React.MouseEvent, node: Node) => setSelectedNodeId(node.id)}
           fitView
           className="pt-20"
         >

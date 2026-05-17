@@ -1,5 +1,5 @@
 import { Bot, GitBranch, MessageSquare, Radio, Webhook } from "lucide-react";
-import { Handle, NodeProps, Position } from "reactflow";
+import { Handle, NodeProps, Position } from "@xyflow/react";
 
 const nodeMeta = {
   TriggerNode: { icon: Radio, label: "Gatilho", color: "bg-brand-red", soft: "bg-red-50 text-brand-red" },
