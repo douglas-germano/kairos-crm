@@ -191,7 +191,7 @@ export function ChatWindow({ conversation, onConversationChange }: Props) {
         {/* Indicador de carregamento de mensagens antigas */}
         {isLoadingMore && (
           <div className="mb-3 flex justify-center">
-            <span className="surface-card flex items-center gap-1.5 rounded-[32px] px-3 py-1.5 text-xs text-brand-muted">
+            <span className="surface-card flex items-center gap-1.5 rounded-pill px-3 py-1.5 text-xs text-brand-muted">
               <Loader2 size={12} className="animate-spin" />
               Carregando mensagens antigas…
             </span>
@@ -201,7 +201,7 @@ export function ChatWindow({ conversation, onConversationChange }: Props) {
         {/* Indicador: início do histórico */}
         {!hasMore && messages.length > 0 && !isLoading && (
           <div className="mb-3 flex justify-center">
-            <span className="surface-card rounded-[32px] px-3 py-1 text-[11px] font-semibold text-brand-muted">
+            <span className="surface-card rounded-pill px-3 py-1 text-[11px] font-semibold text-brand-muted">
               Início da conversa
             </span>
           </div>
@@ -242,7 +242,7 @@ export function ChatWindow({ conversation, onConversationChange }: Props) {
       {/* Rodapé */}
       <div className="shrink-0">
         {sendError && (
-          <div className="flex items-center gap-2 border-t border-red-200 bg-red-50 px-4 py-2 text-xs text-red-700">
+          <div className="flex items-center gap-2 border-t border-brand-red200 bg-brand-red50 px-4 py-2 text-xs font-semibold text-brand-red">
             <AlertCircle size={14} className="shrink-0" />
             <span className="flex-1">{sendError}</span>
             <button onClick={() => setSendError(null)} aria-label="Fechar erro">

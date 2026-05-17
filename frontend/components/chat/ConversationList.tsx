@@ -22,12 +22,12 @@ const FILTERS: Array<{ label: string; value: Channel | "all" }> = [
 ];
 
 const AVATAR_PALETTES = [
-  "bg-blue-100 text-blue-700",
-  "bg-violet-100 text-violet-700",
-  "bg-emerald-100 text-emerald-700",
-  "bg-orange-100 text-orange-700",
-  "bg-pink-100 text-pink-700",
-  "bg-teal-100 text-teal-700",
+  "bg-brand-info text-white",
+  "bg-brand-success text-white",
+  "bg-brand-warning text-brand-ink",
+  "bg-brand-red text-white",
+  "bg-brand-charcoal text-white",
+  "bg-brand-grey text-white",
 ];
 
 function avatarColor(name: string) {
@@ -144,7 +144,7 @@ function ConversationItem({
       className={cn(
         "focus-ring w-full border-b border-brand-line/70 px-4 py-3.5 text-left transition-colors",
         active
-          ? "border-l-4 border-l-brand-red bg-red-50/80"
+          ? "border-l-4 border-l-brand-red bg-brand-red50/80"
           : "border-l-4 border-l-transparent bg-white hover:bg-brand-canvas"
       )}
     >
@@ -177,7 +177,7 @@ function ConversationItem({
 
             <span className="ml-auto flex items-center gap-1.5">
               {conversation.ai_enabled && (
-                <span className="flex items-center gap-0.5 rounded-[32px] bg-red-50 px-1.5 py-0.5 text-[10px] font-extrabold text-brand-red">
+                <span className="flex items-center gap-0.5 rounded-pill bg-brand-red50 px-1.5 py-0.5 font-condensed text-[10px] font-extrabold text-brand-red">
                   <Bot size={9} />
                   IA
                 </span>
@@ -185,7 +185,7 @@ function ConversationItem({
               <span
                 className={cn(
                   "h-2 w-2 rounded-full",
-                  statusOpen ? "bg-emerald-400" : "bg-brand-grey/40"
+                  statusOpen ? "bg-brand-success" : "bg-brand-grey/40"
                 )}
                 title={statusOpen ? "Aberta" : conversation.status}
               />
@@ -201,8 +201,8 @@ function Pill({ label, value, tone }: { label: string; value: number; tone: "gre
   return (
     <div
       className={cn(
-        "flex items-center gap-1 rounded-card px-2 py-1 text-[10px] font-extrabold",
-        tone === "green" ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-brand-red"
+        "flex items-center gap-1 rounded-card px-2 py-1 font-condensed text-[10px] font-extrabold",
+        tone === "green" ? "bg-brand-successSoft text-brand-successStrong" : "bg-brand-red50 text-brand-red"
       )}
     >
       <span>{value}</span>
@@ -234,10 +234,10 @@ function LoadingSkeleton() {
     <div className="divide-y divide-black/[0.06]">
       {Array.from({ length: 6 }).map((_, i) => (
         <div key={i} className="flex items-start gap-3 px-4 py-3">
-          <div className="h-9 w-9 shrink-0 animate-pulse rounded-full bg-slate-100" />
+          <div className="h-9 w-9 shrink-0 animate-pulse rounded-full bg-brand-neutral" />
           <div className="flex-1 space-y-2 pt-1">
-            <div className="h-3 w-2/3 animate-pulse rounded bg-slate-100" />
-            <div className="h-2.5 w-1/3 animate-pulse rounded bg-slate-100" />
+            <div className="h-3 w-2/3 animate-pulse rounded bg-brand-neutral" />
+            <div className="h-2.5 w-1/3 animate-pulse rounded bg-brand-neutral" />
           </div>
         </div>
       ))}

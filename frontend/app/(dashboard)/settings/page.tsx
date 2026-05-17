@@ -111,7 +111,7 @@ function WhatsAppConnectCard({ onConnected }: { onConnected: () => void }) {
         <div className="item-title">Nenhum número conectado</div>
         <div className="body-muted mt-1">Gere o QR code e escaneie com o WhatsApp para vincular</div>
       </div>
-      {phase === "error" && <p className="text-xs text-red-600">{errorMsg}</p>}
+      {phase === "error" && <p className="text-xs font-semibold text-brand-red">{errorMsg}</p>}
       <Button onClick={handleConnect} id="btn-wa-connect"><QrCode size={17} />Gerar QR Code</Button>
     </div>
   );
@@ -119,17 +119,17 @@ function WhatsAppConnectCard({ onConnected }: { onConnected: () => void }) {
   if (phase === "loading") return (
     <div className="flex flex-col items-center gap-3 py-10 text-center">
       <Loader2 size={32} className="animate-spin text-brand-red" />
-      <div className="body-muted">Gerando QR code...</div>
+      <div className="body-muted">Gerando QR code</div>
     </div>
   );
 
   if (phase === "connected") return (
     <div className="flex flex-col items-center gap-3 py-8 text-center">
-      <span className="flex h-14 w-14 items-center justify-center rounded-full bg-green-50">
-        <CheckCircle2 size={28} className="text-green-600" />
+      <span className="flex h-14 w-14 items-center justify-center rounded-full bg-brand-successSoft">
+        <CheckCircle2 size={28} className="text-brand-successStrong" />
       </span>
       <div>
-        <div className="item-title text-green-700">WhatsApp Conectado!</div>
+        <div className="item-title text-brand-successStrong">WhatsApp conectado</div>
         <div className="ui-meta mt-1 font-mono">{instanceName}</div>
       </div>
     </div>
@@ -149,8 +149,8 @@ function WhatsAppConnectCard({ onConnected }: { onConnected: () => void }) {
         <div className="relative">
           <img src={qrSrc} alt="QR Code WhatsApp" className="h-52 w-52 rounded-card border border-brand-line object-contain p-2" />
           <span className="absolute -right-1.5 -top-1.5 flex h-4 w-4">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75" />
-            <span className="relative inline-flex h-4 w-4 rounded-full bg-green-500" />
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-brand-success opacity-75" />
+            <span className="relative inline-flex h-4 w-4 rounded-full bg-brand-success" />
           </span>
         </div>
       ) : (
@@ -160,7 +160,7 @@ function WhatsAppConnectCard({ onConnected }: { onConnected: () => void }) {
       )}
       <div className="ui-meta flex items-center gap-2">
         <Loader2 size={13} className="animate-spin" />
-        Aguardando conexão... ({countdown}s)
+        Aguardando conexão ({countdown}s)
       </div>
       <button onClick={handleRefreshQr} className="ui-meta flex items-center gap-1.5 hover:text-brand-ink" id="btn-wa-refresh-qr">
         <RefreshCw size={13} />Atualizar QR code
@@ -180,18 +180,18 @@ function WhatsAppActiveCard({ integration, onDisconnect }: { integration: Integr
   }
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center gap-3 rounded-card bg-green-50 p-3">
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-green-100">
-          <Wifi size={18} className="text-green-600" />
+      <div className="flex items-center gap-3 rounded-card bg-brand-successSoft p-3">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/75">
+          <Wifi size={18} className="text-brand-successStrong" />
         </span>
         <div className="min-w-0">
-          <div className="ui-label text-green-700">Conectado e ativo</div>
-          <div className="ui-meta truncate font-mono text-green-600">{String(integration.meta?.instance_name || "")}</div>
+          <div className="ui-label text-brand-successStrong">Conectado e ativo</div>
+          <div className="ui-meta truncate font-mono text-brand-successStrong">{String(integration.meta?.instance_name || "")}</div>
         </div>
       </div>
       <Button variant="ghost" onClick={handleDisconnect} disabled={disconnecting} className="w-full" id="btn-wa-disconnect">
         {disconnecting ? <Loader2 size={15} className="animate-spin" /> : <Power size={15} />}
-        {disconnecting ? "Desconectando..." : "Desconectar WhatsApp"}
+        {disconnecting ? "Desconectando" : "Desconectar WhatsApp"}
       </Button>
     </div>
   );
@@ -227,18 +227,18 @@ function InstagramSection({ integration, onDisconnect }: { integration: Integrat
 
       {connected && integration ? (
         <div className="flex flex-col gap-4">
-          <div className="flex items-center gap-3 rounded-card bg-green-50 p-3">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-green-100">
-              <CheckCircle2 size={18} className="text-green-600" />
+          <div className="flex items-center gap-3 rounded-card bg-brand-successSoft p-3">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/75">
+              <CheckCircle2 size={18} className="text-brand-successStrong" />
             </span>
             <div className="min-w-0">
-              <div className="ui-label text-green-700">{String(integration.meta?.page_name || "Página conectada")}</div>
-              <div className="ui-meta truncate font-mono text-green-600">ID: {String(integration.meta?.ig_user_id || "")}</div>
+              <div className="ui-label text-brand-successStrong">{String(integration.meta?.page_name || "Página conectada")}</div>
+              <div className="ui-meta truncate font-mono text-brand-successStrong">ID: {String(integration.meta?.ig_user_id || "")}</div>
             </div>
           </div>
           <Button variant="ghost" onClick={handleDisconnect} disabled={disconnecting} className="w-full" id="btn-ig-disconnect">
             {disconnecting ? <Loader2 size={15} className="animate-spin" /> : <Power size={15} />}
-            {disconnecting ? "Desconectando..." : "Desconectar Instagram"}
+            {disconnecting ? "Desconectando" : "Desconectar Instagram"}
           </Button>
         </div>
       ) : (
@@ -318,7 +318,7 @@ function PerfilSection({ user, onSaved, onLogout }: { user: UserData | undefined
               <p className="body-muted truncate">{user?.email || "Sem e-mail carregado"}</p>
             </div>
           </div>
-          <Button type="button" variant="ghost" onClick={onLogout} className="border-red-200 text-brand-red hover:bg-red-50 sm:self-center">
+          <Button type="button" variant="ghost" onClick={onLogout} className="border-brand-red200 text-brand-red hover:bg-brand-red50 sm:self-center">
             <LogOut size={16} />
             Sair da conta
           </Button>
@@ -347,12 +347,12 @@ function PerfilSection({ user, onSaved, onLogout }: { user: UserData | undefined
             />
           </div>
           {infoMsg && (
-            <p className={`text-xs ${infoMsg.includes("sucesso") ? "text-green-600" : "text-red-600"}`}>{infoMsg}</p>
+            <p className={`text-xs font-semibold ${infoMsg.includes("sucesso") ? "text-brand-successStrong" : "text-brand-red"}`}>{infoMsg}</p>
           )}
           <div className="flex justify-end pt-1">
             <Button type="submit" disabled={saving} id="btn-save-profile">
               {saving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
-              {saving ? "Salvando..." : "Salvar"}
+              {saving ? "Salvando" : "Salvar"}
             </Button>
           </div>
         </div>
@@ -384,12 +384,12 @@ function PerfilSection({ user, onSaved, onLogout }: { user: UserData | undefined
             />
           </div>
           {pwMsg && (
-            <p className={`text-xs ${pwMsg.includes("sucesso") ? "text-green-600" : "text-red-600"}`}>{pwMsg}</p>
+            <p className={`text-xs font-semibold ${pwMsg.includes("sucesso") ? "text-brand-successStrong" : "text-brand-red"}`}>{pwMsg}</p>
           )}
           <div className="flex justify-end pt-1">
             <Button type="submit" disabled={savingPw || !currentPassword || !newPassword} id="btn-save-password">
               {savingPw ? <Loader2 size={15} className="animate-spin" /> : <KeyRound size={15} />}
-              {savingPw ? "Atualizando..." : "Atualizar senha"}
+              {savingPw ? "Atualizando" : "Atualizar senha"}
             </Button>
           </div>
         </div>
@@ -449,13 +449,13 @@ function WorkspaceSection({ workspace, onSaved }: { workspace: Workspace | undef
         )}
 
         {msg && (
-          <p className={`text-xs ${msg.includes("sucesso") ? "text-green-600" : "text-red-600"}`}>{msg}</p>
+          <p className={`text-xs font-semibold ${msg.includes("sucesso") ? "text-brand-successStrong" : "text-brand-red"}`}>{msg}</p>
         )}
 
         <div className="flex justify-end">
           <Button type="submit" disabled={saving} id="btn-save-workspace">
             {saving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
-            {saving ? "Salvando..." : "Salvar"}
+            {saving ? "Salvando" : "Salvar"}
           </Button>
         </div>
       </div>
@@ -597,7 +597,7 @@ export default function SettingsPage() {
                   className={[
                     "focus-ring flex w-full items-center gap-2.5 rounded-card px-3 py-2.5 text-sm font-bold transition-colors",
                     activeSection === item.id
-                      ? "bg-red-50 text-brand-red"
+                      ? "bg-brand-red50 text-brand-red"
                       : "text-brand-muted hover:bg-white hover:text-brand-ink",
                   ].join(" ")}
                 >

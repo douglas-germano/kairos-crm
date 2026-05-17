@@ -119,10 +119,10 @@ export function MessageInput({ onSend, disabled }: Props) {
         {recording ? (
           // Estado de gravação
           <>
-            <div className="flex flex-1 items-center gap-3 rounded-card border border-red-200 bg-red-50 px-3 py-2.5">
+            <div className="flex flex-1 items-center gap-3 rounded-card border border-brand-red200 bg-brand-red50 px-3 py-2.5">
               <span className="flex h-2 w-2 rounded-full bg-brand-red animate-pulse" />
               <span className="item-title text-brand-red">{formatTime(recordingSeconds)}</span>
-              <span className="ui-meta">Gravando...</span>
+              <span className="ui-meta">Gravando</span>
             </div>
             {/* Cancelar */}
             <button

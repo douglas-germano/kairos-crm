@@ -20,7 +20,7 @@ const palette = [
 
 const defaultNodes: Node[] = [
   { id: "trigger-1", type: "TriggerNode", position: { x: 120, y: 80 }, data: { label: "Primeira mensagem", trigger_type: "first_message" } },
-  { id: "message-1", type: "MessageNode", position: { x: 120, y: 250 }, data: { label: "Boas-vindas", message: "Ola! Como posso ajudar?" } }
+  { id: "message-1", type: "MessageNode", position: { x: 120, y: 250 }, data: { label: "Boas-vindas", message: "Olá, como posso ajudar?" } }
 ];
 
 const defaultEdges: Edge[] = [{ id: "trigger-1-message-1", source: "trigger-1", target: "message-1" }];
@@ -103,7 +103,7 @@ export function FlowEditor({ flow, onSaved }: { flow: Flow; onSaved: (flow: Flow
             <button
               key={item.type}
               onClick={() => addNode(item.type, item.label, item.description)}
-              className="focus-ring surface-soft flex w-full items-start gap-3 rounded-card p-3 text-left transition hover:border-brand-red/40 hover:bg-red-50"
+              className="focus-ring surface-soft flex w-full items-start gap-3 rounded-card p-3 text-left transition hover:border-brand-red/40 hover:bg-brand-red50"
             >
               <SmallNodeIcon type={item.type} />
               <span className="min-w-0">

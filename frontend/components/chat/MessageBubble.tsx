@@ -62,14 +62,14 @@ export function MessageBubble({ message }: { message: Message }) {
     "max-w-[78%] rounded-panel px-3.5 py-2.5 shadow-sm",
     outbound
       ? failed
-        ? "bg-red-100 text-red-800"
+        ? "bg-brand-red100 text-brand-red"
         : "bg-brand-charcoal text-white"
       : "border border-brand-line bg-white text-brand-ink"
   );
 
   const metaClass = cn(
     "mt-1.5 flex items-center gap-1 text-[11px]",
-    outbound ? (failed ? "text-red-500" : "text-white/60") : "text-brand-muted"
+    outbound ? (failed ? "text-brand-red" : "text-white/60") : "text-brand-muted"
   );
 
   return (

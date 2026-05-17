@@ -66,7 +66,7 @@ export default function AgentsPage() {
       />
       <div className="section-pad">
         <section className="grid gap-4 xl:grid-cols-2">
-          {isLoading ? <div className="body-muted">Carregando agentes...</div> : null}
+          {isLoading ? <div className="body-muted">Carregando agentes</div> : null}
           {agents.map((agent) => (
             <article key={agent.id} className="surface-card overflow-hidden rounded-panel">
               <div className="flex items-start justify-between gap-4 border-b border-brand-line bg-white p-4">
