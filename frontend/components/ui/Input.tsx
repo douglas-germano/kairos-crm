@@ -1,17 +1,20 @@
-import { InputHTMLAttributes, TextareaHTMLAttributes } from "react";
+import { forwardRef, InputHTMLAttributes, TextareaHTMLAttributes } from "react";
 import { cn } from "@/lib/utils";
 
-export function Input({ className, ...props }: InputHTMLAttributes<HTMLInputElement>) {
-  return (
-    <input
-      className={cn(
-        "focus-ring h-10 w-full rounded-card border border-brand-line bg-white px-3.5 text-sm font-medium text-brand-ink shadow-sm outline-none transition placeholder:text-brand-muted hover:border-brand-charcoal/20",
-        className
-      )}
-      {...props}
-    />
-  );
-}
+export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>(
+  function Input({ className, ...props }, ref) {
+    return (
+      <input
+        ref={ref}
+        className={cn(
+          "focus-ring h-10 w-full rounded-card border border-brand-line bg-white px-3.5 text-sm font-medium text-brand-ink shadow-sm outline-none transition placeholder:text-brand-muted hover:border-brand-charcoal/20",
+          className
+        )}
+        {...props}
+      />
+    );
+  }
+);
 
 export function Textarea({ className, ...props }: TextareaHTMLAttributes<HTMLTextAreaElement>) {
   return (
