@@ -22,12 +22,17 @@ function detectMime(b64: string): string {
 
 function AudioPlayer({ content }: { content: string }) {
   const [src, setSrc] = useState<string>("");
+  const [failed, setFailed] = useState(false);
   const urlRef = useRef<string>("");
 
   useEffect(() => {
+    setFailed(false);
+    setSrc("");
     try {
-      const mime = detectMime(content);
-      const binary = atob(content);
+      // Remove data: prefix if present, strip whitespace
+      const raw = content.replace(/^data:[^;]+;base64,/, "").replace(/\s/g, "");
+      const mime = detectMime(raw);
+      const binary = atob(raw);
       const bytes = new Uint8Array(binary.length);
       for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
       const blob = new Blob([bytes], { type: mime });
@@ -35,14 +40,24 @@ function AudioPlayer({ content }: { content: string }) {
       urlRef.current = url;
       setSrc(url);
     } catch {
-      setSrc("");
+      setFailed(true);
     }
     return () => {
       if (urlRef.current) URL.revokeObjectURL(urlRef.current);
     };
   }, [content]);
 
-  if (!src) return <span className="ui-meta opacity-60">Carregando áudio…</span>;
+  if (failed) return (
+    <span className="flex items-center gap-1.5 ui-meta opacity-70">
+      🎙️ Mensagem de voz
+    </span>
+  );
+  if (!src) return (
+    <span className="flex items-center gap-1.5 ui-meta opacity-60">
+      <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-current" />
+      Carregando áudio…
+    </span>
+  );
   return (
     <audio
       controls
