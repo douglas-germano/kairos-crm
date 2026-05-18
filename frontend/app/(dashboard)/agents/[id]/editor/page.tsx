@@ -10,6 +10,8 @@ import { apiFetch } from "@/lib/api";
 import type { Flow } from "@/lib/types";
 import { useAgent, useFlows } from "@/hooks/useAgent";
 
+export const runtime = "edge";
+
 export default function AgentEditorPage() {
   const params = useParams<{ id: string }>();
   const agentId = Number(params.id);
