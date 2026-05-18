@@ -40,9 +40,17 @@ class WhatsAppService:
             )
             return resp.json()
         except requests.RequestException as exc:
+            body = ""
+            if hasattr(exc, "response") and exc.response is not None:
+                try:
+                    body = exc.response.json()
+                except Exception:
+                    body = exc.response.text[:500]
             logger.error(
-                "Falha ao enviar mensagem WhatsApp",
-                extra={"to": to, "error": str(exc)},
+                "Falha ao enviar mensagem WhatsApp | to=%s status=%s body=%s",
+                to,
+                getattr(getattr(exc, "response", None), "status_code", "N/A"),
+                body,
             )
             raise
 
