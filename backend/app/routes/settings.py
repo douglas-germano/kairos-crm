@@ -39,6 +39,14 @@ def _webhook_url() -> str:
     return f"{base}/webhooks/whatsapp"
 
 
+def _refresh_instance_config(instance_name: str, webhook_url: str):
+    evo_svc.set_webhook(instance_name, webhook_url)
+    try:
+        evo_svc.set_settings(instance_name, groups_ignore=False, sync_full_history=True)
+    except EvolutionError as exc:
+        logger.warning("Falha ao ajustar settings WhatsApp", extra={"error": str(exc)})
+
+
 # ─── Workspace ────────────────────────────────────────────────────────────────
 
 @bp.get("/workspace")
@@ -93,12 +101,12 @@ def whatsapp_connect():
 
         if existing:
             # Instância já existe — garante que o webhook aponta para o backend atual.
-            evo_svc.set_webhook(instance_name, webhook_url)
+            _refresh_instance_config(instance_name, webhook_url)
             qr_data = evo_svc.get_qr(instance_name)
         else:
             # Cria nova instância (já retorna QR quando qrcode=True)
             result = evo_svc.create_instance(instance_name, webhook_url)
-            evo_svc.set_webhook(instance_name, webhook_url)
+            _refresh_instance_config(instance_name, webhook_url)
             qrcode_payload = result.get("qrcode", {})
             qr_data = {
                 "code": qrcode_payload.get("base64") or qrcode_payload.get("code", ""),
@@ -170,7 +178,7 @@ def whatsapp_status():
     instance_name = _instance_name(user_id)
 
     try:
-        evo_svc.set_webhook(instance_name, _webhook_url())
+        _refresh_instance_config(instance_name, _webhook_url())
         state_data = evo_svc.connection_state(instance_name)
         state = state_data.get("instance", {}).get("state", "close")
 

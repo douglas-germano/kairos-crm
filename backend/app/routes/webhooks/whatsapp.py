@@ -81,20 +81,22 @@ def _handle_connection_update(instance_name: str, data: dict):
 
 def _handle_messages(instance_name: str, data: dict):
     """Normaliza payloads da Evolution e processa uma ou mais mensagens."""
-    messages = data.get("messages")
-    if isinstance(messages, list):
-        for message in messages:
-            _handle_message(instance_name, message)
-        return
-    if isinstance(messages, dict):
-        records = messages.get("records") or messages.get("messages") or []
-        if isinstance(records, list):
-            for message in records:
-                if isinstance(message, dict):
-                    _handle_message(instance_name, message)
-            return
+    handled = 0
+    for message in _message_items(data):
+        _handle_message(instance_name, message)
+        handled += 1
 
-    _handle_message(instance_name, data)
+    if handled == 0:
+        integration = _find_integration_any_status(instance_name)
+        if integration:
+            _update_health(
+                integration,
+                last_webhook_at=datetime.utcnow().isoformat(),
+                last_webhook_event="MESSAGES_UPSERT",
+                last_webhook_error="payload sem mensagens processaveis",
+                last_webhook_payload_shape=type(data).__name__,
+            )
+            db.session.commit()
 
 
 def _handle_message(instance_name: str, msg_data: dict):
@@ -102,16 +104,17 @@ def _handle_message(instance_name: str, msg_data: dict):
     key = msg_data.get("key", {})
     remote_jid = key.get("remoteJid", "")
     sender_pn = key.get("senderPn", "")
-    from_me = key.get("fromMe", False)
+    from_me = bool(key.get("fromMe", False))
     external_id = key.get("id", "")
-
-    # Ignora mensagens enviadas por nós mesmos
-    if from_me:
-        return
 
     contact_external_id = canonical_external_id(remote_jid, sender_pn)
     if not contact_external_id:
-        logger.warning("remoteJid inválido", extra={"remote_jid": remote_jid})
+        _mark_webhook_ignored(
+            instance_name,
+            "remoteJid inválido",
+            remote_jid=remote_jid,
+            external_id=external_id,
+        )
         return
 
     # Extrai conteúdo da mensagem (suporta texto, imagem, figurinha, áudio, vídeo)
@@ -121,7 +124,13 @@ def _handle_message(instance_name: str, msg_data: dict):
     content, content_type = _extract_message_content(message_obj)
 
     if not content:
-        logger.debug("Mensagem sem conteúdo suportado ignorada", extra={"jid": remote_jid})
+        _mark_webhook_ignored(
+            instance_name,
+            "mensagem sem conteúdo suportado",
+            remote_jid=remote_jid,
+            external_id=external_id,
+            message_keys=list(message_obj.keys()) if isinstance(message_obj, dict) else [],
+        )
         return
 
     # Encontra a integração WhatsApp pela instance_name
@@ -200,13 +209,14 @@ def _handle_message(instance_name: str, msg_data: dict):
             db.session.commit()
             return
 
-    # Salva a mensagem
+    # Salva a mensagem. Mensagens enviadas fora do CRM chegam como fromMe=True e
+    # devem aparecer no histórico para manter a conversa atualizada.
     msg = Message(
         conversation_id=conversation.id,
-        direction="inbound",
+        direction="outbound" if from_me else "inbound",
         content=content,
         content_type=content_type,
-        status="delivered",
+        status="sent" if from_me else "delivered",
         external_id=external_id,
     )
     db.session.add(msg)
@@ -227,21 +237,51 @@ def _handle_message(instance_name: str, msg_data: dict):
     except Exception as exc:
         logger.warning("Falha ao emitir evento SocketIO new_message | conv=%s error=%s", conversation.id, exc)
 
-    # Enfileira para processamento de IA
-    try:
-        rq_queue.enqueue(
-            "app.tasks.process_message.run",
-            msg.id,
-            job_timeout=60,
-        )
-    except Exception as exc:
-        logger.error("Falha ao enfileirar mensagem WhatsApp", extra={"error": str(exc)})
+    if not from_me:
+        # Enfileira para processamento de IA apenas para mensagens do cliente.
+        try:
+            rq_queue.enqueue(
+                "app.tasks.process_message.run",
+                msg.id,
+                job_timeout=60,
+            )
+        except Exception as exc:
+            logger.error("Falha ao enfileirar mensagem WhatsApp", extra={"error": str(exc)})
 
+
+def _message_items(data) -> list[dict]:
+    """Retorna mensagens em formatos comuns do webhook/consulta da Evolution."""
+    if isinstance(data, list):
+        return [item for item in data if isinstance(item, dict)]
+    if not isinstance(data, dict):
+        return []
+
+    for key in ("messages", "records"):
+        value = data.get(key)
+        if isinstance(value, list):
+            return [item for item in value if isinstance(item, dict)]
+        if isinstance(value, dict):
+            nested = value.get("records") or value.get("messages") or value.get("data")
+            if isinstance(nested, list):
+                return [item for item in nested if isinstance(item, dict)]
+            return [value]
+
+    if isinstance(data.get("data"), list):
+        return [item for item in data["data"] if isinstance(item, dict)]
+    if isinstance(data.get("data"), dict):
+        return _message_items(data["data"])
+
+    return [data] if isinstance(data.get("key"), dict) or isinstance(data.get("message"), dict) else []
 
 
 def _extract_message_content(message_obj: dict) -> tuple[str, str]:
     """Extrai (content, content_type) de um objeto de mensagem da Evolution API."""
     m = message_obj or {}
+
+    for wrapper_key in ("ephemeralMessage", "viewOnceMessage", "documentWithCaptionMessage"):
+        wrapped = (m.get(wrapper_key) or {}).get("message")
+        if wrapped:
+            return _extract_message_content(wrapped)
 
     if text := (m.get("conversation") or (m.get("extendedTextMessage") or {}).get("text", "")):
         return text, "text"
@@ -266,7 +306,27 @@ def _extract_message_content(message_obj: dict) -> tuple[str, str]:
         data = doc.get("url") or doc.get("title") or ""
         return data or "[documento]", "template"
 
+    if reaction := m.get("reactionMessage"):
+        data = reaction.get("text") or ""
+        return data or "[reação]", "text"
+
     return "", "text"
+
+
+def _mark_webhook_ignored(instance_name: str, reason: str, **fields):
+    logger.warning("Mensagem WhatsApp ignorada | reason=%s", reason, extra=fields)
+    integration = _find_integration_any_status(instance_name)
+    if not integration:
+        return
+    _update_health(
+        integration,
+        last_webhook_at=datetime.utcnow().isoformat(),
+        last_webhook_event="MESSAGES_UPSERT",
+        last_webhook_ignored_reason=reason,
+        last_webhook_ignored_fields=fields,
+        last_webhook_error=None,
+    )
+    db.session.commit()
 
 
 def _find_integration(instance_name: str) -> Integration | None:

@@ -69,7 +69,7 @@ def create_instance(instance_name: str, webhook_url: str) -> dict:
         "instanceName": instance_name,
         "integration": "WHATSAPP-BAILEYS",
         "qrcode": True,
-        "groupsIgnore": True,
+        "groupsIgnore": False,
         "readMessages": False,
         "alwaysOnline": True,
         "webhook": {
