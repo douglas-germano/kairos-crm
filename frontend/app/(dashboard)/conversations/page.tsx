@@ -45,7 +45,16 @@ export default function ConversationsPage() {
           setSelected(conv);
         }}
       />
-      <ChatWindow conversation={current} onConversationChange={() => void mutate()} />
+      <ChatWindow
+        conversation={current}
+        onConversationChange={() => void mutate()}
+        onConversationDeleted={(conversationId) => {
+          if (selected?.id === conversationId || current?.id === conversationId) {
+            setSelected(undefined);
+          }
+          void mutate();
+        }}
+      />
     </div>
   );
 }

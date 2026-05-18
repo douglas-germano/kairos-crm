@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import useSWRInfinite from "swr/infinite";
-import { AlertCircle, Bot, CircleSlash, Loader2, MoreHorizontal, RefreshCw, X } from "lucide-react";
+import { AlertCircle, Bot, CircleSlash, Loader2, MoreHorizontal, RefreshCw, Trash2, X } from "lucide-react";
 import { apiFetch, swrFetcher } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 import { useSocket } from "@/hooks/useSocket";
@@ -20,9 +20,10 @@ type SyncState = "idle" | "syncing" | "done" | "error";
 type Props = {
   conversation?: Conversation;
   onConversationChange: () => void;
+  onConversationDeleted?: (conversationId: number) => void;
 };
 
-export function ChatWindow({ conversation, onConversationChange }: Props) {
+export function ChatWindow({ conversation, onConversationChange, onConversationDeleted }: Props) {
   const { workspace } = useAuth(false);
   const [sendError, setSendError] = useState<string | null>(null);
   const [syncState, setSyncState] = useState<SyncState>("idle");
@@ -192,6 +193,20 @@ export function ChatWindow({ conversation, onConversationChange }: Props) {
     }
   }
 
+  async function deleteConversation() {
+    if (!conversation) return;
+    const name =
+      conversation.contact?.name ||
+      conversation.contact?.external_id ||
+      `Conversa #${conversation.id}`;
+    const confirmed = window.confirm(`Excluir a conversa com "${name}" e todas as mensagens?`);
+    if (!confirmed) return;
+
+    await apiFetch(`/api/conversations/${conversation.id}`, { method: "DELETE" });
+    onConversationDeleted?.(conversation.id);
+    onConversationChange();
+  }
+
   if (!conversation) {
     return (
       <section className="flex h-full items-center justify-center app-canvas p-6">
@@ -238,6 +253,15 @@ export function ChatWindow({ conversation, onConversationChange }: Props) {
                 onSync={() => void handleSync()}
               />
             )}
+
+            <button
+              onClick={() => void deleteConversation()}
+              className="focus-ring rounded-card bg-brand-canvas p-2 text-brand-muted transition hover:bg-brand-red50 hover:text-brand-red"
+              aria-label="Excluir conversa"
+              title="Excluir conversa"
+            >
+              <Trash2 size={18} />
+            </button>
 
             <button
               className="focus-ring rounded-card bg-brand-canvas p-2 text-brand-muted transition hover:text-brand-ink"

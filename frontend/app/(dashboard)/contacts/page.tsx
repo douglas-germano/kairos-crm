@@ -2,12 +2,13 @@
 
 export const runtime = "edge";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import type { FormEvent, MouseEvent } from "react";
 import useSWR from "swr";
 import { useRouter } from "next/navigation";
 import {
   MessageCircle, Search, Upload, Users, Loader2,
-  AlertCircle, ChevronLeft, ChevronRight,
+  AlertCircle, ChevronLeft, ChevronRight, Pencil, Trash2, X,
 } from "lucide-react";
 import { swrFetcher, apiFetch, ApiError } from "@/lib/api";
 import type { Contact, ContactPage, Conversation } from "@/lib/types";
@@ -34,7 +35,9 @@ export default function ContactsPage() {
   const [channel, setChannel] = useState("");
   const [page, setPage] = useState(1);
   const [importOpen, setImportOpen] = useState(false);
+  const [editingContact, setEditingContact] = useState<Contact | null>(null);
   const [startingConv, setStartingConv] = useState<number | null>(null);
+  const [deletingContact, setDeletingContact] = useState<number | null>(null);
 
   const params = new URLSearchParams();
   if (search) params.set("search", search);
@@ -60,6 +63,20 @@ export default function ContactsPage() {
       router.push(`/conversations?conv=${conv.id}`);
     } catch {
       setStartingConv(null);
+    }
+  }
+
+  async function deleteContact(contact: Contact) {
+    const name = contact.name || contact.external_id;
+    const confirmed = window.confirm(`Excluir o contato "${name}" e todas as conversas vinculadas?`);
+    if (!confirmed) return;
+
+    setDeletingContact(contact.id);
+    try {
+      await apiFetch(`/api/contacts/${contact.id}`, { method: "DELETE" });
+      await mutate();
+    } finally {
+      setDeletingContact(null);
     }
   }
 
@@ -183,21 +200,41 @@ export default function ContactsPage() {
                         {formatRelativeTime(contact.created_at)}
                       </td>
                       <td className="px-4 py-3 text-right sm:px-7">
-                        {contact.channel === "whatsapp" && (
+                        <div className="flex justify-end gap-1.5">
+                          {contact.channel === "whatsapp" && (
+                            <button
+                              onClick={() => void startConversation(contact)}
+                              disabled={startingConv === contact.id}
+                              title="Iniciar conversa"
+                              className="focus-ring inline-flex h-8 w-8 items-center justify-center rounded-card border border-brand-line bg-white text-brand-muted transition hover:border-brand-charcoal/20 hover:text-brand-ink disabled:opacity-50"
+                            >
+                              {startingConv === contact.id ? (
+                                <Loader2 size={13} className="animate-spin" />
+                              ) : (
+                                <MessageCircle size={13} />
+                              )}
+                            </button>
+                          )}
                           <button
-                            onClick={() => void startConversation(contact)}
-                            disabled={startingConv === contact.id}
-                            title="Iniciar conversa"
-                            className="focus-ring inline-flex items-center gap-1.5 rounded-card border border-brand-line bg-white px-2.5 py-1.5 text-[11px] font-extrabold text-brand-muted transition hover:border-brand-charcoal/20 hover:text-brand-ink disabled:opacity-50"
+                            onClick={() => setEditingContact(contact)}
+                            title="Editar contato"
+                            className="focus-ring inline-flex h-8 w-8 items-center justify-center rounded-card border border-brand-line bg-white text-brand-muted transition hover:border-brand-charcoal/20 hover:text-brand-ink"
                           >
-                            {startingConv === contact.id ? (
-                              <Loader2 size={12} className="animate-spin" />
-                            ) : (
-                              <MessageCircle size={12} />
-                            )}
-                            <span className="hidden sm:inline">Conversar</span>
+                            <Pencil size={13} />
                           </button>
-                        )}
+                          <button
+                            onClick={() => void deleteContact(contact)}
+                            disabled={deletingContact === contact.id}
+                            title="Excluir contato"
+                            className="focus-ring inline-flex h-8 w-8 items-center justify-center rounded-card border border-brand-line bg-white text-brand-muted transition hover:border-brand-red/30 hover:bg-brand-red50 hover:text-brand-red disabled:opacity-50"
+                          >
+                            {deletingContact === contact.id ? (
+                              <Loader2 size={13} className="animate-spin" />
+                            ) : (
+                              <Trash2 size={13} />
+                            )}
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -234,6 +271,115 @@ export default function ContactsPage() {
       </div>
 
       <ImportModal open={importOpen} onClose={() => setImportOpen(false)} onImported={() => void mutate()} />
+      <EditContactModal
+        contact={editingContact}
+        onClose={() => setEditingContact(null)}
+        onSaved={() => {
+          setEditingContact(null);
+          void mutate();
+        }}
+      />
+    </div>
+  );
+}
+
+function EditContactModal({
+  contact,
+  onClose,
+  onSaved,
+}: {
+  contact: Contact | null;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [name, setName] = useState("");
+  const [externalId, setExternalId] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setName(contact?.name ?? "");
+    setExternalId(contact?.external_id ?? "");
+    setError(null);
+  }, [contact]);
+
+  if (!contact) return null;
+
+  function handleBackdrop(e: MouseEvent<HTMLDivElement>) {
+    if (e.target === e.currentTarget) onClose();
+  }
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!contact) return;
+    setSaving(true);
+    setError(null);
+    try {
+      await apiFetch<Contact>(`/api/contacts/${contact.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ name, external_id: externalId }),
+      });
+      onSaved();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Erro ao salvar contato");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
+      onClick={handleBackdrop}
+    >
+      <form onSubmit={handleSubmit} className="w-full max-w-md rounded-panel border border-brand-line bg-white shadow-2xl">
+        <div className="flex items-center justify-between border-b border-brand-line px-5 py-4">
+          <div className="flex items-center gap-2.5">
+            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-canvas text-brand-ink">
+              <Pencil size={15} />
+            </span>
+            <div>
+              <h2 className="text-sm font-black text-brand-ink">Editar contato</h2>
+              <p className="text-[11px] text-brand-muted">{contact.channel === "whatsapp" ? "WhatsApp" : "Instagram"}</p>
+            </div>
+          </div>
+          <button type="button" onClick={onClose} className="focus-ring rounded-card p-1.5 text-brand-muted hover:text-brand-ink">
+            <X size={16} />
+          </button>
+        </div>
+
+        <div className="space-y-4 p-5">
+          <div>
+            <label className="mb-1.5 block text-xs font-extrabold text-brand-ink">Nome</label>
+            <input
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              className="focus-ring w-full rounded-card border border-brand-line bg-white px-3 py-2 text-sm text-brand-ink"
+            />
+          </div>
+          <div>
+            <label className="mb-1.5 block text-xs font-extrabold text-brand-ink">Identificador</label>
+            <input
+              value={externalId}
+              onChange={(event) => setExternalId(event.target.value)}
+              className="focus-ring w-full rounded-card border border-brand-line bg-white px-3 py-2 text-sm text-brand-ink"
+            />
+          </div>
+
+          {error && (
+            <p className="rounded-card border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-600">
+              {error}
+            </p>
+          )}
+
+          <div className="flex justify-end gap-2 pt-1">
+            <Button type="button" variant="ghost" onClick={onClose}>Cancelar</Button>
+            <Button type="submit" disabled={saving}>
+              {saving ? <><Loader2 size={14} className="animate-spin" /> Salvando...</> : "Salvar"}
+            </Button>
+          </div>
+        </div>
+      </form>
     </div>
   );
 }

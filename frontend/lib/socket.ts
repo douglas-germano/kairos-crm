@@ -17,7 +17,7 @@ export function getSocket() {
     socket = io(SOCKET_URL, {
       transports: ["websocket", "polling"],
       autoConnect: false
-    });
+    } as Parameters<typeof io>[1]);
   }
   return socket;
 }

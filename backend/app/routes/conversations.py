@@ -6,7 +6,7 @@ GET    /api/conversations/<id>      — detalhe com contato
 POST   /api/conversations/initiate  — inicia nova conversa manualmente (WhatsApp)
 PATCH  /api/conversations/<id>      — atualiza status, assigned_to
 PATCH  /api/conversations/<id>/ai   — toggle ai_enabled
-DELETE /api/conversations/<id>      — fecha a conversa (status=closed)
+DELETE /api/conversations/<id>      — exclui a conversa e suas mensagens
 """
 import logging
 import re
@@ -14,7 +14,7 @@ from datetime import datetime, timezone
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from app.extensions import db, socketio
-from app.models import Conversation, WorkspaceMember
+from app.models import Conversation, Message, WorkspaceMember
 
 logger = logging.getLogger(__name__)
 bp = Blueprint("conversations", __name__)
@@ -256,7 +256,17 @@ def close_conversation(conversation_id: int):
         id=conversation_id, workspace_id=workspace_id
     ).first_or_404()
 
-    conv.status = "closed"
+    Message.query.filter_by(conversation_id=conv.id).delete(synchronize_session=False)
+    db.session.delete(conv)
     db.session.commit()
 
-    return jsonify({"message": "Conversa encerrada"})
+    try:
+        socketio.emit(
+            "conversation_deleted",
+            {"conversation_id": conversation_id},
+            room=f"workspace_{workspace_id}",
+        )
+    except Exception:
+        pass
+
+    return jsonify({"deleted": True, "conversation_id": conversation_id})

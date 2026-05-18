@@ -1,9 +1,11 @@
 """
 Rotas REST para Contatos.
 
-GET  /api/contacts          — lista com busca e paginação
-POST /api/contacts          — cria contato individual
-POST /api/contacts/import   — importação em massa via CSV
+GET    /api/contacts          — lista com busca e paginação
+POST   /api/contacts          — cria contato individual
+PATCH  /api/contacts/<id>     — edita contato
+DELETE /api/contacts/<id>     — exclui contato e conversas vinculadas
+POST   /api/contacts/import   — importação em massa via CSV
 """
 import csv
 import io
@@ -12,7 +14,7 @@ import re
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from app.extensions import db
-from app.models import Contact, WorkspaceMember
+from app.models import Contact, Conversation, Message, WorkspaceMember
 
 logger = logging.getLogger(__name__)
 bp = Blueprint("contacts", __name__)
@@ -90,6 +92,67 @@ def create_contact():
     db.session.add(contact)
     db.session.commit()
     return jsonify(contact.to_dict()), 201
+
+
+@bp.patch("/<int:contact_id>")
+@jwt_required()
+def update_contact(contact_id: int):
+    user_id = int(get_jwt_identity())
+    workspace_id = _get_workspace_id(user_id)
+    if not workspace_id:
+        return jsonify({"error": "Workspace não encontrado", "code": "NO_WORKSPACE"}), 404
+
+    contact = Contact.query.filter_by(id=contact_id, workspace_id=workspace_id).first_or_404()
+    data = request.get_json() or {}
+
+    if "name" in data:
+        name = str(data.get("name") or "").strip()
+        contact.name = name or contact.external_id
+
+    if "external_id" in data:
+        raw_external_id = str(data.get("external_id") or "").strip()
+        external_id = _normalize_phone(raw_external_id) if contact.channel == "whatsapp" and "@" not in raw_external_id else raw_external_id
+        if not external_id:
+            return jsonify({"error": "external_id é obrigatório", "code": "MISSING_FIELD"}), 400
+
+        duplicate = Contact.query.filter(
+            Contact.workspace_id == workspace_id,
+            Contact.channel == contact.channel,
+            Contact.external_id == external_id,
+            Contact.id != contact.id,
+        ).first()
+        if duplicate:
+            return jsonify({"error": "Já existe um contato com esse identificador", "code": "DUPLICATE_CONTACT"}), 409
+
+        contact.external_id = external_id
+
+    db.session.commit()
+    return jsonify(contact.to_dict())
+
+
+@bp.delete("/<int:contact_id>")
+@jwt_required()
+def delete_contact(contact_id: int):
+    user_id = int(get_jwt_identity())
+    workspace_id = _get_workspace_id(user_id)
+    if not workspace_id:
+        return jsonify({"error": "Workspace não encontrado", "code": "NO_WORKSPACE"}), 404
+
+    contact = Contact.query.filter_by(id=contact_id, workspace_id=workspace_id).first_or_404()
+    conversations = Conversation.query.filter_by(
+        workspace_id=workspace_id,
+        contact_id=contact.id,
+    ).all()
+    conversation_ids = [conversation.id for conversation in conversations]
+
+    if conversation_ids:
+        Message.query.filter(Message.conversation_id.in_(conversation_ids)).delete(synchronize_session=False)
+        Conversation.query.filter(Conversation.id.in_(conversation_ids)).delete(synchronize_session=False)
+
+    db.session.delete(contact)
+    db.session.commit()
+
+    return jsonify({"deleted": True, "contact_id": contact_id, "conversations_deleted": len(conversation_ids)})
 
 
 @bp.post("/import")
