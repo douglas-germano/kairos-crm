@@ -1,6 +1,9 @@
 #!/bin/sh
 set -e
 
+echo "[start] Rodando migrations..."
+alembic upgrade head
+
 echo "[start] Iniciando RQ worker em background..."
 rq worker default --url "$REDIS_URL" &
 
