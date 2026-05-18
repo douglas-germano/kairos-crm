@@ -157,10 +157,8 @@ def whatsapp_status():
         return jsonify({"state": "not_configured", "integration": None})
 
     instance_name = _instance_name(user_id)
-    webhook_url = _webhook_url()
 
     try:
-        evo_svc.set_webhook(instance_name, webhook_url)
         state_data = evo_svc.connection_state(instance_name)
         state = state_data.get("instance", {}).get("state", "close")
 
