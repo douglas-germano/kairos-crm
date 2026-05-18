@@ -186,7 +186,8 @@ def sync_messages(conversation_id: int):
             logger.error("Falha ao buscar histórico Evolution API | error=%s", str(exc))
             return jsonify({"error": str(exc), "code": "EVOLUTION_ERROR"}), 502
 
-        print(f"[sync] Evolution retornou {len(raw_msgs)} mensagens", flush=True)
+        first_sample = raw_msgs[0] if raw_msgs else "none"
+        print(f"[sync] Evolution retornou {len(raw_msgs)} mensagens | first={first_sample}", flush=True)
 
         # IDs já existentes no banco para esta conversa (evita duplicatas)
         existing_ids = {

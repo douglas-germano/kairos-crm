@@ -132,11 +132,24 @@ def find_messages(instance_name: str, remote_jid: str, limit: int = 100, offset:
         "offset": offset,
     }
     result = _request("POST", f"/chat/findMessages/{instance_name}", json=payload)
+
+    # Normaliza qualquer formato da Evolution API para uma lista plana de objetos
     if isinstance(result, list):
-        return result
-    if isinstance(result, dict):
-        return result.get("messages", result.get("records", []))
-    return []
+        items = result
+    elif isinstance(result, dict):
+        # Pode ser {"messages": [...]} ou {"messages": {"total": N, "records": [...]}}
+        inner = result.get("messages") or result.get("records") or []
+        if isinstance(inner, list):
+            items = inner
+        elif isinstance(inner, dict):
+            items = inner.get("records") or inner.get("messages") or []
+        else:
+            items = []
+    else:
+        items = []
+
+    # Filtra apenas dicts (descarta IDs textuais que a API pode incluir)
+    return [m for m in items if isinstance(m, dict)]
 
 
 def fetch_instance(instance_name: str) -> dict | None:
