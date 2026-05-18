@@ -40,6 +40,10 @@ export default function ConversationsPage() {
         channel={channel}
         onChannelChange={setChannel}
         isLoading={isLoading}
+        onNewConversation={(conv) => {
+          void mutate();
+          setSelected(conv);
+        }}
       />
       <ChatWindow conversation={current} onConversationChange={() => void mutate()} />
     </div>
