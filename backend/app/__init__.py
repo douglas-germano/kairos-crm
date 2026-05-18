@@ -29,6 +29,7 @@ def create_app():
     from .routes.flows import bp as flows_bp
     from .routes.settings import bp as settings_bp
     from .routes.integrations import bp as integrations_bp
+    from .routes.contacts import bp as contacts_bp
     from .routes.webhooks.instagram import bp as ig_webhook_bp
     from .routes.webhooks.whatsapp import bp as wa_webhook_bp
 
@@ -39,6 +40,7 @@ def create_app():
     app.register_blueprint(flows_bp, url_prefix="/api/flows")
     app.register_blueprint(settings_bp, url_prefix="/api/settings")
     app.register_blueprint(integrations_bp, url_prefix="/api/integrations")
+    app.register_blueprint(contacts_bp, url_prefix="/api/contacts")
     app.register_blueprint(ig_webhook_bp, url_prefix="/webhooks")
     app.register_blueprint(wa_webhook_bp, url_prefix="/webhooks")
 
