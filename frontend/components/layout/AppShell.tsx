@@ -50,7 +50,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <Link href="/conversations" className="relative flex h-10 w-full items-center justify-center overflow-hidden">
               <span
                 className={cn(
-                  "absolute left-1/2 top-1/2 font-serif text-3xl font-bold leading-none text-brand-red transition duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]",
+                  "absolute left-1/2 top-1/2 font-display text-3xl font-black leading-none text-brand-red transition duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]",
                   collapsed
                     ? "-translate-x-1/2 -translate-y-1/2 opacity-100"
                     : "-translate-x-[74px] -translate-y-1/2 opacity-0"
@@ -61,7 +61,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               </span>
               <span
                 className={cn(
-                  "absolute left-1/2 top-1/2 overflow-hidden font-serif text-[22px] font-bold leading-none text-brand-ink transition duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]",
+                  "absolute left-1/2 top-1/2 overflow-hidden font-display text-[22px] font-black leading-none text-brand-ink transition duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]",
                   collapsed
                     ? "-translate-x-[40px] -translate-y-1/2 opacity-0"
                     : "-translate-x-1/2 -translate-y-1/2 opacity-100"
