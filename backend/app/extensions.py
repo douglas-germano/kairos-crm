@@ -8,7 +8,7 @@ from rq import Queue
 db = SQLAlchemy()
 migrate = Migrate()
 jwt = JWTManager()
-socketio = SocketIO(cors_allowed_origins="*", async_mode="threading")
+socketio = SocketIO(cors_allowed_origins="*", async_mode="gevent")
 
 # Inicializados em create_app após config ser carregada
 redis_client: redis.Redis = None
