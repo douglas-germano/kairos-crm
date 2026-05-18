@@ -6,6 +6,7 @@ POST /api/messages/<conversation_id>        — envia mensagem outbound manualme
 POST /api/messages/<conversation_id>/sync   — sincroniza histórico do WhatsApp
 """
 import logging
+import traceback
 from datetime import datetime, timezone
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
@@ -104,7 +105,7 @@ def send_message(conversation_id: int):
                 msg.external_id = ext_id
             db.session.commit()
         except Exception as exc:
-            logger.error("Falha ao enviar mensagem pelo canal", extra={"channel": channel, "error": str(exc)})
+            logger.error("Falha ao enviar mensagem pelo canal | channel=%s error=%s", channel, str(exc))
             msg.status = "failed"
             db.session.commit()
 
@@ -151,84 +152,92 @@ def sync_messages(conversation_id: int):
     Sincroniza o histórico de mensagens WhatsApp via Evolution API.
     Insere apenas mensagens que ainda não existem no banco (dedup por external_id).
     """
-    import traceback
     from app.services import evolution as evo_svc
     from app.services.evolution import EvolutionError
 
-    user_id = int(get_jwt_identity())
-    workspace_id = _get_workspace_id(user_id)
-    if not workspace_id:
-        return jsonify({"error": "Workspace não encontrado", "code": "NO_WORKSPACE"}), 404
-
-    conv = Conversation.query.filter_by(
-        id=conversation_id, workspace_id=workspace_id
-    ).first_or_404()
-
-    if conv.channel != "whatsapp":
-        return jsonify({"error": "Sync disponível apenas para WhatsApp", "code": "UNSUPPORTED_CHANNEL"}), 400
-
-    integration = Integration.query.filter_by(
-        workspace_id=workspace_id, channel="whatsapp", status="active"
-    ).first()
-    if not integration:
-        return jsonify({"error": "Nenhuma integração WhatsApp ativa", "code": "NO_INTEGRATION"}), 400
-
-    phone = conv.contact.external_id
-    remote_jid = f"{phone}@s.whatsapp.net"
-    instance_name = f"kairos-crm-{user_id}"
-
     try:
-        raw_msgs = evo_svc.find_messages(instance_name, remote_jid, limit=200)
-    except EvolutionError as exc:
-        logger.error("Falha ao buscar histórico Evolution API | error=%s", str(exc))
-        return jsonify({"error": str(exc), "code": "EVOLUTION_ERROR"}), 502
+        user_id = int(get_jwt_identity())
+        workspace_id = _get_workspace_id(user_id)
+        if not workspace_id:
+            return jsonify({"error": "Workspace não encontrado", "code": "NO_WORKSPACE"}), 404
+
+        conv = Conversation.query.filter_by(
+            id=conversation_id, workspace_id=workspace_id
+        ).first_or_404()
+
+        if conv.channel != "whatsapp":
+            return jsonify({"error": "Sync disponível apenas para WhatsApp", "code": "UNSUPPORTED_CHANNEL"}), 400
+
+        integration = Integration.query.filter_by(
+            workspace_id=workspace_id, channel="whatsapp", status="active"
+        ).first()
+        if not integration:
+            return jsonify({"error": "Nenhuma integração WhatsApp ativa", "code": "NO_INTEGRATION"}), 400
+
+        phone = conv.contact.external_id
+        remote_jid = f"{phone}@s.whatsapp.net"
+        instance_name = f"kairos-crm-{user_id}"
+
+        print(f"[sync] Buscando mensagens instance={instance_name} jid={remote_jid}", flush=True)
+
+        try:
+            raw_msgs = evo_svc.find_messages(instance_name, remote_jid, limit=200)
+        except EvolutionError as exc:
+            logger.error("Falha ao buscar histórico Evolution API | error=%s", str(exc))
+            return jsonify({"error": str(exc), "code": "EVOLUTION_ERROR"}), 502
+
+        print(f"[sync] Evolution retornou {len(raw_msgs)} mensagens", flush=True)
+
+        # IDs já existentes no banco para esta conversa (evita duplicatas)
+        existing_ids = {
+            row[0]
+            for row in db.session.query(Message.external_id)
+            .filter(Message.conversation_id == conv.id, Message.external_id.isnot(None))
+            .all()
+        }
+
+        inserted = 0
+        for raw in raw_msgs:
+            key = raw.get("key") or {}
+            ext_id = key.get("id")
+            if not ext_id or ext_id in existing_ids:
+                continue
+
+            content, content_type = _extract_content(raw)
+            if not content:
+                continue
+
+            direction = "outbound" if key.get("fromMe") else "inbound"
+            ts = raw.get("messageTimestamp")
+            # Use naive UTC datetimes — PostgreSQL column is TIMESTAMP WITHOUT TIME ZONE
+            created_at = datetime.utcfromtimestamp(int(ts)) if ts else datetime.utcnow()
+
+            msg = Message(
+                conversation_id=conv.id,
+                direction=direction,
+                content=content,
+                content_type=content_type,
+                status="read" if direction == "inbound" else "delivered",
+                external_id=ext_id,
+                created_at=created_at,
+            )
+            db.session.add(msg)
+            existing_ids.add(ext_id)
+            inserted += 1
+
+        conv.synced_at = datetime.utcnow()
+        db.session.commit()
+
+        print(f"[sync] Commit OK inserted={inserted}", flush=True)
+        logger.info(
+            "Histórico WhatsApp sincronizado | conversation=%s inserted=%s total=%s",
+            conv.id, inserted, len(raw_msgs),
+        )
+        return jsonify({"synced": inserted, "total": len(raw_msgs)})
+
     except Exception as exc:
-        logger.error("Erro inesperado no sync | error=%s trace=%s", str(exc), traceback.format_exc())
+        db.session.rollback()
+        tb = traceback.format_exc()
+        print(f"[sync] ERRO INESPERADO: {exc}\n{tb}", flush=True)
+        logger.error("Erro inesperado no sync | conversation=%s error=%s trace=%s", conversation_id, str(exc), tb)
         return jsonify({"error": "Erro interno ao sincronizar", "code": "INTERNAL_ERROR"}), 500
-
-    # IDs já existentes no banco para esta conversa (evita duplicatas)
-    existing_ids = {
-        row[0]
-        for row in db.session.query(Message.external_id)
-        .filter(Message.conversation_id == conv.id, Message.external_id.isnot(None))
-        .all()
-    }
-
-    inserted = 0
-    for raw in raw_msgs:
-        key = raw.get("key") or {}
-        ext_id = key.get("id")
-        if not ext_id or ext_id in existing_ids:
-            continue
-
-        content, content_type = _extract_content(raw)
-        if not content:
-            continue
-
-        direction = "outbound" if key.get("fromMe") else "inbound"
-        ts = raw.get("messageTimestamp")
-        created_at = (
-            datetime.fromtimestamp(int(ts), tz=timezone.utc) if ts else datetime.now(timezone.utc)
-        )
-
-        msg = Message(
-            conversation_id=conv.id,
-            direction=direction,
-            content=content,
-            content_type=content_type,
-            status="read" if direction == "inbound" else "delivered",
-            external_id=ext_id,
-            created_at=created_at,
-        )
-        db.session.add(msg)
-        existing_ids.add(ext_id)
-        inserted += 1
-
-    conv.synced_at = datetime.now(timezone.utc)
-    db.session.commit()
-
-    logger.info(
-        "Histórico WhatsApp sincronizado | conversation=%s inserted=%s",
-        conv.id, inserted,
-    )
-    return jsonify({"synced": inserted, "total": len(raw_msgs)})
