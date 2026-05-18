@@ -151,9 +151,9 @@ def sync_messages(conversation_id: int):
     Sincroniza o histórico de mensagens WhatsApp via Evolution API.
     Insere apenas mensagens que ainda não existem no banco (dedup por external_id).
     """
+    import traceback
     from app.services import evolution as evo_svc
     from app.services.evolution import EvolutionError
-    from app.routes.settings import _instance_name
 
     user_id = int(get_jwt_identity())
     workspace_id = _get_workspace_id(user_id)
@@ -175,13 +175,16 @@ def sync_messages(conversation_id: int):
 
     phone = conv.contact.external_id
     remote_jid = f"{phone}@s.whatsapp.net"
-    instance_name = _instance_name(user_id)
+    instance_name = f"kairos-crm-{user_id}"
 
     try:
         raw_msgs = evo_svc.find_messages(instance_name, remote_jid, limit=200)
     except EvolutionError as exc:
         logger.error("Falha ao buscar histórico Evolution API | error=%s", str(exc))
         return jsonify({"error": str(exc), "code": "EVOLUTION_ERROR"}), 502
+    except Exception as exc:
+        logger.error("Erro inesperado no sync | error=%s trace=%s", str(exc), traceback.format_exc())
+        return jsonify({"error": "Erro interno ao sincronizar", "code": "INTERNAL_ERROR"}), 500
 
     # IDs já existentes no banco para esta conversa (evita duplicatas)
     existing_ids = {

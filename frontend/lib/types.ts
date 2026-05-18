@@ -23,6 +23,13 @@ export type Contact = {
   created_at: string;
 };
 
+export type ContactPage = {
+  items: Contact[];
+  total: number;
+  page: number;
+  pages: number;
+};
+
 export type Conversation = {
   id: number;
   channel: Channel;

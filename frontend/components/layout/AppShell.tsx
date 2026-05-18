@@ -3,12 +3,13 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { ChevronRight, ChevronsLeft, ChevronsRight, CircleUserRound, MessagesSquare, Settings, Sparkles } from "lucide-react";
+import { ChevronRight, ChevronsLeft, ChevronsRight, CircleUserRound, MessagesSquare, Settings, Sparkles, Users } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 
 const nav = [
   { href: "/conversations", label: "Conversas", icon: MessagesSquare },
+  { href: "/contacts", label: "Contatos", icon: Users },
   { href: "/agents", label: "Agentes", icon: Sparkles },
   { href: "/settings", label: "Config.", icon: Settings },
 ];
