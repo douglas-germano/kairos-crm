@@ -22,6 +22,14 @@ def _get_workspace_id(user_id: int) -> int | None:
     return member.workspace_id if member else None
 
 
+def _remote_jid_for_contact(external_id: str) -> str:
+    """Preserva JIDs já vindos da Evolution, como @lid, e completa números manuais."""
+    external_id = (external_id or "").strip()
+    if "@" in external_id:
+        return external_id
+    return f"{external_id}@s.whatsapp.net"
+
+
 @bp.get("/<int:conversation_id>")
 @jwt_required()
 def list_messages(conversation_id: int):
@@ -174,8 +182,7 @@ def sync_messages(conversation_id: int):
         if not integration:
             return jsonify({"error": "Nenhuma integração WhatsApp ativa", "code": "NO_INTEGRATION"}), 400
 
-        phone = conv.contact.external_id
-        remote_jid = f"{phone}@s.whatsapp.net"
+        remote_jid = _remote_jid_for_contact(conv.contact.external_id)
         instance_name = f"kairos-crm-{user_id}"
 
         print(f"[sync] Buscando mensagens instance={instance_name} jid={remote_jid}", flush=True)

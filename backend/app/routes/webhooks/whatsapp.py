@@ -1,7 +1,7 @@
 import logging
 from datetime import datetime, timezone
 from flask import Blueprint, request, jsonify
-from app.extensions import db, rq_queue
+from app.extensions import db, rq_queue, socketio
 from app.models import Integration, Contact, Conversation, Message
 
 logger = logging.getLogger(__name__)
@@ -61,6 +61,13 @@ def _handle_messages(instance_name: str, data: dict):
         for message in messages:
             _handle_message(instance_name, message)
         return
+    if isinstance(messages, dict):
+        records = messages.get("records") or messages.get("messages") or []
+        if isinstance(records, list):
+            for message in records:
+                if isinstance(message, dict):
+                    _handle_message(instance_name, message)
+            return
 
     _handle_message(instance_name, data)
 
@@ -157,6 +164,14 @@ def _handle_message(instance_name: str, msg_data: dict):
         db.session.add(conversation)
         db.session.flush()
 
+    if external_id:
+        existing = Message.query.filter_by(
+            conversation_id=conversation.id,
+            external_id=external_id,
+        ).first()
+        if existing:
+            return
+
     # Salva a mensagem
     msg = Message(
         conversation_id=conversation.id,
@@ -174,6 +189,15 @@ def _handle_message(instance_name: str, msg_data: dict):
         "Mensagem WhatsApp salva",
         extra={"message_id": msg.id, "conversation_id": conversation.id},
     )
+
+    try:
+        socketio.emit(
+            "new_message",
+            {"conversation_id": conversation.id, "message": msg.to_dict()},
+            room=f"workspace_{workspace_id}",
+        )
+    except Exception:
+        pass
 
     # Enfileira para processamento de IA
     try:
