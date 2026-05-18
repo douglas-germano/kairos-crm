@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 const nav = [
   { href: "/conversations", label: "Conversas", icon: MessagesSquare },
   { href: "/agents", label: "Agentes", icon: Sparkles },
-  { href: "/settings", label: "Configurações", icon: Settings },
+  { href: "/settings", label: "Config.", icon: Settings },
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -33,6 +33,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="app-canvas text-brand-charcoal">
+      {/* ── Sidebar desktop ──────────────────────────────────────────── */}
       <aside className={cn("fixed inset-y-0 left-0 z-30 hidden border-r border-brand-line bg-white/95 shadow-sidebar backdrop-blur transition-[width] duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] lg:flex lg:flex-col", collapsed ? "w-[76px]" : "w-[256px]")}>
         <button
           type="button"
@@ -82,7 +83,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   title={collapsed ? item.label : undefined}
                   className={cn(
                     "relative mb-1 flex h-11 items-center overflow-hidden rounded-card border-l-4 text-sm font-extrabold transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]",
-                  collapsed ? "justify-center px-0" : "gap-3 px-3",
+                    collapsed ? "justify-center px-0" : "gap-3 px-3",
                     active ? "border-brand-red bg-brand-red50 text-brand-red" : "border-transparent text-brand-muted hover:bg-brand-canvas hover:text-brand-ink"
                   )}
                 >
@@ -129,9 +130,41 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
 
-      <div className={cn("h-screen overflow-hidden transition-[padding-left] duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]", collapsed ? "lg:pl-[76px]" : "lg:pl-[256px]")}>
-        <main className="h-full overflow-y-auto">{children}</main>
+      {/* ── Conteúdo principal ───────────────────────────────────────── */}
+      <div className={cn(
+        "h-screen overflow-hidden transition-[padding-left] duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]",
+        collapsed ? "lg:pl-[76px]" : "lg:pl-[256px]"
+      )}>
+        <main className="h-full overflow-y-auto pb-[64px] lg:pb-0">{children}</main>
       </div>
+
+      {/* ── Bottom nav mobile ────────────────────────────────────────── */}
+      <nav className="fixed bottom-0 left-0 right-0 z-30 flex h-16 items-stretch border-t border-brand-line bg-white/95 backdrop-blur lg:hidden"
+        style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+      >
+        {nav.map((item) => {
+          const Icon = item.icon;
+          const active = pathname.startsWith(item.href);
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={cn(
+                "flex flex-1 flex-col items-center justify-center gap-1 text-[10px] font-bold tracking-wide transition-colors duration-200",
+                active ? "text-brand-red" : "text-brand-muted"
+              )}
+            >
+              <span className={cn(
+                "flex h-7 w-12 items-center justify-center rounded-full transition-colors duration-200",
+                active ? "bg-brand-red50" : ""
+              )}>
+                <Icon size={20} strokeWidth={active ? 2.5 : 2} />
+              </span>
+              {item.label}
+            </Link>
+          );
+        })}
+      </nav>
     </div>
   );
 }
