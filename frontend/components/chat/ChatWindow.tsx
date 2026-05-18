@@ -57,8 +57,16 @@ export function ChatWindow({ conversation, onConversationChange }: Props) {
     revalidateAll: false,
   });
 
-  // pages[0] = latest msgs, pages[1] = older, ... → reverse for display order
-  const messages: Message[] = pages ? [...pages].reverse().flat() : [];
+  // Renderiza sempre em ordem cronológica: antigas em cima, novas embaixo.
+  const messages: Message[] = pages
+    ? [...pages]
+        .reverse()
+        .flat()
+        .sort((a, b) => {
+          const byDate = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+          return byDate || a.id - b.id;
+        })
+    : [];
   const hasMore = (pages?.[pages.length - 1]?.length ?? 0) === PAGE_SIZE;
   const isLoadingMore = size > 1 && !pages?.[size - 1];
 

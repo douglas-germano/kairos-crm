@@ -42,14 +42,27 @@ def list_messages(conversation_id: int):
         id=conversation_id, workspace_id=workspace_id
     ).first_or_404()
 
-    # Paginação scroll infinito — cursor-based (before_id)
+    # Paginação scroll infinito — cursor pela posição cronológica da mensagem.
     before_id = request.args.get("before_id", type=int)
     limit = min(int(request.args.get("limit", 50)), 100)
 
     query = Message.query.filter_by(conversation_id=conv.id)
     if before_id:
-        query = query.filter(Message.id < before_id)
-    query = query.order_by(Message.id.desc()).limit(limit)
+        cursor_message = Message.query.filter_by(
+            id=before_id,
+            conversation_id=conv.id,
+        ).first()
+        if cursor_message:
+            query = query.filter(
+                db.or_(
+                    Message.created_at < cursor_message.created_at,
+                    db.and_(
+                        Message.created_at == cursor_message.created_at,
+                        Message.id < cursor_message.id,
+                    ),
+                )
+            )
+    query = query.order_by(Message.created_at.desc(), Message.id.desc()).limit(limit)
 
     messages = list(reversed(query.all()))
     return jsonify([m.to_dict() for m in messages])
