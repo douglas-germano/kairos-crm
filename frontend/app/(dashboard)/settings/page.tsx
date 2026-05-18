@@ -1,5 +1,7 @@
 "use client";
 
+export const runtime = "edge";
+
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import useSWR from "swr";
 import {
@@ -26,6 +28,7 @@ import { Input } from "@/components/ui/Input";
 import { useAuth } from "@/hooks/useAuth";
 import { apiFetch, API_URL, swrFetcher } from "@/lib/api";
 import type { Integration, Workspace } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -143,7 +146,7 @@ function WhatsAppConnectCard({ onConnected }: { onConnected: () => void }) {
     <div className="flex flex-col items-center gap-4">
       <div className="text-center">
         <div className="item-title">Escaneie com o WhatsApp</div>
-        <div className="body-muted mt-0.5">Abra o WhatsApp → Dispositivos Conectados → Conectar Dispositivo</div>
+        <div className="body-muted mt-0.5 text-sm">Abra o WhatsApp → Dispositivos Conectados → Conectar Dispositivo</div>
       </div>
       {qrSrc ? (
         <div className="relative">
@@ -211,7 +214,7 @@ function InstagramSection({ integration, onDisconnect }: { integration: Integrat
   }
 
   return (
-    <div className="surface-card rounded-panel p-5">
+    <div className="surface-card rounded-panel p-4 sm:p-5">
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-2.5">
           <span className="flex h-9 w-9 items-center justify-center rounded-card bg-gradient-to-br from-[#f9ce34] via-[#ee2a7b] to-[#6228d7] text-white">
@@ -277,10 +280,7 @@ function PerfilSection({ user, onSaved, onLogout }: { user: UserData | undefined
     try {
       await apiFetch("/auth/me", {
         method: "PATCH",
-        body: JSON.stringify({
-          name: name || user?.name,
-          email: email || user?.email,
-        }),
+        body: JSON.stringify({ name: name || user?.name, email: email || user?.email }),
       });
       onSaved();
       setInfoMsg("Salvo com sucesso.");
@@ -306,7 +306,7 @@ function PerfilSection({ user, onSaved, onLogout }: { user: UserData | undefined
 
   return (
     <div className="space-y-4">
-      <section className="surface-card rounded-panel p-5">
+      <section className="surface-card rounded-panel p-4 sm:p-5">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex min-w-0 items-center gap-3">
             <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-brand-charcoal text-sm font-black text-white">
@@ -318,33 +318,28 @@ function PerfilSection({ user, onSaved, onLogout }: { user: UserData | undefined
               <p className="body-muted truncate">{user?.email || "Sem e-mail carregado"}</p>
             </div>
           </div>
-          <Button type="button" variant="ghost" onClick={onLogout} className="border-brand-red200 text-brand-red hover:bg-brand-red50 sm:self-center">
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={onLogout}
+            className="w-full border-brand-red200 text-brand-red hover:bg-brand-red50 sm:w-auto"
+          >
             <LogOut size={16} />
             Sair da conta
           </Button>
         </div>
       </section>
 
-      {/* Info */}
-      <form onSubmit={handleSaveInfo} className="surface-card rounded-panel p-5">
+      <form onSubmit={handleSaveInfo} className="surface-card rounded-panel p-4 sm:p-5">
         <h2 className="card-title mb-4">Informações pessoais</h2>
         <div className="space-y-3">
           <div className="space-y-1">
             <label className="ui-label">Nome</label>
-            <Input
-              value={name ?? user?.name ?? ""}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Seu nome"
-            />
+            <Input value={name ?? user?.name ?? ""} onChange={(e) => setName(e.target.value)} placeholder="Seu nome" />
           </div>
           <div className="space-y-1">
             <label className="ui-label">E-mail</label>
-            <Input
-              type="email"
-              value={email ?? user?.email ?? ""}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="seu@email.com"
-            />
+            <Input type="email" value={email ?? user?.email ?? ""} onChange={(e) => setEmail(e.target.value)} placeholder="seu@email.com" />
           </div>
           {infoMsg && (
             <p className={`text-xs font-semibold ${infoMsg.includes("sucesso") ? "text-brand-successStrong" : "text-brand-red"}`}>{infoMsg}</p>
@@ -358,8 +353,7 @@ function PerfilSection({ user, onSaved, onLogout }: { user: UserData | undefined
         </div>
       </form>
 
-      {/* Senha */}
-      <form onSubmit={handleSavePassword} className="surface-card rounded-panel p-5">
+      <form onSubmit={handleSavePassword} className="surface-card rounded-panel p-4 sm:p-5">
         <div className="mb-4 flex items-center gap-2">
           <KeyRound size={16} className="text-brand-muted" />
           <h2 className="card-title">Alterar senha</h2>
@@ -367,21 +361,11 @@ function PerfilSection({ user, onSaved, onLogout }: { user: UserData | undefined
         <div className="space-y-3">
           <div className="space-y-1">
             <label className="ui-label">Senha atual</label>
-            <Input
-              type="password"
-              value={currentPassword}
-              onChange={(e) => setCurrentPassword(e.target.value)}
-              placeholder="••••••••"
-            />
+            <Input type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} placeholder="••••••••" />
           </div>
           <div className="space-y-1">
             <label className="ui-label">Nova senha</label>
-            <Input
-              type="password"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              placeholder="Mínimo 8 caracteres"
-            />
+            <Input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="Mínimo 8 caracteres" />
           </div>
           {pwMsg && (
             <p className={`text-xs font-semibold ${pwMsg.includes("sucesso") ? "text-brand-successStrong" : "text-brand-red"}`}>{pwMsg}</p>
@@ -421,20 +405,16 @@ function WorkspaceSection({ workspace, onSaved }: { workspace: Workspace | undef
   }
 
   return (
-    <form onSubmit={handleSave} className="surface-card rounded-panel p-5">
+    <form onSubmit={handleSave} className="surface-card rounded-panel p-4 sm:p-5">
       <h2 className="card-title mb-4">Workspace</h2>
       <div className="space-y-4">
         <div className="space-y-1">
           <label className="ui-label">Nome do Workspace</label>
-          <Input
-            value={name ?? workspace?.name ?? ""}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Nome do workspace"
-          />
+          <Input value={name ?? workspace?.name ?? ""} onChange={(e) => setName(e.target.value)} placeholder="Nome do workspace" />
         </div>
 
         {workspace && (
-          <div className="grid grid-cols-2 gap-4 rounded-card bg-brand-canvas p-3">
+          <div className="grid grid-cols-2 gap-3 rounded-card bg-brand-canvas p-3">
             <div>
               <div className="ui-label">Plano</div>
               <div className="item-title mt-0.5 capitalize">{workspace.plan}</div>
@@ -466,11 +446,7 @@ function WorkspaceSection({ workspace, onSaved }: { workspace: Workspace | undef
 // ─── Section: Canais ──────────────────────────────────────────────────────────
 
 function CanaisSection({
-  waStatus,
-  integrations,
-  onWaConnected,
-  onWaDisconnected,
-  onIgDisconnected,
+  waStatus, integrations, onWaConnected, onWaDisconnected, onIgDisconnected,
 }: {
   waStatus: WaStatusResponse | undefined;
   integrations: Integration[];
@@ -484,8 +460,7 @@ function CanaisSection({
 
   return (
     <div className="space-y-4">
-      {/* WhatsApp */}
-      <div className="surface-card rounded-panel p-5">
+      <div className="surface-card rounded-panel p-4 sm:p-5">
         <div className="mb-4 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <span className="flex h-9 w-9 items-center justify-center rounded-card bg-[#25D366] text-white">
@@ -506,8 +481,6 @@ function CanaisSection({
           <WhatsAppConnectCard onConnected={onWaConnected} />
         )}
       </div>
-
-      {/* Instagram */}
       <InstagramSection integration={instagram} onDisconnect={onIgDisconnected} />
     </div>
   );
@@ -517,7 +490,7 @@ function CanaisSection({
 
 function WebhooksSection() {
   return (
-    <div className="surface-card rounded-panel p-5">
+    <div className="surface-card rounded-panel p-4 sm:p-5">
       <h2 className="card-title mb-4">Webhooks</h2>
       <div className="space-y-5">
         <div>
@@ -527,14 +500,11 @@ function WebhooksSection() {
             </span>
             <span className="ui-label text-brand-ink">WhatsApp</span>
           </div>
-          <p className="ui-meta break-all rounded-card bg-brand-canvas p-3 font-mono text-brand-ink">
+          <p className="ui-meta break-all rounded-card bg-brand-canvas p-3 font-mono text-brand-ink text-[11px] sm:text-xs">
             {API_URL}/webhooks/whatsapp
           </p>
-          <p className="ui-meta mt-1.5">
-            Configurado automaticamente ao conectar via QR code.
-          </p>
+          <p className="ui-meta mt-1.5">Configurado automaticamente ao conectar via QR code.</p>
         </div>
-
         <div className="border-t border-brand-line pt-5">
           <div className="mb-2 flex items-center gap-1.5">
             <span className="flex h-5 w-5 items-center justify-center rounded-full bg-gradient-to-br from-[#f9ce34] via-[#ee2a7b] to-[#6228d7] text-white">
@@ -542,12 +512,10 @@ function WebhooksSection() {
             </span>
             <span className="ui-label text-brand-ink">Instagram</span>
           </div>
-          <p className="ui-meta break-all rounded-card bg-brand-canvas p-3 font-mono text-brand-ink">
+          <p className="ui-meta break-all rounded-card bg-brand-canvas p-3 font-mono text-brand-ink text-[11px] sm:text-xs">
             {API_URL}/webhooks/instagram
           </p>
-          <p className="ui-meta mt-1.5">
-            Configure no Facebook Developers junto com o verify token do backend.
-          </p>
+          <p className="ui-meta mt-1.5">Configure no Facebook Developers junto com o verify token do backend.</p>
         </div>
       </div>
     </div>
@@ -560,18 +528,9 @@ export default function SettingsPage() {
   const [activeSection, setActiveSection] = useState<Section>("perfil");
   const { logout } = useAuth(true);
 
-  const { data: meData, mutate: mutateMe } = useSWR<{ user: UserData }>(
-    "/auth/me",
-    swrFetcher
-  );
-  const { data: workspace, mutate: mutateWorkspace } = useSWR<Workspace>(
-    "/api/settings/workspace",
-    swrFetcher
-  );
-  const { data: integrations = [], mutate: mutateIntegrations } = useSWR<Integration[]>(
-    "/api/integrations",
-    swrFetcher
-  );
+  const { data: meData, mutate: mutateMe } = useSWR<{ user: UserData }>("/auth/me", swrFetcher);
+  const { data: workspace, mutate: mutateWorkspace } = useSWR<Workspace>("/api/settings/workspace", swrFetcher);
+  const { data: integrations = [], mutate: mutateIntegrations } = useSWR<Integration[]>("/api/integrations", swrFetcher);
   const { data: waStatus, mutate: mutateWaStatus } = useSWR<WaStatusResponse>(
     "/api/settings/whatsapp/status",
     swrFetcher,
@@ -579,27 +538,45 @@ export default function SettingsPage() {
   );
 
   return (
-    <>
-      <PageHeader
-        eyebrow="Configurações"
-        title="Configurações"
-        description="Perfil, workspace, canais e webhooks."
-      />
+    <div className="flex h-full flex-col overflow-hidden">
+      <PageHeader eyebrow="Configurações" title="Configurações" />
 
-      <div className="section-pad flex min-h-0 gap-0">
-        {/* ── Sidebar nav ───────────────────────────────────────── */}
-        <nav className="mr-5 hidden w-44 shrink-0 md:block">
+      {/* ── Mobile tab strip ─────────────────────────────────────────── */}
+      <div className="shrink-0 border-b border-brand-line bg-white md:hidden">
+        <div className="flex overflow-x-auto px-4 scrollbar-none">
+          {NAV_ITEMS.map((item) => (
+            <button
+              key={item.id}
+              onClick={() => setActiveSection(item.id)}
+              className={cn(
+                "flex shrink-0 items-center gap-1.5 border-b-2 px-3 pb-3 pt-3 text-xs font-bold transition-colors",
+                activeSection === item.id
+                  ? "border-brand-red text-brand-red"
+                  : "border-transparent text-brand-muted hover:text-brand-ink"
+              )}
+            >
+              {item.icon}
+              {item.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Main area ────────────────────────────────────────────────── */}
+      <div className="flex min-h-0 flex-1 overflow-hidden">
+        {/* Desktop sidebar */}
+        <nav className="hidden w-52 shrink-0 border-r border-brand-line bg-white/60 p-4 md:block">
           <ul className="space-y-0.5">
             {NAV_ITEMS.map((item) => (
               <li key={item.id}>
                 <button
                   onClick={() => setActiveSection(item.id)}
-                  className={[
+                  className={cn(
                     "focus-ring flex w-full items-center gap-2.5 rounded-card px-3 py-2.5 text-sm font-bold transition-colors",
                     activeSection === item.id
                       ? "bg-brand-red50 text-brand-red"
-                      : "text-brand-muted hover:bg-white hover:text-brand-ink",
-                  ].join(" ")}
+                      : "text-brand-muted hover:bg-brand-canvas hover:text-brand-ink"
+                  )}
                 >
                   {item.icon}
                   {item.label}
@@ -609,45 +586,28 @@ export default function SettingsPage() {
           </ul>
         </nav>
 
-        {/* ── Mobile tab strip ──────────────────────────────────── */}
-        <div className="mb-4 -mx-4 flex overflow-x-auto border-b border-brand-line px-4 md:hidden">
-          {NAV_ITEMS.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => setActiveSection(item.id)}
-              className={[
-                "flex shrink-0 items-center gap-1.5 border-b-2 px-3 pb-3 text-xs font-semibold transition-colors",
-                activeSection === item.id
-                  ? "border-brand-red text-brand-red"
-                  : "border-transparent text-brand-muted hover:text-brand-ink",
-              ].join(" ")}
-            >
-              {item.icon}
-              {item.label}
-            </button>
-          ))}
-        </div>
-
-        {/* ── Content ───────────────────────────────────────────── */}
-        <div className="min-w-0 flex-1">
-          {activeSection === "perfil" && (
-            <PerfilSection user={meData?.user} onSaved={() => mutateMe()} onLogout={logout} />
-          )}
-          {activeSection === "workspace" && (
-            <WorkspaceSection workspace={workspace} onSaved={() => mutateWorkspace()} />
-          )}
-          {activeSection === "canais" && (
-            <CanaisSection
-              waStatus={waStatus}
-              integrations={integrations}
-              onWaConnected={() => { mutateIntegrations(); mutateWaStatus(); }}
-              onWaDisconnected={() => { mutateIntegrations(); mutateWaStatus(); }}
-              onIgDisconnected={() => mutateIntegrations()}
-            />
-          )}
-          {activeSection === "webhooks" && <WebhooksSection />}
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto scrollbar-thin">
+          <div className="mx-auto max-w-2xl p-4 sm:p-6">
+            {activeSection === "perfil" && (
+              <PerfilSection user={meData?.user} onSaved={() => mutateMe()} onLogout={logout} />
+            )}
+            {activeSection === "workspace" && (
+              <WorkspaceSection workspace={workspace} onSaved={() => mutateWorkspace()} />
+            )}
+            {activeSection === "canais" && (
+              <CanaisSection
+                waStatus={waStatus}
+                integrations={integrations}
+                onWaConnected={() => { mutateIntegrations(); mutateWaStatus(); }}
+                onWaDisconnected={() => { mutateIntegrations(); mutateWaStatus(); }}
+                onIgDisconnected={() => mutateIntegrations()}
+              />
+            )}
+            {activeSection === "webhooks" && <WebhooksSection />}
+          </div>
         </div>
       </div>
-    </>
+    </div>
   );
 }
