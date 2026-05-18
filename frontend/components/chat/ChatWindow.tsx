@@ -32,6 +32,7 @@ export function ChatWindow({ conversation, onConversationChange, onConversationD
   const scrollRef = useRef<HTMLDivElement>(null);
   const prevScrollHeightRef = useRef<number>(0);
   const isLoadingMoreRef = useRef(false);
+  const scrollToBottomRef = useRef(false);
 
   // Cursor-based pagination: page 0 = latest 50, page N = older with before_id
   const getKey = useCallback(
@@ -108,18 +109,24 @@ export function ChatWindow({ conversation, onConversationChange, onConversationD
     }
   }
 
-  // ── Scroll ao trocar de conversa: vai direto ao final ──────────────────────
+  // ── Ao trocar de conversa: sinaliza que deve rolar ao final quando carregar ──
   useEffect(() => {
-    const el = scrollRef.current;
-    if (el) el.scrollTop = el.scrollHeight;
+    scrollToBottomRef.current = true;
     setSyncState("idle");
     setSyncCount(null);
   }, [conversation?.id]);
 
-  // ── Scroll para mensagens novas: só move se já estava perto do final ───────
+  // ── Scroll após mensagens carregarem ──────────────────────────────────────
   useEffect(() => {
     const el = scrollRef.current;
     if (!el || isLoadingMoreRef.current) return;
+
+    if (scrollToBottomRef.current && messages.length > 0) {
+      el.scrollTop = el.scrollHeight;
+      scrollToBottomRef.current = false;
+      return;
+    }
+
     const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
     if (distanceFromBottom < 150) {
       el.scrollTop = el.scrollHeight;
