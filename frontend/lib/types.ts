@@ -92,3 +92,33 @@ export type Integration = {
   meta: Record<string, unknown>;
   created_at: string;
 };
+
+export type BroadcastStatus = "draft" | "sending" | "completed" | "failed";
+
+export type Broadcast = {
+  id: number;
+  workspace_id: number;
+  name: string;
+  message: string;
+  status: BroadcastStatus;
+  total_count: number;
+  sent_count: number;
+  failed_count: number;
+  created_at: string;
+  started_at: string | null;
+  completed_at: string | null;
+};
+
+export type BroadcastRecipient = {
+  id: number;
+  broadcast_id: number;
+  contact_id: number;
+  status: "pending" | "sent" | "failed";
+  sent_at: string | null;
+  error_message: string | null;
+  contact: Contact | null;
+};
+
+export type BroadcastDetail = Broadcast & {
+  recipients: BroadcastRecipient[];
+};

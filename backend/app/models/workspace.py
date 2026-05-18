@@ -17,6 +17,7 @@ class Workspace(db.Model):
     contacts = db.relationship("Contact", back_populates="workspace", lazy="dynamic")
     conversations = db.relationship("Conversation", back_populates="workspace", lazy="dynamic")
     agents = db.relationship("Agent", back_populates="workspace", lazy="dynamic")
+    broadcasts = db.relationship("Broadcast", back_populates="workspace", lazy="dynamic")
 
     def to_dict(self):
         return {"id": self.id, "name": self.name, "plan": self.plan, "created_at": self.created_at.isoformat()}
