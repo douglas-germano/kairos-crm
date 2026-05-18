@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="KairosCRM mark">
+  
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#e60000"></stop>
+      <stop offset="100%" stop-color="#ac1811"></stop>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="12" fill="url(#g)"></rect>
+  <rect y="62" width="64" height="2" fill="rgba(255,255,255,0.12)" rx="0"></rect>
+  <text x="32" y="46" text-anchor="middle" font-family="ui-serif, Georgia, &#39;Times New Roman&#39;, serif" font-weight="700" font-size="42" fill="#ffffff">K</text>
+</svg>
