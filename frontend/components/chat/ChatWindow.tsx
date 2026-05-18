@@ -15,6 +15,8 @@ import { formatDateTime } from "@/lib/utils";
 
 const PAGE_SIZE = 50;
 
+type SyncState = "idle" | "syncing" | "done" | "error";
+
 type Props = {
   conversation?: Conversation;
   onConversationChange: () => void;
@@ -23,6 +25,9 @@ type Props = {
 export function ChatWindow({ conversation, onConversationChange }: Props) {
   const { workspace } = useAuth(false);
   const [sendError, setSendError] = useState<string | null>(null);
+  const [syncState, setSyncState] = useState<SyncState>("idle");
+  const [syncCount, setSyncCount] = useState<number | null>(null);
+  const autoSyncedRef = useRef<Set<number>>(new Set());
   const scrollRef = useRef<HTMLDivElement>(null);
   const prevScrollHeightRef = useRef<number>(0);
   const isLoadingMoreRef = useRef(false);
@@ -57,10 +62,49 @@ export function ChatWindow({ conversation, onConversationChange }: Props) {
   const hasMore = (pages?.[pages.length - 1]?.length ?? 0) === PAGE_SIZE;
   const isLoadingMore = size > 1 && !pages?.[size - 1];
 
+  // ── Auto-sync na primeira abertura de conversas WhatsApp não sincronizadas ──
+  useEffect(() => {
+    if (
+      !conversation ||
+      conversation.channel !== "whatsapp" ||
+      isLoading ||
+      autoSyncedRef.current.has(conversation.id)
+    ) return;
+
+    // Dispara sync se nunca foi sincronizado (synced_at === null)
+    if (!conversation.synced_at) {
+      autoSyncedRef.current.add(conversation.id);
+      void handleSync();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [conversation?.id, conversation?.synced_at, isLoading]);
+
+  async function handleSync() {
+    if (!conversation || syncState === "syncing") return;
+    setSyncState("syncing");
+    setSyncCount(null);
+    try {
+      const res = await apiFetch<{ synced: number; total: number }>(
+        `/api/messages/${conversation.id}/sync`,
+        { method: "POST" }
+      );
+      setSyncCount(res.synced);
+      setSyncState("done");
+      await mutate();
+      onConversationChange();
+    } catch {
+      setSyncState("error");
+    } finally {
+      setTimeout(() => setSyncState((s) => (s !== "syncing" ? "idle" : s)), 4000);
+    }
+  }
+
   // ── Scroll ao trocar de conversa: vai direto ao final ──────────────────────
   useEffect(() => {
     const el = scrollRef.current;
     if (el) el.scrollTop = el.scrollHeight;
+    setSyncState("idle");
+    setSyncCount(null);
   }, [conversation?.id]);
 
   // ── Scroll para mensagens novas: só move se já estava perto do final ───────
@@ -159,6 +203,8 @@ export function ChatWindow({ conversation, onConversationChange }: Props) {
     conversation.contact?.external_id ||
     `Conversa #${conversation.id}`;
 
+  const isWhatsApp = conversation.channel === "whatsapp";
+
   return (
     <section className="flex h-full flex-col overflow-hidden bg-white/90">
       {/* Header */}
@@ -175,7 +221,20 @@ export function ChatWindow({ conversation, onConversationChange }: Props) {
           </div>
           <div className="flex shrink-0 items-center gap-3">
             <Toggle checked={conversation.ai_enabled} onChange={toggleAi} label="IA ativa" />
-            <button className="focus-ring rounded-card bg-brand-canvas p-2 text-brand-muted transition hover:text-brand-ink" aria-label="Mais opções">
+
+            {/* Sync button — WhatsApp only */}
+            {isWhatsApp && (
+              <SyncButton
+                state={syncState}
+                count={syncCount}
+                onSync={() => void handleSync()}
+              />
+            )}
+
+            <button
+              className="focus-ring rounded-card bg-brand-canvas p-2 text-brand-muted transition hover:text-brand-ink"
+              aria-label="Mais opções"
+            >
               <MoreHorizontal size={18} />
             </button>
           </div>
@@ -219,9 +278,12 @@ export function ChatWindow({ conversation, onConversationChange }: Props) {
               <RefreshCw size={13} /> Tentar novamente
             </button>
           </div>
-        ) : isLoading ? (
-          <div className="flex h-full items-center justify-center">
+        ) : isLoading || syncState === "syncing" ? (
+          <div className="flex h-full flex-col items-center justify-center gap-2">
             <Loader2 size={24} className="animate-spin text-brand-muted" />
+            {syncState === "syncing" && (
+              <p className="ui-meta">Sincronizando histórico do WhatsApp…</p>
+            )}
           </div>
         ) : messages.length === 0 ? (
           <div className="flex h-full items-center justify-center text-center">
@@ -253,5 +315,45 @@ export function ChatWindow({ conversation, onConversationChange }: Props) {
         <MessageInput onSend={(content, type) => sendMessage(content, type)} />
       </div>
     </section>
+  );
+}
+
+function SyncButton({
+  state,
+  count,
+  onSync,
+}: {
+  state: SyncState;
+  count: number | null;
+  onSync: () => void;
+}) {
+  const label =
+    state === "syncing"
+      ? "Sincronizando…"
+      : state === "done"
+        ? count === 0
+          ? "Já sincronizado"
+          : `${count} msg${count !== 1 ? "s" : ""} importada${count !== 1 ? "s" : ""}`
+        : state === "error"
+          ? "Erro ao sincronizar"
+          : "Sincronizar histórico";
+
+  return (
+    <button
+      type="button"
+      onClick={onSync}
+      disabled={state === "syncing"}
+      title={label}
+      className={`focus-ring flex items-center gap-1.5 rounded-card border px-2.5 py-1.5 text-[11px] font-extrabold transition
+        ${state === "done"
+          ? "border-brand-success/30 bg-brand-successSoft text-brand-successStrong"
+          : state === "error"
+            ? "border-brand-red/30 bg-brand-red50 text-brand-red"
+            : "border-brand-line bg-brand-canvas text-brand-muted hover:text-brand-ink"
+        } disabled:opacity-60`}
+    >
+      <RefreshCw size={12} className={state === "syncing" ? "animate-spin" : ""} />
+      <span className="hidden sm:inline">{label}</span>
+    </button>
   );
 }

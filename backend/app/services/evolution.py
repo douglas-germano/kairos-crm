@@ -124,6 +124,21 @@ def set_webhook(instance_name: str, webhook_url: str) -> dict:
     return _request("POST", f"/webhook/set/{instance_name}", json=payload)
 
 
+def find_messages(instance_name: str, remote_jid: str, limit: int = 100, offset: int = 0) -> list:
+    """Busca histórico de mensagens de um chat específico via Evolution API."""
+    payload = {
+        "where": {"key": {"remoteJid": remote_jid}},
+        "limit": limit,
+        "offset": offset,
+    }
+    result = _request("POST", f"/chat/findMessages/{instance_name}", json=payload)
+    if isinstance(result, list):
+        return result
+    if isinstance(result, dict):
+        return result.get("messages", result.get("records", []))
+    return []
+
+
 def fetch_instance(instance_name: str) -> dict | None:
     """Busca dados de uma instância. Retorna None se não existir."""
     try:

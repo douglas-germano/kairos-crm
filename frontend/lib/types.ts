@@ -31,6 +31,7 @@ export type Conversation = {
   last_message_at: string | null;
   assigned_to: number | null;
   created_at: string;
+  synced_at: string | null;
   contact?: Contact;
 };
 
