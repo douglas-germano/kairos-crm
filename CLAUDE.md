@@ -249,3 +249,7 @@ NEXT_PUBLIC_SOCKET_URL=http://localhost:5000
 17. Docker Compose para desenvolvimento local
 
 > Comece pelo passo 1. Pergunte antes de implementar se tiver dúvida sobre alguma decisão de arquitetura — não assuma.
+
+## Fluxo Git Obrigatório
+
+Após cada push para um branch de feature/fix, **sempre** abra um Pull Request para `main` automaticamente usando as ferramentas GitHub MCP (`mcp__github__create_pull_request`). Faça isso sem precisar ser solicitado.
