@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { Bot, MessageSquare, Search } from "lucide-react";
+import { Bot, MessageSquare, Plus, Search } from "lucide-react";
 import type { Channel, Conversation } from "@/lib/types";
 import { ChannelIcon } from "@/components/ui/ChannelIcon";
+import { NewConversationModal } from "@/components/chat/NewConversationModal";
 import { cn, formatRelativeTime, initials } from "@/lib/utils";
 
 type Props = {
@@ -13,6 +14,7 @@ type Props = {
   channel: Channel | "all";
   onChannelChange: (channel: Channel | "all") => void;
   isLoading?: boolean;
+  onNewConversation?: (conversation: Conversation) => void;
 };
 
 const FILTERS: Array<{ label: string; value: Channel | "all" }> = [
@@ -41,8 +43,10 @@ export function ConversationList({
   channel,
   onChannelChange,
   isLoading,
+  onNewConversation,
 }: Props) {
   const [search, setSearch] = useState("");
+  const [modalOpen, setModalOpen] = useState(false);
 
   const filtered = search.trim()
     ? conversations.filter((c) => {
@@ -55,6 +59,16 @@ export function ConversationList({
   const aiCount = conversations.filter((c) => c.ai_enabled).length;
 
   return (
+    <>
+      <NewConversationModal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        onCreated={(conv) => {
+          setModalOpen(false);
+          onNewConversation?.(conv);
+        }}
+      />
+
     <section className="flex h-full flex-col overflow-hidden border-r border-brand-line bg-white/95">
       {/* Header */}
       <div className="border-b border-brand-line px-4 pb-4 pt-5">
@@ -64,9 +78,17 @@ export function ConversationList({
             <h2 className="heading-md">Inbox</h2>
             <p className="ui-meta mt-1">{conversations.length} conversas</p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2">
             <Pill label="Abertas" value={openCount} tone="green" />
             <Pill label="IA" value={aiCount} tone="red" />
+            <button
+              type="button"
+              onClick={() => setModalOpen(true)}
+              title="Nova conversa"
+              className="focus-ring flex h-7 w-7 items-center justify-center rounded-full bg-brand-charcoal text-white transition hover:bg-brand-ink"
+            >
+              <Plus size={14} />
+            </button>
           </div>
         </div>
 
@@ -118,6 +140,7 @@ export function ConversationList({
         )}
       </div>
     </section>
+    </>
   );
 }
 
