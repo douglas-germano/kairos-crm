@@ -19,7 +19,7 @@ bp = Blueprint("agents", __name__)
 
 
 def _get_workspace_id(user_id: int) -> int | None:
-    member = WorkspaceMember.query.filter_by(user_id=user_id, role="owner").first()
+    member = WorkspaceMember.query.filter_by(user_id=user_id).first()
     return member.workspace_id if member else None
 
 
@@ -48,12 +48,16 @@ def create_agent():
     if not name:
         return jsonify({"error": "Campo name é obrigatório", "code": "MISSING_NAME"}), 400
 
+    temperature = float(data.get("temperature", 0.7))
+    if not (0.0 <= temperature <= 2.0):
+        return jsonify({"error": "temperature deve estar entre 0.0 e 2.0", "code": "INVALID_TEMPERATURE"}), 400
+
     agent = Agent(
         workspace_id=workspace_id,
         name=name,
         system_prompt=data.get("system_prompt", ""),
-        model=data.get("model", CLAUDE_MODEL),
-        temperature=float(data.get("temperature", 0.7)),
+        model=data.get("model") or CLAUDE_MODEL,
+        temperature=temperature,
         enabled=bool(data.get("enabled", False)),
         channels=data.get("channels", []),
     )
@@ -87,7 +91,12 @@ def update_agent(agent_id: int):
     for field in allowed_fields:
         if field in data:
             if field == "temperature":
-                setattr(agent, field, float(data[field]))
+                temp = float(data[field])
+                if not (0.0 <= temp <= 2.0):
+                    return jsonify({"error": "temperature deve estar entre 0.0 e 2.0", "code": "INVALID_TEMPERATURE"}), 400
+                setattr(agent, field, temp)
+            elif field == "model":
+                setattr(agent, field, data[field] or CLAUDE_MODEL)
             elif field == "enabled":
                 setattr(agent, field, bool(data[field]))
             else:

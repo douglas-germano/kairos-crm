@@ -7,9 +7,10 @@ POST /api/messages/<conversation_id>/sync   — sincroniza histórico do WhatsAp
 """
 import logging
 import traceback
-from datetime import datetime, timezone
+from datetime import datetime
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
+from sqlalchemy.exc import IntegrityError
 from app.extensions import db, socketio
 from app.models import Conversation, Message, Integration, WorkspaceMember
 from app.services.whatsapp_identity import remote_jids_for_contact
@@ -19,7 +20,7 @@ bp = Blueprint("messages", __name__)
 
 
 def _get_workspace_id(user_id: int) -> int | None:
-    member = WorkspaceMember.query.filter_by(user_id=user_id, role="owner").first()
+    member = WorkspaceMember.query.filter_by(user_id=user_id).first()
     return member.workspace_id if member else None
 
 
@@ -96,7 +97,7 @@ def send_message(conversation_id: int):
         external_id=None,
     )
     db.session.add(msg)
-    conv.last_message_at = datetime.now(timezone.utc)
+    conv.last_message_at = datetime.utcnow()
     db.session.commit()
 
     # Tenta enviar pelo canal — falhas não removem a mensagem do banco
@@ -122,6 +123,10 @@ def send_message(conversation_id: int):
             logger.error("Falha ao enviar mensagem pelo canal | channel=%s error=%s", channel, str(exc))
             msg.status = "failed"
             db.session.commit()
+    else:
+        logger.warning("Mensagem não enviada — sem integração ativa | channel=%s conv=%s", channel, conv.id)
+        msg.status = "failed"
+        db.session.commit()
 
     # Emite evento real-time
     try:
@@ -130,8 +135,8 @@ def send_message(conversation_id: int):
             {"conversation_id": conv.id, "message": msg.to_dict()},
             room=f"workspace_{workspace_id}",
         )
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.warning("Falha ao emitir evento SocketIO new_message | conv=%s error=%s", conv.id, exc)
 
     return jsonify(msg.to_dict()), 201
 
@@ -191,7 +196,7 @@ def sync_messages(conversation_id: int):
         remote_jids = remote_jids_for_contact(conv.contact)
         instance_name = f"kairos-crm-{user_id}"
 
-        print(f"[sync] Buscando mensagens instance={instance_name} jids={remote_jids}", flush=True)
+        logger.debug("Buscando mensagens | instance=%s jids=%s", instance_name, remote_jids)
 
         raw_msgs: list[dict] = []
         sync_errors: list[dict] = []
@@ -223,8 +228,7 @@ def sync_messages(conversation_id: int):
             db.session.commit()
             return jsonify({"error": sync_errors[0]["error"], "code": "EVOLUTION_ERROR", "details": sync_errors}), 502
 
-        first_sample = raw_msgs[0] if raw_msgs else "none"
-        print(f"[sync] Evolution retornou {len(raw_msgs)} mensagens | first={first_sample}", flush=True)
+        logger.debug("Evolution retornou %s mensagens | conv=%s", len(raw_msgs), conv.id)
 
         # IDs já existentes no banco para esta conversa (evita duplicatas)
         existing_ids = {
@@ -247,7 +251,6 @@ def sync_messages(conversation_id: int):
 
             direction = "outbound" if key.get("fromMe") else "inbound"
             ts = raw.get("messageTimestamp")
-            # Use naive UTC datetimes — PostgreSQL column is TIMESTAMP WITHOUT TIME ZONE
             created_at = datetime.utcfromtimestamp(int(ts)) if ts else datetime.utcnow()
 
             msg = Message(
@@ -259,9 +262,13 @@ def sync_messages(conversation_id: int):
                 external_id=ext_id,
                 created_at=created_at,
             )
-            db.session.add(msg)
-            existing_ids.add(ext_id)
-            inserted += 1
+            try:
+                with db.session.begin_nested():
+                    db.session.add(msg)
+                existing_ids.add(ext_id)
+                inserted += 1
+            except IntegrityError:
+                logger.warning("Mensagem duplicada ignorada no sync | ext_id=%s conv=%s", ext_id, conv.id)
 
         conv.synced_at = datetime.utcnow()
         conv.last_message_at = (
@@ -281,7 +288,6 @@ def sync_messages(conversation_id: int):
         )
         db.session.commit()
 
-        print(f"[sync] Commit OK inserted={inserted}", flush=True)
         logger.info(
             "Histórico WhatsApp sincronizado | conversation=%s inserted=%s total=%s",
             conv.id, inserted, len(raw_msgs),
@@ -291,7 +297,6 @@ def sync_messages(conversation_id: int):
     except Exception as exc:
         db.session.rollback()
         tb = traceback.format_exc()
-        print(f"[sync] ERRO INESPERADO: {exc}\n{tb}", flush=True)
         logger.error("Erro inesperado no sync | conversation=%s error=%s trace=%s", conversation_id, str(exc), tb)
         return jsonify({"error": "Erro interno ao sincronizar", "code": "INTERNAL_ERROR"}), 500
 

@@ -31,7 +31,7 @@ def _get_workspace_id(user_id: int) -> int | None:
     """Retorna o primeiro workspace do usuário (owner)."""
     member = (
         WorkspaceMember.query
-        .filter_by(user_id=user_id, role="owner")
+        .filter_by(user_id=user_id)
         .first()
     )
     return member.workspace_id if member else None

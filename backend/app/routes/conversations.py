@@ -10,9 +10,10 @@ DELETE /api/conversations/<id>      — exclui a conversa e suas mensagens
 """
 import logging
 import re
-from datetime import datetime, timezone
+from datetime import datetime
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
+from sqlalchemy.orm import joinedload
 from app.extensions import db, socketio
 from app.models import Conversation, Message, WorkspaceMember
 
@@ -21,7 +22,7 @@ bp = Blueprint("conversations", __name__)
 
 
 def _get_workspace_id(user_id: int) -> int | None:
-    member = WorkspaceMember.query.filter_by(user_id=user_id, role="owner").first()
+    member = WorkspaceMember.query.filter_by(user_id=user_id).first()
     return member.workspace_id if member else None
 
 
@@ -40,10 +41,15 @@ def list_conversations():
 
     channel = request.args.get("channel")
     status = request.args.get("status")
-    page = int(request.args.get("page", 1))
-    per_page = int(request.args.get("per_page", 30))
+    try:
+        page = int(request.args.get("page", 1))
+        per_page = int(request.args.get("per_page", 30))
+    except (ValueError, TypeError):
+        return jsonify({"error": "Parametros page e per_page devem ser inteiros", "code": "INVALID_PARAMS"}), 400
 
-    query = Conversation.query.filter_by(workspace_id=workspace_id)
+    query = Conversation.query.filter_by(workspace_id=workspace_id).options(
+        joinedload(Conversation.contact)
+    )
     if channel:
         query = query.filter_by(channel=channel)
     if status:
@@ -133,7 +139,7 @@ def initiate_conversation():
             contact_id=contact.id,
             channel="whatsapp",
             status="open",
-            last_message_at=datetime.now(timezone.utc),
+            last_message_at=datetime.utcnow(),
         )
         db.session.add(conversation)
         db.session.flush()
@@ -148,7 +154,7 @@ def initiate_conversation():
             status="sent",
         )
         db.session.add(msg)
-        conversation.last_message_at = datetime.now(timezone.utc)
+        conversation.last_message_at = datetime.utcnow()
         db.session.flush()
 
         try:
@@ -173,8 +179,8 @@ def initiate_conversation():
             {"conversation_id": conversation.id, "fields": {}},
             room=f"workspace_{workspace_id}",
         )
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.warning("Falha ao emitir evento SocketIO | error=%s", exc)
 
     return jsonify(conversation.to_dict(include_contact=True)), 201
 
@@ -184,6 +190,8 @@ def initiate_conversation():
 def get_conversation(conversation_id: int):
     user_id = int(get_jwt_identity())
     workspace_id = _get_workspace_id(user_id)
+    if not workspace_id:
+        return jsonify({"error": "Workspace nao encontrado", "code": "NO_WORKSPACE"}), 404
 
     conv = Conversation.query.filter_by(
         id=conversation_id, workspace_id=workspace_id
@@ -197,6 +205,8 @@ def get_conversation(conversation_id: int):
 def update_conversation(conversation_id: int):
     user_id = int(get_jwt_identity())
     workspace_id = _get_workspace_id(user_id)
+    if not workspace_id:
+        return jsonify({"error": "Workspace nao encontrado", "code": "NO_WORKSPACE"}), 404
     data = request.get_json() or {}
 
     conv = Conversation.query.filter_by(
@@ -216,8 +226,8 @@ def update_conversation(conversation_id: int):
             {"conversation_id": conv.id, "fields": {f: data[f] for f in allowed_fields if f in data}},
             room=f"workspace_{workspace_id}",
         )
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.warning("Falha ao emitir evento SocketIO | error=%s", exc)
 
     return jsonify(conv.to_dict(include_contact=True))
 
@@ -227,6 +237,8 @@ def update_conversation(conversation_id: int):
 def toggle_ai(conversation_id: int):
     user_id = int(get_jwt_identity())
     workspace_id = _get_workspace_id(user_id)
+    if not workspace_id:
+        return jsonify({"error": "Workspace nao encontrado", "code": "NO_WORKSPACE"}), 404
     data = request.get_json() or {}
 
     conv = Conversation.query.filter_by(
@@ -245,8 +257,8 @@ def toggle_ai(conversation_id: int):
             {"conversation_id": conv.id, "fields": {"ai_enabled": conv.ai_enabled}},
             room=f"workspace_{workspace_id}",
         )
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.warning("Falha ao emitir evento SocketIO | error=%s", exc)
 
     return jsonify({"id": conv.id, "ai_enabled": conv.ai_enabled})
 
@@ -256,6 +268,8 @@ def toggle_ai(conversation_id: int):
 def close_conversation(conversation_id: int):
     user_id = int(get_jwt_identity())
     workspace_id = _get_workspace_id(user_id)
+    if not workspace_id:
+        return jsonify({"error": "Workspace nao encontrado", "code": "NO_WORKSPACE"}), 404
 
     conv = Conversation.query.filter_by(
         id=conversation_id, workspace_id=workspace_id
@@ -271,7 +285,7 @@ def close_conversation(conversation_id: int):
             {"conversation_id": conversation_id},
             room=f"workspace_{workspace_id}",
         )
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.warning("Falha ao emitir evento SocketIO | error=%s", exc)
 
     return jsonify({"deleted": True, "conversation_id": conversation_id})

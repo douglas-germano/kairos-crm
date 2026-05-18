@@ -24,7 +24,7 @@ bp = Blueprint("settings", __name__)
 # ─── Helpers ──────────────────────────────────────────────────────────────────
 
 def _get_workspace(user_id: int):
-    member = WorkspaceMember.query.filter_by(user_id=user_id, role="owner").first()
+    member = WorkspaceMember.query.filter_by(user_id=user_id).first()
     if not member:
         return None
     return db.session.get(Workspace, member.workspace_id)

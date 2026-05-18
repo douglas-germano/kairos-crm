@@ -21,7 +21,7 @@ bp = Blueprint("contacts", __name__)
 
 
 def _get_workspace_id(user_id: int) -> int | None:
-    member = WorkspaceMember.query.filter_by(user_id=user_id, role="owner").first()
+    member = WorkspaceMember.query.filter_by(user_id=user_id).first()
     return member.workspace_id if member else None
 
 
