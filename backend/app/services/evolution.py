@@ -36,16 +36,15 @@ def _request(method: str, path: str, **kwargs) -> dict:
             body = exc.response.json()
         except Exception:
             pass
+        status_code = exc.response.status_code
+        error_msg = body.get("message") or body.get("error") or str(exc)
         logger.error(
-            "Evolution API HTTP error",
-            extra={"status": exc.response.status_code, "path": path, "body": body},
+            "Evolution API HTTP error | status=%s path=%s body=%s",
+            status_code, path, body,
         )
-        raise EvolutionError(
-            body.get("message") or body.get("error") or str(exc),
-            status=exc.response.status_code,
-        )
+        raise EvolutionError(error_msg, status=status_code)
     except requests.exceptions.RequestException as exc:
-        logger.error("Evolution API request error", extra={"error": str(exc)})
+        logger.error("Evolution API request error | error=%s", str(exc))
         raise EvolutionError(str(exc))
 
 
