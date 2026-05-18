@@ -91,11 +91,13 @@ def whatsapp_connect():
         existing = evo_svc.fetch_instance(instance_name)
 
         if existing:
-            # Instância já existe — só busca QR atualizado
+            # Instância já existe — garante que o webhook aponta para o backend atual.
+            evo_svc.set_webhook(instance_name, webhook_url)
             qr_data = evo_svc.get_qr(instance_name)
         else:
             # Cria nova instância (já retorna QR quando qrcode=True)
             result = evo_svc.create_instance(instance_name, webhook_url)
+            evo_svc.set_webhook(instance_name, webhook_url)
             qrcode_payload = result.get("qrcode", {})
             qr_data = {
                 "code": qrcode_payload.get("base64") or qrcode_payload.get("code", ""),
@@ -155,8 +157,10 @@ def whatsapp_status():
         return jsonify({"state": "not_configured", "integration": None})
 
     instance_name = _instance_name(user_id)
+    webhook_url = _webhook_url()
 
     try:
+        evo_svc.set_webhook(instance_name, webhook_url)
         state_data = evo_svc.connection_state(instance_name)
         state = state_data.get("instance", {}).get("state", "close")
 

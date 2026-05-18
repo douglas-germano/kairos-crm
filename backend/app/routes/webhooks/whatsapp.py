@@ -8,6 +8,7 @@ logger = logging.getLogger(__name__)
 bp = Blueprint("webhook_whatsapp", __name__)
 
 # Eventos que atualizam o status de conexão
+_MESSAGE_EVENTS = {"messages.upsert", "MESSAGES_UPSERT"}
 _CONNECTION_EVENTS = {"connection.update", "CONNECTION_UPDATE"}
 
 
@@ -19,8 +20,8 @@ def receive():
     event = data.get("event", "")
     instance_name = data.get("instance")
 
-    if event == "messages.upsert":
-        _handle_message(instance_name, data.get("data", {}))
+    if event in _MESSAGE_EVENTS:
+        _handle_messages(instance_name, data.get("data", {}))
     elif event in _CONNECTION_EVENTS:
         _handle_connection_update(instance_name, data.get("data", {}))
     else:
@@ -51,6 +52,17 @@ def _handle_connection_update(instance_name: str, data: dict):
             "Status WhatsApp atualizado via CONNECTION_UPDATE",
             extra={"instance": instance_name, "state": state, "status": new_status},
         )
+
+
+def _handle_messages(instance_name: str, data: dict):
+    """Normaliza payloads da Evolution e processa uma ou mais mensagens."""
+    messages = data.get("messages")
+    if isinstance(messages, list):
+        for message in messages:
+            _handle_message(instance_name, message)
+        return
+
+    _handle_message(instance_name, data)
 
 
 def _handle_message(instance_name: str, msg_data: dict):

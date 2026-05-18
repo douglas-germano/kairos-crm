@@ -3,7 +3,12 @@
 import { io, Socket } from "socket.io-client";
 import { getAccessToken } from "@/lib/auth";
 
-const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:5001";
+const DEFAULT_SOCKET_URL =
+  process.env.NODE_ENV === "production"
+    ? "https://backend-production-33ef.up.railway.app"
+    : "http://localhost:5001";
+
+const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || DEFAULT_SOCKET_URL;
 
 let socket: Socket | null = null;
 
