@@ -11,7 +11,7 @@ class Contact(db.Model):
     external_id = db.Column(db.String(255), nullable=False)  # IGSID ou número WhatsApp
     name = db.Column(db.String(255))
     avatar_url = db.Column(db.String(500))
-    metadata_ = db.Column("metadata", db.JSON, default=dict)
+    metadata_ = db.Column("metadata", db.JSON, default=lambda: {})
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
     workspace = db.relationship("Workspace", back_populates="contacts")

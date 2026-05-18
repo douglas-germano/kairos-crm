@@ -13,7 +13,7 @@ class Integration(db.Model):
     channel = db.Column(db.String(20), nullable=False)   # instagram | whatsapp
     status = db.Column(db.String(20), default="inactive")  # active | inactive
     _credentials = db.Column("credentials", db.Text)       # JSON criptografado
-    meta = db.Column(db.JSON, default=dict)
+    meta = db.Column(db.JSON, default=lambda: {})
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
     workspace = db.relationship("Workspace", back_populates="integrations")

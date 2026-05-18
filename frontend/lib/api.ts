@@ -24,25 +24,35 @@ type ApiOptions = RequestInit & {
   skipAuth?: boolean;
 };
 
-async function refreshAccessToken() {
-  const refreshToken = getRefreshToken();
-  if (!refreshToken) return null;
+let _refreshPromise: Promise<string | null> | null = null;
 
-  const response = await fetch(`${API_URL}/auth/refresh`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${refreshToken}`
+async function refreshAccessToken(): Promise<string | null> {
+  if (_refreshPromise) return _refreshPromise;
+
+  _refreshPromise = (async () => {
+    const refreshToken = getRefreshToken();
+    if (!refreshToken) return null;
+
+    const response = await fetch(`${API_URL}/auth/refresh`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${refreshToken}`
+      }
+    });
+
+    if (!response.ok) {
+      clearTokens();
+      return null;
     }
+
+    const data = (await response.json()) as { access_token: string };
+    setTokens(data.access_token, refreshToken);
+    return data.access_token;
+  })().finally(() => {
+    _refreshPromise = null;
   });
 
-  if (!response.ok) {
-    clearTokens();
-    return null;
-  }
-
-  const data = (await response.json()) as { access_token: string };
-  setTokens(data.access_token, refreshToken);
-  return data.access_token;
+  return _refreshPromise;
 }
 
 export async function apiFetch<T>(path: string, options: ApiOptions = {}, retry = true): Promise<T> {
@@ -70,7 +80,7 @@ export async function apiFetch<T>(path: string, options: ApiOptions = {}, retry 
   }
 
   if (!response.ok) {
-    let message = "Falha na requisicao";
+    let message = "Falha na requisição";
     let code: string | undefined;
     try {
       const data = await response.json();

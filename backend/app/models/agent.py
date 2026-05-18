@@ -14,7 +14,7 @@ class Agent(db.Model):
     model = db.Column(db.String(100), default=CLAUDE_MODEL)
     temperature = db.Column(db.Float, default=0.7)
     enabled = db.Column(db.Boolean, default=False)
-    channels = db.Column(db.JSON, default=list)   # ["instagram", "whatsapp"]
+    channels = db.Column(db.JSON, default=lambda: [])   # ["instagram", "whatsapp"]
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
     workspace = db.relationship("Workspace", back_populates="agents")

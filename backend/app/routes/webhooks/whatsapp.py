@@ -133,7 +133,7 @@ def _handle_message(instance_name: str, msg_data: dict):
         db.session.flush()
     else:
         # Atualiza o nome se ainda não estava definido
-        if contact.name == contact.external_id and push_name:
+        if not contact.name and push_name:
             contact.name = push_name
 
     # Cria ou localiza a conversa aberta
