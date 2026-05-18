@@ -1,8 +1,9 @@
 """
 Rotas REST para Mensagens.
 
-GET  /api/messages/<conversation_id>  — histórico paginado de uma conversa
-POST /api/messages/<conversation_id>  — envia mensagem outbound manualmente
+GET  /api/messages/<conversation_id>        — histórico paginado de uma conversa
+POST /api/messages/<conversation_id>        — envia mensagem outbound manualmente
+POST /api/messages/<conversation_id>/sync   — sincroniza histórico do WhatsApp
 """
 import logging
 from datetime import datetime, timezone
@@ -118,3 +119,113 @@ def send_message(conversation_id: int):
         pass
 
     return jsonify(msg.to_dict()), 201
+
+
+# ── Helpers para parsear mensagens da Evolution API ────────────────────────────
+
+def _extract_content(msg_obj: dict) -> tuple[str, str]:
+    """
+    Extrai (content, content_type) de um objeto de mensagem da Evolution API.
+    Retorna ("", "text") se não reconhecer o tipo.
+    """
+    m = msg_obj.get("message") or {}
+
+    if text := (m.get("conversation") or (m.get("extendedTextMessage") or {}).get("text", "")):
+        return text, "text"
+    if img := m.get("imageMessage"):
+        return img.get("url") or img.get("caption") or "[imagem]", "image"
+    if aud := (m.get("audioMessage") or m.get("pttMessage")):
+        return aud.get("url") or "[áudio]", "audio"
+    if vid := m.get("videoMessage"):
+        return vid.get("url") or vid.get("caption") or "[vídeo]", "video"
+    if doc := m.get("documentMessage"):
+        return doc.get("url") or doc.get("title") or "[documento]", "template"
+
+    return "", "text"
+
+
+@bp.post("/<int:conversation_id>/sync")
+@jwt_required()
+def sync_messages(conversation_id: int):
+    """
+    Sincroniza o histórico de mensagens WhatsApp via Evolution API.
+    Insere apenas mensagens que ainda não existem no banco (dedup por external_id).
+    """
+    from app.services import evolution as evo_svc
+    from app.services.evolution import EvolutionError
+    from app.routes.settings import _instance_name
+
+    user_id = int(get_jwt_identity())
+    workspace_id = _get_workspace_id(user_id)
+    if not workspace_id:
+        return jsonify({"error": "Workspace não encontrado", "code": "NO_WORKSPACE"}), 404
+
+    conv = Conversation.query.filter_by(
+        id=conversation_id, workspace_id=workspace_id
+    ).first_or_404()
+
+    if conv.channel != "whatsapp":
+        return jsonify({"error": "Sync disponível apenas para WhatsApp", "code": "UNSUPPORTED_CHANNEL"}), 400
+
+    integration = Integration.query.filter_by(
+        workspace_id=workspace_id, channel="whatsapp", status="active"
+    ).first()
+    if not integration:
+        return jsonify({"error": "Nenhuma integração WhatsApp ativa", "code": "NO_INTEGRATION"}), 400
+
+    phone = conv.contact.external_id
+    remote_jid = f"{phone}@s.whatsapp.net"
+    instance_name = _instance_name(user_id)
+
+    try:
+        raw_msgs = evo_svc.find_messages(instance_name, remote_jid, limit=200)
+    except EvolutionError as exc:
+        logger.error("Falha ao buscar histórico Evolution API | error=%s", str(exc))
+        return jsonify({"error": str(exc), "code": "EVOLUTION_ERROR"}), 502
+
+    # IDs já existentes no banco para esta conversa (evita duplicatas)
+    existing_ids = {
+        row[0]
+        for row in db.session.query(Message.external_id)
+        .filter(Message.conversation_id == conv.id, Message.external_id.isnot(None))
+        .all()
+    }
+
+    inserted = 0
+    for raw in raw_msgs:
+        key = raw.get("key") or {}
+        ext_id = key.get("id")
+        if not ext_id or ext_id in existing_ids:
+            continue
+
+        content, content_type = _extract_content(raw)
+        if not content:
+            continue
+
+        direction = "outbound" if key.get("fromMe") else "inbound"
+        ts = raw.get("messageTimestamp")
+        created_at = (
+            datetime.fromtimestamp(int(ts), tz=timezone.utc) if ts else datetime.now(timezone.utc)
+        )
+
+        msg = Message(
+            conversation_id=conv.id,
+            direction=direction,
+            content=content,
+            content_type=content_type,
+            status="read" if direction == "inbound" else "delivered",
+            external_id=ext_id,
+            created_at=created_at,
+        )
+        db.session.add(msg)
+        existing_ids.add(ext_id)
+        inserted += 1
+
+    conv.synced_at = datetime.now(timezone.utc)
+    db.session.commit()
+
+    logger.info(
+        "Histórico WhatsApp sincronizado | conversation=%s inserted=%s",
+        conv.id, inserted,
+    )
+    return jsonify({"synced": inserted, "total": len(raw_msgs)})

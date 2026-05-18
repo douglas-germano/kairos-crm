@@ -13,6 +13,7 @@ class Conversation(db.Model):
     last_message_at = db.Column(db.DateTime)
     assigned_to = db.Column(db.Integer, db.ForeignKey("users.id"))
     ai_enabled = db.Column(db.Boolean, default=False)
+    synced_at = db.Column(db.DateTime, nullable=True)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
     workspace = db.relationship("Workspace", back_populates="conversations")
@@ -29,6 +30,7 @@ class Conversation(db.Model):
             "last_message_at": self.last_message_at.isoformat() if self.last_message_at else None,
             "assigned_to": self.assigned_to,
             "created_at": self.created_at.isoformat(),
+            "synced_at": self.synced_at.isoformat() if self.synced_at else None,
         }
         if include_contact:
             data["contact"] = self.contact.to_dict()
