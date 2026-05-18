@@ -9,9 +9,9 @@ class Flow(db.Model):
     agent_id = db.Column(db.Integer, db.ForeignKey("agents.id"), nullable=False)
     name = db.Column(db.String(255), nullable=False)
     trigger_type = db.Column(db.String(50))          # first_message | keyword | schedule
-    trigger_config = db.Column(db.JSON, default=dict)
-    nodes = db.Column(db.JSON, default=list)          # React Flow nodes
-    edges = db.Column(db.JSON, default=list)          # React Flow edges
+    trigger_config = db.Column(db.JSON, default=lambda: {})
+    nodes = db.Column(db.JSON, default=lambda: [])    # React Flow nodes
+    edges = db.Column(db.JSON, default=lambda: [])    # React Flow edges
     active = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 

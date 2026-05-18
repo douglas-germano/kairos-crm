@@ -12,11 +12,10 @@ from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from app.extensions import db
 from app.models import Agent, WorkspaceMember
+from app.models.agent import CLAUDE_MODEL
 
 logger = logging.getLogger(__name__)
 bp = Blueprint("agents", __name__)
-
-CLAUDE_MODEL = "claude-sonnet-4-20250514"
 
 
 def _get_workspace_id(user_id: int) -> int | None:

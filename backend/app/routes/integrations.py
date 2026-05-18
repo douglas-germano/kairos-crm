@@ -104,8 +104,12 @@ def instagram_callback():
         logger.error("Falha ao obter long-lived token", extra={"response": ll_resp.text})
         return redirect(f"{base_url}/settings?error=long_lived_token_failed")
 
-    long_token = ll_resp.json().get("access_token")
-    expires_in = ll_resp.json().get("expires_in")
+    ll_data = ll_resp.json()
+    long_token = ll_data.get("access_token")
+    expires_in = ll_data.get("expires_in")
+    if not long_token:
+        logger.error("Token de longa duração ausente na resposta da Meta", extra={"response": ll_data})
+        return redirect(f"{base_url}/settings?error=long_lived_token_failed")
 
     # 3. Busca páginas do usuário para encontrar IG Business Account
     pages_resp = requests.get(f"{GRAPH_BASE}/me/accounts", params={

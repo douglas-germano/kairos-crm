@@ -1,7 +1,5 @@
 "use client";
 
-export const runtime = "edge";
-
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { ArrowLeft, Plus } from "lucide-react";
@@ -11,6 +9,8 @@ import { Button } from "@/components/ui/Button";
 import { apiFetch } from "@/lib/api";
 import type { Flow } from "@/lib/types";
 import { useAgent, useFlows } from "@/hooks/useAgent";
+
+export const runtime = "edge";
 
 export default function AgentEditorPage() {
   const params = useParams<{ id: string }>();

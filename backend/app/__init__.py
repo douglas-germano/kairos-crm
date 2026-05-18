@@ -18,8 +18,8 @@ def create_app():
     db.init_app(app)
     migrate.init_app(app, db)
     jwt.init_app(app)
-    socketio.init_app(app)
     init_redis(app)
+    socketio.init_app(app, message_queue=app.config["REDIS_URL"])
 
     # Blueprints
     from .routes.auth import bp as auth_bp
