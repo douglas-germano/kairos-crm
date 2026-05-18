@@ -54,7 +54,7 @@ export type Message = {
   conversation_id: number;
   direction: "inbound" | "outbound";
   content: string;
-  content_type: "text" | "image" | "audio" | "video" | "template";
+  content_type: "text" | "image" | "audio" | "video" | "template" | "sticker";
   status: "sent" | "delivered" | "read" | "failed";
   external_id: string | null;
   created_at: string;

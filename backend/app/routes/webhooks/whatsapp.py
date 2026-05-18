@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime, timezone
+from datetime import datetime
 from flask import Blueprint, request, jsonify
 from app.extensions import db, rq_queue, socketio
 from app.models import Integration, Contact, Conversation, Message
@@ -114,27 +114,15 @@ def _handle_message(instance_name: str, msg_data: dict):
         logger.warning("remoteJid inválido", extra={"remote_jid": remote_jid})
         return
 
-    # Extrai conteúdo da mensagem (texto ou áudio)
+    # Extrai conteúdo da mensagem (suporta texto, imagem, figurinha, áudio, vídeo)
     message_obj = msg_data.get("message", {})
     push_name = msg_data.get("pushName", contact_external_id)
 
-    text = (
-        message_obj.get("conversation")
-        or message_obj.get("extendedTextMessage", {}).get("text")
-        or ""
-    )
-    audio_b64 = (
-        message_obj.get("audioMessage", {}).get("base64")
-        or message_obj.get("pttMessage", {}).get("base64")
-        or ""
-    )
+    content, content_type = _extract_message_content(message_obj)
 
-    if not text and not audio_b64:
+    if not content:
         logger.debug("Mensagem sem conteúdo suportado ignorada", extra={"jid": remote_jid})
         return
-
-    content = text or audio_b64
-    content_type = "text" if text else "audio"
 
     # Encontra a integração WhatsApp pela instance_name
     integration = _find_integration(instance_name)
@@ -222,7 +210,7 @@ def _handle_message(instance_name: str, msg_data: dict):
         external_id=external_id,
     )
     db.session.add(msg)
-    conversation.last_message_at = datetime.now(timezone.utc)
+    conversation.last_message_at = datetime.utcnow()
     db.session.commit()
 
     logger.info(
@@ -236,8 +224,8 @@ def _handle_message(instance_name: str, msg_data: dict):
             {"conversation_id": conversation.id, "message": msg.to_dict()},
             room=f"workspace_{workspace_id}",
         )
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.warning("Falha ao emitir evento SocketIO new_message | conv=%s error=%s", conversation.id, exc)
 
     # Enfileira para processamento de IA
     try:
@@ -248,6 +236,37 @@ def _handle_message(instance_name: str, msg_data: dict):
         )
     except Exception as exc:
         logger.error("Falha ao enfileirar mensagem WhatsApp", extra={"error": str(exc)})
+
+
+
+def _extract_message_content(message_obj: dict) -> tuple[str, str]:
+    """Extrai (content, content_type) de um objeto de mensagem da Evolution API."""
+    m = message_obj or {}
+
+    if text := (m.get("conversation") or (m.get("extendedTextMessage") or {}).get("text", "")):
+        return text, "text"
+
+    if img := m.get("imageMessage"):
+        data = img.get("base64") or img.get("url") or img.get("caption") or ""
+        return data or "[imagem]", "image"
+
+    if sticker := m.get("stickerMessage"):
+        data = sticker.get("base64") or sticker.get("url") or ""
+        return data or "[figurinha]", "sticker"
+
+    if aud := (m.get("audioMessage") or m.get("pttMessage")):
+        data = aud.get("base64") or aud.get("url") or ""
+        return data or "[audio]", "audio"
+
+    if vid := m.get("videoMessage"):
+        data = vid.get("url") or vid.get("caption") or ""
+        return data or "[video]", "video"
+
+    if doc := m.get("documentMessage"):
+        data = doc.get("url") or doc.get("title") or ""
+        return data or "[documento]", "template"
+
+    return "", "text"
 
 
 def _find_integration(instance_name: str) -> Integration | None:

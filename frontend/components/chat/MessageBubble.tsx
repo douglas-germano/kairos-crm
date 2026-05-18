@@ -20,6 +20,18 @@ function detectMime(b64: string): string {
   return "audio/ogg; codecs=opus"; // WhatsApp PTT default
 }
 
+function resolveMediaSrc(content: string, mimePrefix = "image/jpeg"): string {
+  if (!content) return "";
+  if (content.startsWith("http://") || content.startsWith("https://")) return content;
+  if (content.startsWith("data:")) return content;
+  // Assume base64
+  return `data:${mimePrefix};base64,${content}`;
+}
+
+function isPlaceholder(content: string): boolean {
+  return content.startsWith("[") && content.endsWith("]");
+}
+
 function AudioPlayer({ content }: { content: string }) {
   const [src, setSrc] = useState<string>("");
   const [failed, setFailed] = useState(false);
@@ -29,7 +41,6 @@ function AudioPlayer({ content }: { content: string }) {
     setFailed(false);
     setSrc("");
     try {
-      // Remove data: prefix if present, strip whitespace
       const raw = content.replace(/^data:[^;]+;base64,/, "").replace(/\s/g, "");
       const mime = detectMime(raw);
       const binary = atob(raw);
@@ -68,18 +79,79 @@ function AudioPlayer({ content }: { content: string }) {
   );
 }
 
+function MediaImage({
+  content,
+  alt,
+  placeholder,
+  className,
+}: {
+  content: string;
+  alt: string;
+  placeholder: string;
+  className?: string;
+}) {
+  const [failed, setFailed] = useState(false);
+
+  if (isPlaceholder(content) || failed) {
+    return (
+      <span className="flex items-center gap-1.5 ui-meta opacity-70">
+        {placeholder}
+      </span>
+    );
+  }
+
+  return (
+    <img
+      src={resolveMediaSrc(content)}
+      alt={alt}
+      className={cn("max-w-full rounded-lg object-contain", className)}
+      onError={() => setFailed(true)}
+      loading="lazy"
+    />
+  );
+}
+
+function VideoPlayer({ content }: { content: string }) {
+  if (isPlaceholder(content)) {
+    return (
+      <span className="flex items-center gap-1.5 ui-meta opacity-70">
+        🎬 Vídeo
+      </span>
+    );
+  }
+  return (
+    <video
+      controls
+      src={content}
+      className="max-w-full max-h-64 rounded-lg"
+      preload="metadata"
+    />
+  );
+}
+
 export function MessageBubble({ message }: { message: Message }) {
   const outbound = message.direction === "outbound";
   const failed = message.status === "failed";
-  const isAudio = message.content_type === "audio";
+  const { content_type, content } = message;
+
+  const isAudio = content_type === "audio";
+  const isImage = content_type === "image";
+  const isSticker = content_type === "sticker";
+  const isVideo = content_type === "video";
+
+  // Stickers render without the standard bubble padding / background
+  const isNakedMedia = isSticker;
 
   const bubbleClass = cn(
-    "max-w-[78%] rounded-panel px-3.5 py-2.5 shadow-sm",
+    "max-w-[78%] rounded-panel shadow-sm",
+    isNakedMedia ? "" : "px-3.5 py-2.5",
     outbound
       ? failed
         ? "bg-brand-red100 text-brand-red"
         : "bg-brand-charcoal text-white"
-      : "border border-brand-line bg-white text-brand-ink"
+      : isNakedMedia
+        ? ""
+        : "border border-brand-line bg-white text-brand-ink"
   );
 
   const metaClass = cn(
@@ -87,18 +159,29 @@ export function MessageBubble({ message }: { message: Message }) {
     outbound ? (failed ? "text-brand-red" : "text-white/60") : "text-brand-muted"
   );
 
+  function renderContent() {
+    if (isAudio) return <AudioPlayer content={content} />;
+    if (isImage) return <MediaImage content={content} alt="Imagem" placeholder="🖼️ Imagem" className="max-h-64" />;
+    if (isSticker) return <MediaImage content={content} alt="Figurinha" placeholder="😀 Figurinha" className="max-h-32 max-w-[128px]" />;
+    if (isVideo) return <VideoPlayer content={content} />;
+    return <p className="ui-body whitespace-pre-wrap">{content}</p>;
+  }
+
   return (
     <div className={cn("mx-auto flex w-full max-w-4xl", outbound ? "justify-end" : "justify-start")}>
       <div className={bubbleClass}>
-        {isAudio ? (
-          <AudioPlayer content={message.content} />
-        ) : (
-          <p className="ui-body whitespace-pre-wrap">{message.content}</p>
+        {renderContent()}
+        {!isNakedMedia && (
+          <div className={metaClass}>
+            {failed && <AlertCircle size={11} />}
+            {failed ? "Falha na entrega" : formatDateTime(message.created_at)}
+          </div>
         )}
-        <div className={metaClass}>
-          {failed && <AlertCircle size={11} />}
-          {failed ? "Falha na entrega" : formatDateTime(message.created_at)}
-        </div>
+        {isNakedMedia && (
+          <div className={cn(metaClass, "px-1")}>
+            {formatDateTime(message.created_at)}
+          </div>
+        )}
       </div>
     </div>
   );

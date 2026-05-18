@@ -154,6 +154,8 @@ def _extract_content(msg_obj: dict) -> tuple[str, str]:
         return text, "text"
     if img := m.get("imageMessage"):
         return img.get("url") or img.get("caption") or "[imagem]", "image"
+    if sticker := m.get("stickerMessage"):
+        return sticker.get("url") or "[figurinha]", "sticker"
     if aud := (m.get("audioMessage") or m.get("pttMessage")):
         return aud.get("url") or "[áudio]", "audio"
     if vid := m.get("videoMessage"):
