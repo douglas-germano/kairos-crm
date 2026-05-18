@@ -9,6 +9,7 @@ GET   /api/settings/whatsapp/status        — verifica estado de conexão da in
 POST  /api/settings/whatsapp/disconnect    — desconecta e remove instância
 """
 import logging
+from datetime import datetime
 from flask import Blueprint, request, jsonify, current_app
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from app.extensions import db
@@ -124,7 +125,17 @@ def whatsapp_connect():
         "api_url": current_app.config.get("EVOLUTION_API_URL", ""),
         "api_key": current_app.config.get("EVOLUTION_API_KEY", ""),
     })
-    integration.meta = {"instance_name": instance_name}
+    meta = dict(integration.meta or {})
+    meta["instance_name"] = instance_name
+    meta["webhook_url"] = webhook_url
+    integration.meta = meta
+    _update_health(
+        integration,
+        last_connect_at=datetime.utcnow().isoformat(),
+        webhook_url=webhook_url,
+        last_webhook_refresh_at=datetime.utcnow().isoformat(),
+        last_error=None,
+    )
     db.session.commit()
 
     logger.info("WhatsApp QR gerado", extra={"workspace_id": ws.id, "instance": instance_name})
@@ -159,23 +170,41 @@ def whatsapp_status():
     instance_name = _instance_name(user_id)
 
     try:
+        evo_svc.set_webhook(instance_name, _webhook_url())
         state_data = evo_svc.connection_state(instance_name)
         state = state_data.get("instance", {}).get("state", "close")
 
         # Sincroniza status no banco quando conectado
         if state == "open" and integration.status != "active":
             integration.status = "active"
-            db.session.commit()
         elif state != "open" and integration.status == "active":
             integration.status = "inactive"
-            db.session.commit()
+        meta = dict(integration.meta or {})
+        meta["webhook_url"] = _webhook_url()
+        integration.meta = meta
+        _update_health(
+            integration,
+            connection_state=state,
+            last_status_check_at=datetime.utcnow().isoformat(),
+            last_webhook_refresh_at=datetime.utcnow().isoformat(),
+            last_error=None,
+        )
+        db.session.commit()
 
-    except EvolutionError:
+    except EvolutionError as exc:
         state = "close"
+        _update_health(
+            integration,
+            connection_state=state,
+            last_status_check_at=datetime.utcnow().isoformat(),
+            last_error=str(exc),
+        )
+        db.session.commit()
 
     return jsonify({
         "state": state,
         "integration": integration.to_dict(),
+        "health": (integration.meta or {}).get("health", {}),
     })
 
 
@@ -230,3 +259,11 @@ def get_whatsapp_status():
         return jsonify({"status": "not_configured"})
 
     return jsonify(integration.to_dict())
+
+
+def _update_health(integration: Integration, **fields):
+    meta = dict(integration.meta or {})
+    health = dict(meta.get("health") or {})
+    health.update(fields)
+    meta["health"] = health
+    integration.meta = meta

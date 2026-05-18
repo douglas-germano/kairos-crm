@@ -66,6 +66,7 @@ def list_conversations():
 def initiate_conversation():
     """Inicia uma conversa WhatsApp a partir de um número adicionado manualmente."""
     from app.models import Integration, Contact, Message
+    from app.services.whatsapp_identity import contact_has_phone, remember_contact_identity
     from app.services.whatsapp_service import get_whatsapp_service
 
     user_id = int(get_jwt_identity())
@@ -97,6 +98,9 @@ def initiate_conversation():
         channel="whatsapp",
         external_id=phone_number,
     ).first()
+    if not contact:
+        contacts = Contact.query.filter_by(workspace_id=workspace_id, channel="whatsapp").all()
+        contact = next((item for item in contacts if contact_has_phone(item, phone_number)), None)
 
     if not contact:
         contact = Contact(
@@ -109,6 +113,7 @@ def initiate_conversation():
         db.session.flush()
     elif name and not contact.name:
         contact.name = name
+    remember_contact_identity(contact, f"{phone_number}@s.whatsapp.net", f"{phone_number}@s.whatsapp.net", name or None)
 
     # Reabre conversa existente ou cria nova
     conversation = (

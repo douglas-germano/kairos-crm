@@ -12,6 +12,7 @@ from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from app.extensions import db, socketio
 from app.models import Conversation, Message, Integration, WorkspaceMember
+from app.services.whatsapp_identity import remote_jids_for_contact
 
 logger = logging.getLogger(__name__)
 bp = Blueprint("messages", __name__)
@@ -20,14 +21,6 @@ bp = Blueprint("messages", __name__)
 def _get_workspace_id(user_id: int) -> int | None:
     member = WorkspaceMember.query.filter_by(user_id=user_id, role="owner").first()
     return member.workspace_id if member else None
-
-
-def _remote_jid_for_contact(external_id: str) -> str:
-    """Preserva JIDs já vindos da Evolution, como @lid, e completa números manuais."""
-    external_id = (external_id or "").strip()
-    if "@" in external_id:
-        return external_id
-    return f"{external_id}@s.whatsapp.net"
 
 
 @bp.get("/<int:conversation_id>")
@@ -195,16 +188,40 @@ def sync_messages(conversation_id: int):
         if not integration:
             return jsonify({"error": "Nenhuma integração WhatsApp ativa", "code": "NO_INTEGRATION"}), 400
 
-        remote_jid = _remote_jid_for_contact(conv.contact.external_id)
+        remote_jids = remote_jids_for_contact(conv.contact)
         instance_name = f"kairos-crm-{user_id}"
 
-        print(f"[sync] Buscando mensagens instance={instance_name} jid={remote_jid}", flush=True)
+        print(f"[sync] Buscando mensagens instance={instance_name} jids={remote_jids}", flush=True)
 
-        try:
-            raw_msgs = evo_svc.find_messages(instance_name, remote_jid, limit=200)
-        except EvolutionError as exc:
-            logger.error("Falha ao buscar histórico Evolution API | error=%s", str(exc))
-            return jsonify({"error": str(exc), "code": "EVOLUTION_ERROR"}), 502
+        raw_msgs: list[dict] = []
+        sync_errors: list[dict] = []
+        seen_raw_ids: set[str] = set()
+        for remote_jid in remote_jids:
+            try:
+                jid_messages = evo_svc.find_messages(instance_name, remote_jid, limit=200)
+            except EvolutionError as exc:
+                sync_errors.append({"jid": remote_jid, "error": str(exc)})
+                logger.error("Falha ao buscar histórico Evolution API | jid=%s error=%s", remote_jid, str(exc))
+                continue
+
+            for raw in jid_messages:
+                ext_id = (raw.get("key") or {}).get("id")
+                dedupe_key = ext_id or f"{remote_jid}:{raw.get('messageTimestamp')}:{len(raw_msgs)}"
+                if dedupe_key in seen_raw_ids:
+                    continue
+                seen_raw_ids.add(dedupe_key)
+                raw_msgs.append(raw)
+
+        if not raw_msgs and sync_errors:
+            _update_integration_health(
+                integration,
+                last_sync_at=datetime.utcnow().isoformat(),
+                last_sync_status="error",
+                last_sync_errors=sync_errors,
+                last_sync_jids=remote_jids,
+            )
+            db.session.commit()
+            return jsonify({"error": sync_errors[0]["error"], "code": "EVOLUTION_ERROR", "details": sync_errors}), 502
 
         first_sample = raw_msgs[0] if raw_msgs else "none"
         print(f"[sync] Evolution retornou {len(raw_msgs)} mensagens | first={first_sample}", flush=True)
@@ -247,6 +264,21 @@ def sync_messages(conversation_id: int):
             inserted += 1
 
         conv.synced_at = datetime.utcnow()
+        conv.last_message_at = (
+            db.session.query(db.func.max(Message.created_at))
+            .filter(Message.conversation_id == conv.id)
+            .scalar()
+            or conv.last_message_at
+        )
+        _update_integration_health(
+            integration,
+            last_sync_at=datetime.utcnow().isoformat(),
+            last_sync_status="partial" if sync_errors else "ok",
+            last_sync_inserted=inserted,
+            last_sync_total=len(raw_msgs),
+            last_sync_jids=remote_jids,
+            last_sync_errors=sync_errors,
+        )
         db.session.commit()
 
         print(f"[sync] Commit OK inserted={inserted}", flush=True)
@@ -254,7 +286,7 @@ def sync_messages(conversation_id: int):
             "Histórico WhatsApp sincronizado | conversation=%s inserted=%s total=%s",
             conv.id, inserted, len(raw_msgs),
         )
-        return jsonify({"synced": inserted, "total": len(raw_msgs)})
+        return jsonify({"synced": inserted, "total": len(raw_msgs), "jids": remote_jids, "errors": sync_errors})
 
     except Exception as exc:
         db.session.rollback()
@@ -262,3 +294,11 @@ def sync_messages(conversation_id: int):
         print(f"[sync] ERRO INESPERADO: {exc}\n{tb}", flush=True)
         logger.error("Erro inesperado no sync | conversation=%s error=%s trace=%s", conversation_id, str(exc), tb)
         return jsonify({"error": "Erro interno ao sincronizar", "code": "INTERNAL_ERROR"}), 500
+
+
+def _update_integration_health(integration: Integration, **fields):
+    meta = dict(integration.meta or {})
+    health = dict(meta.get("health") or {})
+    health.update(fields)
+    meta["health"] = health
+    integration.meta = meta

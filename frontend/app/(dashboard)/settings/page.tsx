@@ -37,6 +37,7 @@ type ConnectResponse = { instance_name: string; qr: QrData };
 type WaStatusResponse = {
   state: "open" | "close" | "connecting" | "not_configured";
   integration: Integration | null;
+  health?: Record<string, unknown>;
 };
 type UserData = { id: number; email: string; name: string; created_at: string };
 
@@ -176,6 +177,7 @@ function WhatsAppConnectCard({ onConnected }: { onConnected: () => void }) {
 
 function WhatsAppActiveCard({ integration, onDisconnect }: { integration: Integration; onDisconnect: () => void }) {
   const [disconnecting, setDisconnecting] = useState(false);
+  const health = getIntegrationHealth(integration);
   async function handleDisconnect() {
     setDisconnecting(true);
     try { await apiFetch("/api/settings/whatsapp/disconnect", { method: "POST" }); onDisconnect(); }
@@ -192,12 +194,64 @@ function WhatsAppActiveCard({ integration, onDisconnect }: { integration: Integr
           <div className="ui-meta truncate font-mono text-brand-successStrong">{String(integration.meta?.instance_name || "")}</div>
         </div>
       </div>
+      <div className="grid gap-2 rounded-card border border-brand-line bg-brand-canvas p-3 text-[11px] sm:grid-cols-2">
+        <HealthItem label="Webhook" value={formatMetaDate(health.last_webhook_at) || "sem chamadas"} />
+        <HealthItem label="Último sync" value={formatMetaDate(health.last_sync_at) || "não executado"} />
+        <HealthItem label="Status sync" value={String(health.last_sync_status || "aguardando")} />
+        <HealthItem label="Estado" value={String(health.connection_state || health.last_connection_state || "desconhecido")} />
+        <HealthItem label="Último JID" value={String(health.last_remote_jid || "-")} wide />
+        <HealthItem label="Erro" value={String(health.last_webhook_error || health.last_error || "-")} wide tone={health.last_webhook_error || health.last_error ? "error" : "normal"} />
+      </div>
       <Button variant="ghost" onClick={handleDisconnect} disabled={disconnecting} className="w-full" id="btn-wa-disconnect">
         {disconnecting ? <Loader2 size={15} className="animate-spin" /> : <Power size={15} />}
         {disconnecting ? "Desconectando" : "Desconectar WhatsApp"}
       </Button>
     </div>
   );
+}
+
+function HealthItem({
+  label,
+  value,
+  wide = false,
+  tone = "normal",
+}: {
+  label: string;
+  value: string;
+  wide?: boolean;
+  tone?: "normal" | "error";
+}) {
+  return (
+    <div className={wide ? "min-w-0 sm:col-span-2" : "min-w-0"}>
+      <div className="ui-meta font-bold uppercase tracking-normal text-brand-muted">{label}</div>
+      <div className={cn(
+        "truncate font-mono text-[11px]",
+        tone === "error" ? "text-brand-red" : "text-brand-ink"
+      )}>
+        {value}
+      </div>
+    </div>
+  );
+}
+
+function getIntegrationHealth(integration: Integration): Record<string, unknown> {
+  const meta = integration.meta || {};
+  const health = meta.health;
+  return health && typeof health === "object" && !Array.isArray(health)
+    ? health as Record<string, unknown>
+    : {};
+}
+
+function formatMetaDate(value: unknown): string {
+  if (!value || typeof value !== "string") return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 // ─── Instagram Section ────────────────────────────────────────────────────────
@@ -454,7 +508,7 @@ function CanaisSection({
   onWaDisconnected: () => void;
   onIgDisconnected: () => void;
 }) {
-  const whatsapp = integrations.find((i) => i.channel === "whatsapp");
+  const whatsapp = waStatus?.integration ?? integrations.find((i) => i.channel === "whatsapp");
   const instagram = integrations.find((i) => i.channel === "instagram");
   const waConnected = waStatus?.state === "open";
 

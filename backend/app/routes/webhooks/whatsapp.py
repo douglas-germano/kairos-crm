@@ -3,6 +3,11 @@ from datetime import datetime, timezone
 from flask import Blueprint, request, jsonify
 from app.extensions import db, rq_queue, socketio
 from app.models import Integration, Contact, Conversation, Message
+from app.services.whatsapp_identity import (
+    canonical_external_id,
+    lookup_external_ids,
+    remember_contact_identity,
+)
 
 logger = logging.getLogger(__name__)
 bp = Blueprint("webhook_whatsapp", __name__)
@@ -20,12 +25,26 @@ def receive():
     event = data.get("event", "")
     instance_name = data.get("instance")
 
-    if event in _MESSAGE_EVENTS:
-        _handle_messages(instance_name, data.get("data", {}))
-    elif event in _CONNECTION_EVENTS:
-        _handle_connection_update(instance_name, data.get("data", {}))
-    else:
-        logger.debug("Evento WhatsApp ignorado", extra={"event": event})
+    try:
+        if event in _MESSAGE_EVENTS:
+            _handle_messages(instance_name, data.get("data", {}))
+        elif event in _CONNECTION_EVENTS:
+            _handle_connection_update(instance_name, data.get("data", {}))
+        else:
+            logger.debug("Evento WhatsApp ignorado", extra={"event": event})
+    except Exception as exc:
+        db.session.rollback()
+        logger.exception("Falha ao processar webhook WhatsApp", extra={"event": event, "instance": instance_name})
+        integration = _find_integration_any_status(instance_name)
+        if integration:
+            _update_health(
+                integration,
+                last_webhook_error=str(exc),
+                last_webhook_event=event,
+                last_webhook_at=datetime.utcnow().isoformat(),
+            )
+            db.session.commit()
+        return jsonify({"status": "error", "message": "webhook processing failed"}), 500
 
     # Retorna 200 imediatamente — processamento pesado vai para a fila
     return jsonify({"status": "ok"}), 200
@@ -47,11 +66,17 @@ def _handle_connection_update(instance_name: str, data: dict):
 
     if new_status and integration.status != new_status:
         integration.status = new_status
-        db.session.commit()
-        logger.info(
-            "Status WhatsApp atualizado via CONNECTION_UPDATE",
-            extra={"instance": instance_name, "state": state, "status": new_status},
-        )
+    _update_health(
+        integration,
+        last_connection_state=state,
+        last_connection_event_at=datetime.utcnow().isoformat(),
+        last_webhook_error=None,
+    )
+    db.session.commit()
+    logger.info(
+        "Status WhatsApp atualizado via CONNECTION_UPDATE",
+        extra={"instance": instance_name, "state": state, "status": integration.status},
+    )
 
 
 def _handle_messages(instance_name: str, data: dict):
@@ -76,6 +101,7 @@ def _handle_message(instance_name: str, msg_data: dict):
     """Extrai dados do payload, salva a mensagem e enfileira para processamento."""
     key = msg_data.get("key", {})
     remote_jid = key.get("remoteJid", "")
+    sender_pn = key.get("senderPn", "")
     from_me = key.get("fromMe", False)
     external_id = key.get("id", "")
 
@@ -83,15 +109,14 @@ def _handle_message(instance_name: str, msg_data: dict):
     if from_me:
         return
 
-    # Extrai número removendo @s.whatsapp.net (ou @g.us para grupos)
-    phone_number = remote_jid.replace("@s.whatsapp.net", "").replace("@g.us", "")
-    if not phone_number:
+    contact_external_id = canonical_external_id(remote_jid, sender_pn)
+    if not contact_external_id:
         logger.warning("remoteJid inválido", extra={"remote_jid": remote_jid})
         return
 
     # Extrai conteúdo da mensagem (texto ou áudio)
     message_obj = msg_data.get("message", {})
-    push_name = msg_data.get("pushName", phone_number)
+    push_name = msg_data.get("pushName", contact_external_id)
 
     text = (
         message_obj.get("conversation")
@@ -121,19 +146,32 @@ def _handle_message(instance_name: str, msg_data: dict):
         return
 
     workspace_id = integration.workspace_id
+    _update_health(
+        integration,
+        last_webhook_at=datetime.utcnow().isoformat(),
+        last_webhook_event="MESSAGES_UPSERT",
+        last_remote_jid=remote_jid,
+        last_sender_pn=sender_pn,
+        last_message_external_id=external_id,
+        last_webhook_error=None,
+    )
 
     # Cria ou localiza o contato
-    contact = Contact.query.filter_by(
-        workspace_id=workspace_id,
-        channel="whatsapp",
-        external_id=phone_number,
-    ).first()
+    contact = None
+    for candidate in lookup_external_ids(remote_jid, sender_pn):
+        contact = Contact.query.filter_by(
+            workspace_id=workspace_id,
+            channel="whatsapp",
+            external_id=candidate,
+        ).first()
+        if contact:
+            break
 
     if not contact:
         contact = Contact(
             workspace_id=workspace_id,
             channel="whatsapp",
-            external_id=phone_number,
+            external_id=contact_external_id,
             name=push_name,
         )
         db.session.add(contact)
@@ -142,6 +180,7 @@ def _handle_message(instance_name: str, msg_data: dict):
         # Atualiza o nome se ainda não estava definido
         if not contact.name and push_name:
             contact.name = push_name
+    remember_contact_identity(contact, remote_jid, sender_pn, push_name)
 
     # Cria ou localiza a conversa aberta
     conversation = (
@@ -170,6 +209,7 @@ def _handle_message(instance_name: str, msg_data: dict):
             external_id=external_id,
         ).first()
         if existing:
+            db.session.commit()
             return
 
     # Salva a mensagem
@@ -228,3 +268,11 @@ def _find_integration_any_status(instance_name: str) -> Integration | None:
         if integ.meta and integ.meta.get("instance_name") == instance_name:
             return integ
     return None
+
+
+def _update_health(integration: Integration, **fields):
+    meta = dict(integration.meta or {})
+    health = dict(meta.get("health") or {})
+    health.update(fields)
+    meta["health"] = health
+    integration.meta = meta
