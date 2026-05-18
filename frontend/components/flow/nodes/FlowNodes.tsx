@@ -2,11 +2,11 @@ import { Bot, GitBranch, MessageSquare, Radio, Webhook } from "lucide-react";
 import { Handle, NodeProps, Position } from "@xyflow/react";
 
 const nodeMeta = {
-  TriggerNode: { icon: Radio, label: "Gatilho", color: "bg-brand-red", soft: "bg-brand-red50 text-brand-red" },
-  MessageNode: { icon: MessageSquare, label: "Mensagem", color: "bg-brand-success", soft: "bg-brand-successSoft text-brand-successStrong" },
-  ConditionNode: { icon: GitBranch, label: "Condicao", color: "bg-brand-warning", soft: "bg-brand-warningSoft text-brand-warningStrong" },
-  AINode: { icon: Bot, label: "IA", color: "bg-brand-charcoal", soft: "bg-brand-canvas text-brand-charcoal" },
-  WebhookNode: { icon: Webhook, label: "Webhook", color: "bg-brand-info", soft: "bg-brand-infoSoft text-brand-infoStrong" }
+  TriggerNode: { icon: Radio, label: "Gatilho", color: "bg-brand-red", soft: "bg-red-50 text-brand-red" },
+  MessageNode: { icon: MessageSquare, label: "Mensagem", color: "bg-emerald-600", soft: "bg-emerald-50 text-emerald-700" },
+  ConditionNode: { icon: GitBranch, label: "Condição", color: "bg-amber-500", soft: "bg-amber-50 text-amber-700" },
+  AINode: { icon: Bot, label: "IA", color: "bg-brand-charcoal", soft: "bg-slate-100 text-brand-charcoal" },
+  WebhookNode: { icon: Webhook, label: "Webhook", color: "bg-blue-600", soft: "bg-blue-50 text-blue-700" }
 };
 
 export function FlowNode({ data, type }: NodeProps) {
@@ -30,7 +30,7 @@ export function FlowNode({ data, type }: NodeProps) {
       </div>
       <div className="p-3">
         <p className="body-muted line-clamp-2 max-w-56">{summary}</p>
-        <span className={`mt-3 inline-flex rounded-pill px-2 py-1 font-condensed text-[10px] font-extrabold uppercase ${meta.soft}`}>
+        <span className={`mt-3 inline-flex rounded-[32px] px-2 py-1 text-[10px] font-extrabold uppercase ${meta.soft}`}>
           {type}
         </span>
       </div>

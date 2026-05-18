@@ -24,12 +24,12 @@ const FILTERS: Array<{ label: string; value: Channel | "all" }> = [
 ];
 
 const AVATAR_PALETTES = [
-  "bg-brand-info text-white",
-  "bg-brand-success text-white",
-  "bg-brand-warning text-brand-ink",
-  "bg-brand-red text-white",
-  "bg-brand-charcoal text-white",
-  "bg-brand-grey text-white",
+  "bg-blue-100 text-blue-700",
+  "bg-violet-100 text-violet-700",
+  "bg-emerald-100 text-emerald-700",
+  "bg-orange-100 text-orange-700",
+  "bg-pink-100 text-pink-700",
+  "bg-teal-100 text-teal-700",
 ];
 
 function avatarColor(name: string) {
@@ -167,7 +167,7 @@ function ConversationItem({
       className={cn(
         "focus-ring w-full border-b border-brand-line/70 px-4 py-3.5 text-left transition-colors",
         active
-          ? "border-l-4 border-l-brand-red bg-brand-red50/80"
+          ? "border-l-4 border-l-brand-red bg-red-50/80"
           : "border-l-4 border-l-transparent bg-white hover:bg-brand-canvas"
       )}
     >
@@ -200,7 +200,7 @@ function ConversationItem({
 
             <span className="ml-auto flex items-center gap-1.5">
               {conversation.ai_enabled && (
-                <span className="flex items-center gap-0.5 rounded-pill bg-brand-red50 px-1.5 py-0.5 font-condensed text-[10px] font-extrabold text-brand-red">
+                <span className="flex items-center gap-0.5 rounded-[32px] bg-red-50 px-1.5 py-0.5 text-[10px] font-extrabold text-brand-red">
                   <Bot size={9} />
                   IA
                 </span>
@@ -208,7 +208,7 @@ function ConversationItem({
               <span
                 className={cn(
                   "h-2 w-2 rounded-full",
-                  statusOpen ? "bg-brand-success" : "bg-brand-grey/40"
+                  statusOpen ? "bg-emerald-400" : "bg-brand-grey/40"
                 )}
                 title={statusOpen ? "Aberta" : conversation.status}
               />
@@ -225,7 +225,7 @@ function Pill({ label, value, tone }: { label: string; value: number; tone: "gre
     <div
       className={cn(
         "flex items-center gap-1 rounded-card px-2 py-1 font-condensed text-[10px] font-extrabold",
-        tone === "green" ? "bg-brand-successSoft text-brand-successStrong" : "bg-brand-red50 text-brand-red"
+        tone === "green" ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-brand-red"
       )}
     >
       <span>{value}</span>
