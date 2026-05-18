@@ -35,12 +35,13 @@ def canonical_external_id(remote_jid: str | None, sender_pn: str | None = None) 
     Escolhe o identificador principal do contato.
 
     - `@lid` é preservado porque costuma ser o identificador real do chat.
+    - `@g.us` é preservado para não misturar grupos com telefones.
     - `@s.whatsapp.net` vira telefone puro para manter compatibilidade com
       contatos criados manualmente.
     - se o remote_jid não for útil, usa senderPn como fallback.
     """
     jid = normalize_jid(remote_jid)
-    if jid.endswith("@lid"):
+    if jid.endswith("@lid") or jid.endswith("@g.us"):
         return jid
     phone = phone_from_jid(jid)
     if phone:

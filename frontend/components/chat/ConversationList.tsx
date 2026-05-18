@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Bot, MessageSquare, Plus, Search } from "lucide-react";
-import type { Channel, Conversation } from "@/lib/types";
+import { Bot, Loader2, MessageSquare, Plus, RefreshCw, Search } from "lucide-react";
+import type { Channel, Conversation, ConversationSyncResult } from "@/lib/types";
 import { ChannelIcon } from "@/components/ui/ChannelIcon";
 import { NewConversationModal } from "@/components/chat/NewConversationModal";
 import { cn, formatRelativeTime, initials } from "@/lib/utils";
@@ -15,6 +15,9 @@ type Props = {
   onChannelChange: (channel: Channel | "all") => void;
   isLoading?: boolean;
   onNewConversation?: (conversation: Conversation) => void;
+  syncState?: "idle" | "syncing" | "done" | "error";
+  syncResult?: ConversationSyncResult | null;
+  onSyncWhatsApp?: () => void;
 };
 
 const FILTERS: Array<{ label: string; value: Channel | "all" }> = [
@@ -44,6 +47,9 @@ export function ConversationList({
   onChannelChange,
   isLoading,
   onNewConversation,
+  syncState = "idle",
+  syncResult,
+  onSyncWhatsApp,
 }: Props) {
   const [search, setSearch] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
@@ -91,6 +97,29 @@ export function ConversationList({
             </button>
           </div>
         </div>
+
+        {onSyncWhatsApp && (
+          <button
+            type="button"
+            onClick={onSyncWhatsApp}
+            disabled={syncState === "syncing"}
+            className={cn(
+              "focus-ring mb-3 flex w-full items-center justify-center gap-2 rounded-card border px-3 py-2 text-[11px] font-extrabold transition",
+              syncState === "done"
+                ? "border-brand-success/30 bg-brand-successSoft text-brand-successStrong"
+                : syncState === "error"
+                  ? "border-brand-red/30 bg-brand-red50 text-brand-red"
+                  : "border-brand-line bg-brand-canvas text-brand-muted hover:text-brand-ink"
+            )}
+          >
+            {syncState === "syncing" ? (
+              <Loader2 size={13} className="animate-spin" />
+            ) : (
+              <RefreshCw size={13} />
+            )}
+            <span>{syncButtonLabel(syncState, syncResult)}</span>
+          </button>
+        )}
 
         {/* Search */}
         <div className="relative mb-3">
@@ -142,6 +171,19 @@ export function ConversationList({
     </section>
     </>
   );
+}
+
+function syncButtonLabel(
+  state: "idle" | "syncing" | "done" | "error",
+  result?: ConversationSyncResult | null
+) {
+  if (state === "syncing") return "Sincronizando conversas do WhatsApp...";
+  if (state === "error") return "Erro ao sincronizar conversas";
+  if (state === "done" && result) {
+    if (result.imported === 0 && result.updated === 0) return "Conversas já sincronizadas";
+    return `${result.imported} nova${result.imported !== 1 ? "s" : ""}, ${result.updated} atualizada${result.updated !== 1 ? "s" : ""}`;
+  }
+  return "Sincronizar conversas do WhatsApp";
 }
 
 function ConversationItem({

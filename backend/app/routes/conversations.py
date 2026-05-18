@@ -15,7 +15,12 @@ from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from sqlalchemy.orm import joinedload
 from app.extensions import db, socketio
-from app.models import Conversation, Message, WorkspaceMember
+from app.models import Contact, Conversation, Integration, Message, WorkspaceMember
+from app.services.whatsapp_identity import (
+    canonical_external_id,
+    lookup_external_ids,
+    remember_contact_identity,
+)
 
 logger = logging.getLogger(__name__)
 bp = Blueprint("conversations", __name__)
@@ -64,6 +69,125 @@ def list_conversations():
         "total": pagination.total,
         "page": pagination.page,
         "pages": pagination.pages,
+    })
+
+
+@bp.post("/sync-whatsapp")
+@jwt_required()
+def sync_whatsapp_conversations():
+    """Importa/atualiza a lista de conversas existentes na instância WhatsApp."""
+    from app.services import evolution as evo_svc
+    from app.services.evolution import EvolutionError
+
+    user_id = int(get_jwt_identity())
+    workspace_id = _get_workspace_id(user_id)
+    if not workspace_id:
+        return jsonify({"error": "Workspace não encontrado", "code": "NO_WORKSPACE"}), 404
+
+    integration = Integration.query.filter_by(
+        workspace_id=workspace_id, channel="whatsapp", status="active"
+    ).first()
+    if not integration:
+        return jsonify({"error": "Nenhuma integração WhatsApp ativa", "code": "NO_INTEGRATION"}), 400
+
+    meta = integration.meta or {}
+    instance_name = meta.get("instance_name") or f"kairos-crm-{user_id}"
+    try:
+        try:
+            evo_svc.set_settings(instance_name, groups_ignore=False, sync_full_history=True)
+        except EvolutionError as exc:
+            logger.warning("Falha ao ajustar settings Evolution antes do sync | error=%s", exc)
+        chats = evo_svc.find_chats(instance_name, limit=min(request.args.get("limit", 200, type=int), 500))
+    except EvolutionError as exc:
+        return jsonify({"error": str(exc), "code": "EVOLUTION_ERROR"}), 502
+
+    imported = 0
+    updated = 0
+    skipped = 0
+    for chat in chats:
+        remote_jid = _chat_remote_jid(chat)
+        if not remote_jid or remote_jid == "status@broadcast":
+            skipped += 1
+            continue
+
+        contact_external_id = canonical_external_id(remote_jid)
+        if not contact_external_id:
+            skipped += 1
+            continue
+
+        contact = None
+        for candidate in lookup_external_ids(remote_jid):
+            contact = Contact.query.filter_by(
+                workspace_id=workspace_id,
+                channel="whatsapp",
+                external_id=candidate,
+            ).first()
+            if contact:
+                break
+
+        name = _chat_name(chat, contact_external_id)
+        if not contact:
+            contact = Contact(
+                workspace_id=workspace_id,
+                channel="whatsapp",
+                external_id=contact_external_id,
+                name=name,
+            )
+            db.session.add(contact)
+            db.session.flush()
+        elif name and (not contact.name or contact.name == contact.external_id):
+            contact.name = name
+
+        remember_contact_identity(contact, remote_jid, None, name)
+
+        conversation = Conversation.query.filter_by(
+            workspace_id=workspace_id,
+            contact_id=contact.id,
+            channel="whatsapp",
+        ).first()
+        last_message_at = _chat_last_message_at(chat)
+        if not conversation:
+            conversation = Conversation(
+                workspace_id=workspace_id,
+                contact_id=contact.id,
+                channel="whatsapp",
+                status="open",
+                last_message_at=last_message_at or datetime.utcnow(),
+            )
+            db.session.add(conversation)
+            imported += 1
+        else:
+            if last_message_at and (
+                not conversation.last_message_at or last_message_at > conversation.last_message_at
+            ):
+                conversation.last_message_at = last_message_at
+                updated += 1
+
+    _update_integration_health(
+        integration,
+        last_chat_sync_at=datetime.utcnow().isoformat(),
+        last_chat_sync_status="ok",
+        last_chat_sync_total=len(chats),
+        last_chat_sync_imported=imported,
+        last_chat_sync_updated=updated,
+        last_chat_sync_skipped=skipped,
+    )
+    db.session.commit()
+
+    try:
+        socketio.emit(
+            "conversation_updated",
+            {"conversation_id": None, "fields": {"chat_sync": True}},
+            room=f"workspace_{workspace_id}",
+        )
+    except Exception as exc:
+        logger.warning("Falha ao emitir evento SocketIO | error=%s", exc)
+
+    return jsonify({
+        "imported": imported,
+        "updated": updated,
+        "skipped": skipped,
+        "total": len(chats),
     })
 
 
@@ -289,3 +413,65 @@ def close_conversation(conversation_id: int):
         logger.warning("Falha ao emitir evento SocketIO | error=%s", exc)
 
     return jsonify({"deleted": True, "conversation_id": conversation_id})
+
+
+def _chat_remote_jid(chat: dict) -> str:
+    key = chat.get("key") or {}
+    remote = (
+        chat.get("remoteJid")
+        or chat.get("remote_jid")
+        or chat.get("jid")
+        or chat.get("id")
+        or key.get("remoteJid")
+    )
+    return str(remote or "").strip().lower()
+
+
+def _chat_name(chat: dict, fallback: str) -> str:
+    contact = chat.get("contact") if isinstance(chat.get("contact"), dict) else {}
+    name = (
+        chat.get("name")
+        or chat.get("pushName")
+        or chat.get("subject")
+        or contact.get("name")
+        or contact.get("pushName")
+        or contact.get("notify")
+        or fallback
+    )
+    return str(name).strip() or fallback
+
+
+def _chat_last_message_at(chat: dict) -> datetime | None:
+    value = (
+        chat.get("conversationTimestamp")
+        or chat.get("messageTimestamp")
+        or chat.get("updatedAt")
+        or chat.get("lastMessageAt")
+    )
+    if value is None and isinstance(chat.get("lastMessage"), dict):
+        value = chat["lastMessage"].get("messageTimestamp") or chat["lastMessage"].get("createdAt")
+    return _parse_chat_datetime(value)
+
+
+def _parse_chat_datetime(value) -> datetime | None:
+    if value in (None, ""):
+        return None
+    if isinstance(value, (int, float)) or (isinstance(value, str) and value.isdigit()):
+        timestamp = int(value)
+        if timestamp > 10_000_000_000:
+            timestamp = timestamp / 1000
+        return datetime.utcfromtimestamp(timestamp)
+    if isinstance(value, str):
+        try:
+            return datetime.fromisoformat(value.replace("Z", "+00:00")).replace(tzinfo=None)
+        except ValueError:
+            return None
+    return None
+
+
+def _update_integration_health(integration: Integration, **fields):
+    meta = dict(integration.meta or {})
+    health = dict(meta.get("health") or {})
+    health.update(fields)
+    meta["health"] = health
+    integration.meta = meta

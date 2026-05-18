@@ -124,6 +124,25 @@ def set_webhook(instance_name: str, webhook_url: str) -> dict:
     return _request("POST", f"/webhook/set/{instance_name}", json=payload)
 
 
+def set_settings(
+    instance_name: str,
+    *,
+    groups_ignore: bool = False,
+    sync_full_history: bool = True,
+) -> dict:
+    """Ajusta a instância para manter chats e histórico disponíveis para sync."""
+    payload = {
+        "rejectCall": False,
+        "msgCall": "",
+        "groupsIgnore": groups_ignore,
+        "alwaysOnline": True,
+        "readMessages": False,
+        "readStatus": False,
+        "syncFullHistory": sync_full_history,
+    }
+    return _request("POST", f"/settings/set/{instance_name}", json=payload)
+
+
 def find_messages(instance_name: str, remote_jid: str, limit: int = 100, offset: int = 0) -> list:
     """Busca histórico de mensagens de um chat específico via Evolution API."""
     payload = {
@@ -157,6 +176,32 @@ def find_messages(instance_name: str, remote_jid: str, limit: int = 100, offset:
     filtered = [m for m in items if isinstance(m, dict)]
     print(f"[find_messages] items_total={len(items)} items_dict={len(filtered)}", flush=True)
     return filtered
+
+
+def find_chats(instance_name: str, limit: int = 200, offset: int = 0) -> list:
+    """Busca a lista de chats conhecidos pela instância WhatsApp."""
+    payload = {
+        "where": {},
+        "take": limit,
+        "skip": offset,
+        "orderBy": {"updatedAt": "desc"},
+    }
+    result = _request("POST", f"/chat/findChats/{instance_name}", json=payload)
+
+    if isinstance(result, list):
+        items = result
+    elif isinstance(result, dict):
+        inner = result.get("chats") or result.get("records") or result.get("data") or []
+        if isinstance(inner, list):
+            items = inner
+        elif isinstance(inner, dict):
+            items = inner.get("records") or inner.get("chats") or inner.get("data") or []
+        else:
+            items = []
+    else:
+        items = []
+
+    return [chat for chat in items if isinstance(chat, dict)]
 
 
 def fetch_instance(instance_name: str) -> dict | None:

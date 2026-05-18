@@ -6,12 +6,15 @@ import { ConversationList } from "@/components/chat/ConversationList";
 import { useConversations } from "@/hooks/useConversations";
 import { useAuth } from "@/hooks/useAuth";
 import { useSocket } from "@/hooks/useSocket";
-import type { Channel, Conversation } from "@/lib/types";
+import { apiFetch } from "@/lib/api";
+import type { Channel, Conversation, ConversationSyncResult } from "@/lib/types";
 
 export default function ConversationsPage() {
   const { workspace } = useAuth(true);
   const [channel, setChannel] = useState<Channel | "all">("all");
   const [selected, setSelected] = useState<Conversation | undefined>();
+  const [syncState, setSyncState] = useState<"idle" | "syncing" | "done" | "error">("idle");
+  const [syncResult, setSyncResult] = useState<ConversationSyncResult | null>(null);
   const { data, isLoading, mutate } = useConversations(channel, "all");
 
   useSocket(
@@ -31,6 +34,24 @@ export default function ConversationsPage() {
     ? conversations.find((item) => item.id === selected.id) ?? selected
     : conversations[0];
 
+  async function syncWhatsAppConversations() {
+    if (syncState === "syncing") return;
+    setSyncState("syncing");
+    setSyncResult(null);
+    try {
+      const result = await apiFetch<ConversationSyncResult>("/api/conversations/sync-whatsapp", {
+        method: "POST",
+      });
+      setSyncResult(result);
+      setSyncState("done");
+      await mutate();
+    } catch {
+      setSyncState("error");
+    } finally {
+      setTimeout(() => setSyncState((state) => (state !== "syncing" ? "idle" : state)), 5000);
+    }
+  }
+
   return (
     <div className="grid h-full grid-rows-[1fr] overflow-hidden app-canvas xl:grid-cols-[380px_1fr]">
       <ConversationList
@@ -44,6 +65,9 @@ export default function ConversationsPage() {
           void mutate();
           setSelected(conv);
         }}
+        syncState={syncState}
+        syncResult={syncResult}
+        onSyncWhatsApp={() => void syncWhatsAppConversations()}
       />
       <ChatWindow
         conversation={current}

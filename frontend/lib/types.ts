@@ -49,6 +49,13 @@ export type ConversationPage = {
   pages: number;
 };
 
+export type ConversationSyncResult = {
+  imported: number;
+  updated: number;
+  skipped: number;
+  total: number;
+};
+
 export type Message = {
   id: number;
   conversation_id: number;
