@@ -277,7 +277,7 @@ export function ChatWindow({ conversation, onConversationChange, onConversationD
       <div
         ref={scrollRef}
         onScroll={handleScroll}
-        className="scrollbar-thin min-h-0 flex-1 overflow-y-auto bg-[linear-gradient(180deg,#f8f9fb_0%,#f3f5f7_100%)] p-4"
+        className="scrollbar-thin min-h-0 flex-1 overflow-y-auto bg-[linear-gradient(180deg,#f8f9fb_0%,#f3f5f7_100%)] pl-4 pr-5 py-4"
       >
         {/* Indicador de carregamento de mensagens antigas */}
         {isLoadingMore && (
