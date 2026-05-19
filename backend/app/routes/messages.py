@@ -143,7 +143,7 @@ def send_message(conversation_id: int):
 
 # ── Helpers para parsear mensagens da Evolution API ────────────────────────────
 
-def _extract_content(msg_obj: dict) -> tuple[str, str]:
+def _extract_content(msg_obj: dict, instance_name: str | None = None) -> tuple[str, str]:
     """
     Extrai (content, content_type) de um objeto de mensagem da Evolution API.
     Retorna ("", "text") se não reconhecer o tipo.
@@ -153,17 +153,63 @@ def _extract_content(msg_obj: dict) -> tuple[str, str]:
     if text := (m.get("conversation") or (m.get("extendedTextMessage") or {}).get("text", "")):
         return text, "text"
     if img := m.get("imageMessage"):
-        return img.get("url") or img.get("caption") or "[imagem]", "image"
+        return _extract_media_content(msg_obj, img, "image", "[imagem]", instance_name)
     if sticker := m.get("stickerMessage"):
-        return sticker.get("url") or "[figurinha]", "sticker"
+        return _extract_media_content(msg_obj, sticker, "sticker", "[figurinha]", instance_name)
     if aud := (m.get("audioMessage") or m.get("pttMessage")):
-        return aud.get("url") or "[áudio]", "audio"
+        return _extract_media_content(msg_obj, aud, "audio", "[áudio]", instance_name)
     if vid := m.get("videoMessage"):
-        return vid.get("url") or vid.get("caption") or "[vídeo]", "video"
+        return _extract_media_content(msg_obj, vid, "video", "[vídeo]", instance_name)
     if doc := m.get("documentMessage"):
-        return doc.get("url") or doc.get("title") or "[documento]", "template"
+        return _extract_media_content(msg_obj, doc, "template", "[documento]", instance_name)
 
     return "", "text"
+
+
+def _extract_media_content(
+    raw_msg: dict,
+    media_obj: dict,
+    content_type: str,
+    placeholder: str,
+    instance_name: str | None = None,
+) -> tuple[str, str]:
+    content = (
+        media_obj.get("base64")
+        or media_obj.get("url")
+        or media_obj.get("mediaUrl")
+        or ""
+    )
+    if content:
+        return _media_data_url(content, media_obj.get("mimetype") or media_obj.get("mimeType"), content_type), content_type
+
+    if instance_name:
+        try:
+            from app.services import evolution as evo_svc
+            media = evo_svc.get_media_base64(instance_name, raw_msg)
+            if media.get("base64"):
+                return _media_data_url(media["base64"], media.get("mimetype") or media_obj.get("mimetype"), content_type), content_type
+        except Exception as exc:
+            logger.warning(
+                "Falha ao baixar mídia Evolution | ext_id=%s error=%s",
+                (raw_msg.get("key") or {}).get("id"),
+                exc,
+            )
+
+    caption = media_obj.get("caption") or media_obj.get("title") or ""
+    return caption or placeholder, content_type
+
+
+def _media_data_url(content: str, mimetype: str | None = None, content_type: str | None = None) -> str:
+    if not content or content.startswith(("http://", "https://", "data:")):
+        return content
+    fallback_mime = {
+        "image": "image/jpeg",
+        "sticker": "image/webp",
+        "audio": "audio/ogg",
+        "video": "video/mp4",
+        "template": "application/octet-stream",
+    }.get(content_type or "", "application/octet-stream")
+    return f"data:{mimetype or fallback_mime};base64,{content}"
 
 
 @bp.post("/<int:conversation_id>/sync")
@@ -232,22 +278,35 @@ def sync_messages(conversation_id: int):
 
         logger.debug("Evolution retornou %s mensagens | conv=%s", len(raw_msgs), conv.id)
 
-        # IDs já existentes no banco para esta conversa (evita duplicatas)
-        existing_ids = {
-            row[0]
-            for row in db.session.query(Message.external_id)
+        # Mensagens já existentes no banco para esta conversa (evita duplicatas
+        # e permite preencher mídias que antes foram salvas como placeholder).
+        existing_messages = {
+            msg.external_id: msg
+            for msg in Message.query
             .filter(Message.conversation_id == conv.id, Message.external_id.isnot(None))
             .all()
         }
+        existing_ids = set(existing_messages)
 
         inserted = 0
+        updated_media = 0
         for raw in raw_msgs:
             key = raw.get("key") or {}
             ext_id = key.get("id")
-            if not ext_id or ext_id in existing_ids:
+            if not ext_id:
                 continue
 
-            content, content_type = _extract_content(raw)
+            existing_msg = existing_messages.get(ext_id)
+            if existing_msg:
+                if _should_refresh_media(existing_msg):
+                    content, content_type = _extract_content(raw, instance_name)
+                    if content and not _is_placeholder(content):
+                        existing_msg.content = content
+                        existing_msg.content_type = content_type
+                        updated_media += 1
+                continue
+
+            content, content_type = _extract_content(raw, instance_name)
             if not content:
                 continue
 
@@ -268,6 +327,7 @@ def sync_messages(conversation_id: int):
                 with db.session.begin_nested():
                     db.session.add(msg)
                 existing_ids.add(ext_id)
+                existing_messages[ext_id] = msg
                 inserted += 1
             except IntegrityError:
                 logger.warning("Mensagem duplicada ignorada no sync | ext_id=%s conv=%s", ext_id, conv.id)
@@ -284,6 +344,7 @@ def sync_messages(conversation_id: int):
             last_sync_at=datetime.utcnow().isoformat(),
             last_sync_status="partial" if sync_errors else "ok",
             last_sync_inserted=inserted,
+            last_sync_media_updated=updated_media,
             last_sync_total=len(raw_msgs),
             last_sync_jids=remote_jids,
             last_sync_errors=sync_errors,
@@ -294,7 +355,13 @@ def sync_messages(conversation_id: int):
             "Histórico WhatsApp sincronizado | conversation=%s inserted=%s total=%s",
             conv.id, inserted, len(raw_msgs),
         )
-        return jsonify({"synced": inserted, "total": len(raw_msgs), "jids": remote_jids, "errors": sync_errors})
+        return jsonify({
+            "synced": inserted,
+            "media_updated": updated_media,
+            "total": len(raw_msgs),
+            "jids": remote_jids,
+            "errors": sync_errors,
+        })
 
     except Exception as exc:
         db.session.rollback()
@@ -309,3 +376,15 @@ def _update_integration_health(integration: Integration, **fields):
     health.update(fields)
     meta["health"] = health
     integration.meta = meta
+
+
+def _is_placeholder(content: str) -> bool:
+    return bool(content) and content.startswith("[") and content.endswith("]")
+
+
+def _should_refresh_media(message: Message) -> bool:
+    return message.content_type in {"image", "sticker", "audio", "video", "template"} and (
+        not message.content
+        or _is_placeholder(message.content)
+        or not message.content.startswith(("http://", "https://", "data:"))
+    )

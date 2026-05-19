@@ -184,6 +184,30 @@ def find_messages(instance_name: str, remote_jid: str, limit: int = 100, offset:
     return filtered
 
 
+def get_media_base64(instance_name: str, message: dict) -> dict:
+    """Baixa a mídia de uma mensagem e retorna os dados normalizados."""
+    result = _request("POST", f"/chat/getBase64FromMediaMessage/{instance_name}", json={
+        "message": message,
+        "convertToMp4": False,
+    })
+
+    if isinstance(result, str):
+        return {"base64": result}
+    if not isinstance(result, dict):
+        return {}
+
+    data = result.get("data") if isinstance(result.get("data"), dict) else result
+    base64_value = (
+        data.get("base64")
+        or data.get("media")
+        or data.get("file")
+        or data.get("buffer")
+        or ""
+    )
+    mimetype = data.get("mimetype") or data.get("mimeType") or data.get("type") or ""
+    return {"base64": base64_value, "mimetype": mimetype}
+
+
 def find_chats(instance_name: str, limit: int = 200, offset: int = 0) -> list:
     """Busca a lista de chats conhecidos pela instância WhatsApp."""
     payload = {

@@ -121,7 +121,7 @@ def _handle_message(instance_name: str, msg_data: dict):
     message_obj = msg_data.get("message", {})
     push_name = msg_data.get("pushName", contact_external_id)
 
-    content, content_type = _extract_message_content(message_obj)
+    content, content_type = _extract_message_content(message_obj, msg_data, instance_name)
 
     if not content:
         _mark_webhook_ignored(
@@ -274,43 +274,84 @@ def _message_items(data) -> list[dict]:
     return [data] if isinstance(data.get("key"), dict) or isinstance(data.get("message"), dict) else []
 
 
-def _extract_message_content(message_obj: dict) -> tuple[str, str]:
+def _extract_message_content(message_obj: dict, raw_msg: dict | None = None, instance_name: str | None = None) -> tuple[str, str]:
     """Extrai (content, content_type) de um objeto de mensagem da Evolution API."""
     m = message_obj or {}
 
     for wrapper_key in ("ephemeralMessage", "viewOnceMessage", "documentWithCaptionMessage"):
         wrapped = (m.get(wrapper_key) or {}).get("message")
         if wrapped:
-            return _extract_message_content(wrapped)
+            return _extract_message_content(wrapped, raw_msg, instance_name)
 
     if text := (m.get("conversation") or (m.get("extendedTextMessage") or {}).get("text", "")):
         return text, "text"
 
     if img := m.get("imageMessage"):
-        data = img.get("base64") or img.get("url") or img.get("caption") or ""
-        return data or "[imagem]", "image"
+        return _extract_media_content(raw_msg or {"message": message_obj}, img, "image", "[imagem]", instance_name)
 
     if sticker := m.get("stickerMessage"):
-        data = sticker.get("base64") or sticker.get("url") or ""
-        return data or "[figurinha]", "sticker"
+        return _extract_media_content(raw_msg or {"message": message_obj}, sticker, "sticker", "[figurinha]", instance_name)
 
     if aud := (m.get("audioMessage") or m.get("pttMessage")):
-        data = aud.get("base64") or aud.get("url") or ""
-        return data or "[audio]", "audio"
+        return _extract_media_content(raw_msg or {"message": message_obj}, aud, "audio", "[audio]", instance_name)
 
     if vid := m.get("videoMessage"):
-        data = vid.get("url") or vid.get("caption") or ""
-        return data or "[video]", "video"
+        return _extract_media_content(raw_msg or {"message": message_obj}, vid, "video", "[video]", instance_name)
 
     if doc := m.get("documentMessage"):
-        data = doc.get("url") or doc.get("title") or ""
-        return data or "[documento]", "template"
+        return _extract_media_content(raw_msg or {"message": message_obj}, doc, "template", "[documento]", instance_name)
 
     if reaction := m.get("reactionMessage"):
         data = reaction.get("text") or ""
         return data or "[reação]", "text"
 
     return "", "text"
+
+
+def _extract_media_content(
+    raw_msg: dict,
+    media_obj: dict,
+    content_type: str,
+    placeholder: str,
+    instance_name: str | None = None,
+) -> tuple[str, str]:
+    content = (
+        media_obj.get("base64")
+        or media_obj.get("url")
+        or media_obj.get("mediaUrl")
+        or ""
+    )
+    if content:
+        return _media_data_url(content, media_obj.get("mimetype") or media_obj.get("mimeType"), content_type), content_type
+
+    if instance_name:
+        try:
+            from app.services import evolution as evo_svc
+            media = evo_svc.get_media_base64(instance_name, raw_msg)
+            if media.get("base64"):
+                return _media_data_url(media["base64"], media.get("mimetype") or media_obj.get("mimetype"), content_type), content_type
+        except Exception as exc:
+            logger.warning(
+                "Falha ao baixar mídia Evolution | ext_id=%s error=%s",
+                (raw_msg.get("key") or {}).get("id"),
+                exc,
+            )
+
+    caption = media_obj.get("caption") or media_obj.get("title") or ""
+    return caption or placeholder, content_type
+
+
+def _media_data_url(content: str, mimetype: str | None = None, content_type: str | None = None) -> str:
+    if not content or content.startswith(("http://", "https://", "data:")):
+        return content
+    fallback_mime = {
+        "image": "image/jpeg",
+        "sticker": "image/webp",
+        "audio": "audio/ogg",
+        "video": "video/mp4",
+        "template": "application/octet-stream",
+    }.get(content_type or "", "application/octet-stream")
+    return f"data:{mimetype or fallback_mime};base64,{content}"
 
 
 def _mark_webhook_ignored(instance_name: str, reason: str, **fields):
