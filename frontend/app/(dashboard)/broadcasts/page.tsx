@@ -263,11 +263,11 @@ function BroadcastRow({
 }
 
 function RecipientStatus({ status }: { status: "pending" | "sent" | "delivered" | "read" | "failed" }) {
-  if (status === "read") return <Eye size={14} className="shrink-0 text-brand-info" title="Lida" />;
-  if (status === "delivered") return <CheckCircle2 size={14} className="shrink-0 text-brand-info" title="Entregue" />;
-  if (status === "sent") return <CheckCircle2 size={14} className="shrink-0 text-brand-success" title="Enviada" />;
-  if (status === "failed") return <XCircle size={14} className="shrink-0 text-brand-red" title="Falhou" />;
-  return <Clock size={14} className="shrink-0 text-brand-muted" title="Pendente" />;
+  if (status === "read") return <span title="Lida"><Eye size={14} className="shrink-0 text-brand-info" /></span>;
+  if (status === "delivered") return <span title="Entregue"><CheckCircle2 size={14} className="shrink-0 text-brand-info" /></span>;
+  if (status === "sent") return <span title="Enviada"><CheckCircle2 size={14} className="shrink-0 text-brand-success" /></span>;
+  if (status === "failed") return <span title="Falhou"><XCircle size={14} className="shrink-0 text-brand-red" /></span>;
+  return <span title="Pendente"><Clock size={14} className="shrink-0 text-brand-muted" /></span>;
 }
 
 // ── Create modal ──────────────────────────────────────────────────────────────
