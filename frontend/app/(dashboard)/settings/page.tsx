@@ -22,9 +22,12 @@ import {
   Wifi,
 } from "lucide-react";
 import { PageHeader } from "@/components/layout/AppShell";
-import { Button } from "@/components/ui/Button";
-import { Badge } from "@/components/ui/Badge";
-import { Input } from "@/components/ui/Input";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/useAuth";
 import { apiFetch, API_URL, swrFetcher } from "@/lib/api";
 import type { Integration, Workspace } from "@/lib/types";
@@ -388,11 +391,11 @@ function PerfilSection({ user, onSaved, onLogout }: { user: UserData | undefined
         <h2 className="card-title mb-4">Informações pessoais</h2>
         <div className="space-y-3">
           <div className="space-y-1">
-            <label className="ui-label">Nome</label>
+            <Label>Nome</Label>
             <Input value={name ?? user?.name ?? ""} onChange={(e) => setName(e.target.value)} placeholder="Seu nome" />
           </div>
           <div className="space-y-1">
-            <label className="ui-label">E-mail</label>
+            <Label>E-mail</Label>
             <Input type="email" value={email ?? user?.email ?? ""} onChange={(e) => setEmail(e.target.value)} placeholder="seu@email.com" />
           </div>
           {infoMsg && (
@@ -414,11 +417,11 @@ function PerfilSection({ user, onSaved, onLogout }: { user: UserData | undefined
         </div>
         <div className="space-y-3">
           <div className="space-y-1">
-            <label className="ui-label">Senha atual</label>
+            <Label>Senha atual</Label>
             <Input type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} placeholder="••••••••" />
           </div>
           <div className="space-y-1">
-            <label className="ui-label">Nova senha</label>
+            <Label>Nova senha</Label>
             <Input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="Mínimo 8 caracteres" />
           </div>
           {pwMsg && (
@@ -463,7 +466,7 @@ function WorkspaceSection({ workspace, onSaved }: { workspace: Workspace | undef
       <h2 className="card-title mb-4">Workspace</h2>
       <div className="space-y-4">
         <div className="space-y-1">
-          <label className="ui-label">Nome do Workspace</label>
+          <Label>Nome do Workspace</Label>
           <Input value={name ?? workspace?.name ?? ""} onChange={(e) => setName(e.target.value)} placeholder="Nome do workspace" />
         </div>
 
@@ -579,7 +582,6 @@ function WebhooksSection() {
 // ─── Settings Page ────────────────────────────────────────────────────────────
 
 export default function SettingsPage() {
-  const [activeSection, setActiveSection] = useState<Section>("perfil");
   const { logout } = useAuth(true);
 
   const { data: meData, mutate: mutateMe } = useSWR<{ user: UserData }>("/auth/me", swrFetcher);
@@ -595,73 +597,63 @@ export default function SettingsPage() {
     <div className="flex h-full flex-col overflow-hidden">
       <PageHeader eyebrow="Configurações" title="Configurações" />
 
-      {/* ── Mobile tab strip ─────────────────────────────────────────── */}
-      <div className="shrink-0 border-b border-brand-line bg-white md:hidden">
-        <div className="flex overflow-x-auto px-4 scrollbar-none">
-          {NAV_ITEMS.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => setActiveSection(item.id)}
-              className={cn(
-                "flex shrink-0 items-center gap-1.5 border-b-2 px-3 pb-3 pt-3 text-xs font-bold transition-colors",
-                activeSection === item.id
-                  ? "border-brand-red text-brand-red"
-                  : "border-transparent text-brand-muted hover:text-brand-ink"
-              )}
-            >
-              {item.icon}
-              {item.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* ── Main area ────────────────────────────────────────────────── */}
-      <div className="flex min-h-0 flex-1 overflow-hidden">
-        {/* Desktop sidebar */}
-        <nav className="hidden w-52 shrink-0 border-r border-brand-line bg-white/60 p-4 md:block">
-          <ul className="space-y-0.5">
+      <Tabs defaultValue="perfil" className="flex min-h-0 flex-1 flex-col overflow-hidden md:flex-row">
+        {/* Sidebar desktop */}
+        <aside className="hidden w-52 shrink-0 flex-col border-r border-brand-line bg-white/60 p-4 md:flex">
+          <TabsList className="flex-col items-stretch gap-0.5 bg-transparent p-0 h-auto">
             {NAV_ITEMS.map((item) => (
-              <li key={item.id}>
-                <button
-                  onClick={() => setActiveSection(item.id)}
-                  className={cn(
-                    "focus-ring flex w-full items-center gap-2.5 rounded-card px-3 py-2.5 text-sm font-bold transition-colors",
-                    activeSection === item.id
-                      ? "bg-brand-red50 text-brand-red"
-                      : "text-brand-muted hover:bg-brand-canvas hover:text-brand-ink"
-                  )}
-                >
-                  {item.icon}
-                  {item.label}
-                </button>
-              </li>
+              <TabsTrigger
+                key={item.id}
+                value={item.id}
+                className="justify-start gap-2.5 rounded-card px-3 py-2.5 text-sm data-[state=active]:bg-brand-red50 data-[state=active]:text-brand-red data-[state=active]:shadow-none"
+              >
+                {item.icon}
+                {item.label}
+              </TabsTrigger>
             ))}
-          </ul>
-        </nav>
+          </TabsList>
+        </aside>
+
+        {/* Mobile tab strip */}
+        <div className="shrink-0 border-b border-brand-line bg-white md:hidden">
+          <TabsList className="h-auto w-full justify-start overflow-x-auto rounded-none bg-transparent px-4 py-0">
+            {NAV_ITEMS.map((item) => (
+              <TabsTrigger
+                key={item.id}
+                value={item.id}
+                className="shrink-0 gap-1.5 rounded-none border-b-2 border-transparent px-3 pb-3 pt-3 text-xs data-[state=active]:border-brand-red data-[state=active]:bg-transparent data-[state=active]:text-brand-red data-[state=active]:shadow-none"
+              >
+                {item.icon}
+                {item.label}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </div>
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto scrollbar-thin">
           <div className="mx-auto max-w-2xl p-4 sm:p-6">
-            {activeSection === "perfil" && (
+            <TabsContent value="perfil" className="mt-0">
               <PerfilSection user={meData?.user} onSaved={() => mutateMe()} onLogout={logout} />
-            )}
-            {activeSection === "workspace" && (
+            </TabsContent>
+            <TabsContent value="workspace" className="mt-0">
               <WorkspaceSection workspace={workspace} onSaved={() => mutateWorkspace()} />
-            )}
-            {activeSection === "canais" && (
+            </TabsContent>
+            <TabsContent value="canais" className="mt-0">
               <CanaisSection
                 waStatus={waStatus}
                 integrations={integrations}
-                onWaConnected={() => { mutateIntegrations(); mutateWaStatus(); }}
-                onWaDisconnected={() => { mutateIntegrations(); mutateWaStatus(); }}
+                onWaConnected={() => { mutateIntegrations(); void mutateWaStatus(); }}
+                onWaDisconnected={() => { mutateIntegrations(); void mutateWaStatus(); }}
                 onIgDisconnected={() => mutateIntegrations()}
               />
-            )}
-            {activeSection === "webhooks" && <WebhooksSection />}
+            </TabsContent>
+            <TabsContent value="webhooks" className="mt-0">
+              <WebhooksSection />
+            </TabsContent>
           </div>
         </div>
-      </div>
+      </Tabs>
     </div>
   );
 }

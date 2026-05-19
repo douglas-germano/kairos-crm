@@ -1,9 +1,19 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { X, MessageCircle, Loader2 } from "lucide-react";
-import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
+import { MessageCircle, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { apiFetch, ApiError } from "@/lib/api";
 import type { Conversation } from "@/lib/types";
 
@@ -53,45 +63,26 @@ export function NewConversationModal({ open, onClose, onCreated }: Props) {
     }
   }
 
-  function handleBackdrop(e: React.MouseEvent) {
-    if (e.target === e.currentTarget) onClose();
-  }
-
-  if (!open) return null;
-
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
-      onClick={handleBackdrop}
-    >
-      <div className="w-full max-w-md rounded-panel border border-brand-line bg-white shadow-2xl">
-        {/* Header */}
-        <div className="flex items-center justify-between border-b border-brand-line px-5 py-4">
-          <div className="flex items-center gap-2.5">
-            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-successSoft text-brand-successStrong">
-              <MessageCircle size={16} />
-            </span>
-            <div>
-              <h2 className="text-sm font-black text-brand-ink">Nova conversa</h2>
-              <p className="text-[11px] text-brand-muted">WhatsApp</p>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="focus-ring flex h-7 w-7 items-center justify-center rounded-full text-brand-muted transition hover:bg-brand-canvas hover:text-brand-ink"
-          >
-            <X size={15} />
-          </button>
-        </div>
-
-        {/* Form */}
-        <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4 p-5">
+    <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
+      <DialogContent className="max-w-md p-0">
+        <DialogHeader className="flex-row items-center gap-2.5">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-successSoft text-brand-successStrong">
+            <MessageCircle size={16} />
+          </span>
           <div>
-            <label className="mb-1.5 block text-xs font-extrabold text-brand-ink">
+            <DialogTitle>Nova conversa</DialogTitle>
+            <DialogDescription>WhatsApp</DialogDescription>
+          </div>
+        </DialogHeader>
+
+        <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4 px-5 py-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="phone">
               Número <span className="text-brand-red">*</span>
-            </label>
+            </Label>
             <Input
+              id="phone"
               ref={phoneRef}
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
@@ -100,16 +91,18 @@ export function NewConversationModal({ open, onClose, onCreated }: Props) {
               disabled={loading}
               className="font-mono"
             />
-            <p className="mt-1 text-[11px] text-brand-muted">
+            <p className="text-[11px] text-brand-muted">
               DDI + DDD + número sem espaços ou hífens. Ex: 5511999999999
             </p>
           </div>
 
-          <div>
-            <label className="mb-1.5 block text-xs font-extrabold text-brand-ink">
-              Nome do contato <span className="text-brand-muted font-medium">(opcional)</span>
-            </label>
+          <div className="space-y-1.5">
+            <Label htmlFor="contact-name">
+              Nome do contato{" "}
+              <span className="font-medium text-brand-muted">(opcional)</span>
+            </Label>
             <Input
+              id="contact-name"
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="João Silva"
@@ -117,17 +110,18 @@ export function NewConversationModal({ open, onClose, onCreated }: Props) {
             />
           </div>
 
-          <div>
-            <label className="mb-1.5 block text-xs font-extrabold text-brand-ink">
-              Mensagem inicial <span className="text-brand-muted font-medium">(opcional)</span>
-            </label>
-            <textarea
+          <div className="space-y-1.5">
+            <Label htmlFor="initial-message">
+              Mensagem inicial{" "}
+              <span className="font-medium text-brand-muted">(opcional)</span>
+            </Label>
+            <Textarea
+              id="initial-message"
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               placeholder="Olá! Gostaria de falar sobre..."
               disabled={loading}
-              rows={3}
-              className="focus-ring w-full resize-none rounded-card border border-brand-line bg-white px-3 py-2.5 text-sm text-brand-ink placeholder:text-brand-muted disabled:opacity-50"
+              className="min-h-[80px]"
             />
           </div>
 
@@ -137,7 +131,7 @@ export function NewConversationModal({ open, onClose, onCreated }: Props) {
             </p>
           )}
 
-          <div className="flex justify-end gap-2 pt-1">
+          <DialogFooter className="-mx-5 -mb-4 px-5 py-4">
             <Button type="button" variant="ghost" onClick={onClose} disabled={loading}>
               Cancelar
             </Button>
@@ -151,9 +145,9 @@ export function NewConversationModal({ open, onClose, onCreated }: Props) {
                 "Iniciar conversa"
               )}
             </Button>
-          </div>
+          </DialogFooter>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

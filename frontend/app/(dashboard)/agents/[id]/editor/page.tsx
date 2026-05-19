@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import { ArrowLeft, Plus } from "lucide-react";
 import { PageHeader } from "@/components/layout/AppShell";
 import { FlowEditor } from "@/components/flow/FlowEditor";
-import { Button } from "@/components/ui/Button";
+import { Button } from "@/components/ui/button";
 import { apiFetch } from "@/lib/api";
 import type { Flow } from "@/lib/types";
 import { useAgent, useFlows } from "@/hooks/useAgent";

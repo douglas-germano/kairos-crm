@@ -1,58 +1,98 @@
+"use client";
+
+import { Handle, Position, NodeProps } from "@xyflow/react";
 import { Bot, GitBranch, MessageSquare, Radio, Webhook } from "lucide-react";
-import { Handle, NodeProps, Position } from "@xyflow/react";
 
-const nodeMeta = {
-  TriggerNode: { icon: Radio, label: "Gatilho", color: "bg-brand-red", soft: "bg-red-50 text-brand-red" },
-  MessageNode: { icon: MessageSquare, label: "Mensagem", color: "bg-emerald-600", soft: "bg-emerald-50 text-emerald-700" },
-  ConditionNode: { icon: GitBranch, label: "Condição", color: "bg-amber-500", soft: "bg-amber-50 text-amber-700" },
-  AINode: { icon: Bot, label: "IA", color: "bg-brand-charcoal", soft: "bg-slate-100 text-brand-charcoal" },
-  WebhookNode: { icon: Webhook, label: "Webhook", color: "bg-blue-600", soft: "bg-blue-50 text-blue-700" }
-};
+const baseClass =
+  "min-w-[180px] rounded-card border border-brand-line bg-white px-3.5 py-3 shadow-node font-sans text-sm";
 
-export function FlowNode({ data, type }: NodeProps) {
-  const meta = nodeMeta[(type || "MessageNode") as keyof typeof nodeMeta] || nodeMeta.MessageNode;
-  const Icon = meta.icon;
-  const summary = String(data?.message || data?.system_prompt || data?.url || data?.description || "Configure este passo no painel lateral.");
-
+export function TriggerNode({ data }: NodeProps) {
   return (
-    <div className="min-w-56 overflow-hidden rounded-card border border-brand-line bg-white">
-      <Handle type="target" position={Position.Top} className="!bg-brand-charcoal" />
-      <div className="border-b border-brand-line bg-brand-canvas px-3 py-2">
-        <div className="flex items-center gap-2">
-          <span className={`flex h-8 w-8 items-center justify-center rounded-card text-white ${meta.color}`}>
-            <Icon size={16} />
-          </span>
-          <div className="min-w-0">
-            <div className="item-title truncate">{String(data?.label || meta.label)}</div>
-            <div className="ui-label text-[10px]">{meta.label}</div>
-          </div>
-        </div>
+    <div className={baseClass}>
+      <div className="flex items-center gap-2 mb-1">
+        <Radio size={14} className="text-brand-red shrink-0" />
+        <span className="font-extrabold text-brand-ink text-xs truncate">{String(data.label ?? "Gatilho")}</span>
       </div>
-      <div className="p-3">
-        <p className="body-muted line-clamp-2 max-w-56">{summary}</p>
-        <span className={`mt-3 inline-flex rounded-[32px] px-2 py-1 text-[10px] font-extrabold uppercase ${meta.soft}`}>
-          {type}
-        </span>
-      </div>
-      <Handle type="source" position={Position.Bottom} className="!bg-brand-red" />
+      <p className="text-[10px] text-brand-muted capitalize">{String(data.trigger_type ?? "first_message").replace(/_/g, " ")}</p>
+      <Handle type="source" position={Position.Bottom} />
     </div>
   );
 }
 
-export function SmallNodeIcon({ type }: { type: string }) {
-  const meta = nodeMeta[(type || "MessageNode") as keyof typeof nodeMeta] || nodeMeta.MessageNode;
-  const Icon = meta.icon;
+export function MessageNode({ data }: NodeProps) {
   return (
-    <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-card text-white ${meta.color}`}>
-          <Icon size={16} />
-    </span>
+    <div className={baseClass}>
+      <Handle type="target" position={Position.Top} />
+      <div className="flex items-center gap-2 mb-1">
+        <MessageSquare size={14} className="text-brand-info shrink-0" />
+        <span className="font-extrabold text-brand-ink text-xs truncate">{String(data.label ?? "Mensagem")}</span>
+      </div>
+      <p className="text-[10px] text-brand-muted line-clamp-2">{String(data.message ?? "")}</p>
+      <Handle type="source" position={Position.Bottom} />
+    </div>
+  );
+}
+
+export function ConditionNode({ data }: NodeProps) {
+  return (
+    <div className={baseClass}>
+      <Handle type="target" position={Position.Top} />
+      <div className="flex items-center gap-2 mb-1">
+        <GitBranch size={14} className="text-brand-warning shrink-0" />
+        <span className="font-extrabold text-brand-ink text-xs truncate">{String(data.label ?? "Condição")}</span>
+      </div>
+      <p className="text-[10px] text-brand-muted">{String(data.condition ?? "")}</p>
+      <Handle type="source" position={Position.Bottom} id="yes" style={{ left: "30%" }} />
+      <Handle type="source" position={Position.Bottom} id="no" style={{ left: "70%" }} />
+    </div>
+  );
+}
+
+export function AINode({ data }: NodeProps) {
+  return (
+    <div className={baseClass}>
+      <Handle type="target" position={Position.Top} />
+      <div className="flex items-center gap-2 mb-1">
+        <Bot size={14} className="text-brand-red shrink-0" />
+        <span className="font-extrabold text-brand-ink text-xs truncate">{String(data.label ?? "IA")}</span>
+      </div>
+      <p className="text-[10px] text-brand-muted line-clamp-2">{String(data.prompt ?? "")}</p>
+      <Handle type="source" position={Position.Bottom} />
+    </div>
+  );
+}
+
+export function WebhookNode({ data }: NodeProps) {
+  return (
+    <div className={baseClass}>
+      <Handle type="target" position={Position.Top} />
+      <div className="flex items-center gap-2 mb-1">
+        <Webhook size={14} className="text-brand-charcoal shrink-0" />
+        <span className="font-extrabold text-brand-ink text-xs truncate">{String(data.label ?? "Webhook")}</span>
+      </div>
+      <p className="text-[10px] text-brand-muted truncate">{String(data.url ?? "")}</p>
+      <Handle type="source" position={Position.Bottom} />
+    </div>
   );
 }
 
 export const nodeTypes = {
-  TriggerNode: FlowNode,
-  MessageNode: FlowNode,
-  ConditionNode: FlowNode,
-  AINode: FlowNode,
-  WebhookNode: FlowNode
+  TriggerNode,
+  MessageNode,
+  ConditionNode,
+  AINode,
+  WebhookNode,
 };
+
+const NODE_ICONS: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {
+  TriggerNode: Radio,
+  MessageNode: MessageSquare,
+  ConditionNode: GitBranch,
+  AINode: Bot,
+  WebhookNode: Webhook,
+};
+
+export function SmallNodeIcon({ type, className }: { type: string; className?: string }) {
+  const Icon = NODE_ICONS[type] ?? Radio;
+  return <Icon size={14} className={className} />;
+}

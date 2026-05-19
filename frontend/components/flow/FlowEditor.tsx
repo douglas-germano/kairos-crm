@@ -3,9 +3,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ReactFlow, addEdge, Background, Connection, Controls, Edge, MiniMap, Node, useEdgesState, useNodesState } from "@xyflow/react";
 import { Bot, GitBranch, MessageSquare, Radio, Save, Trash2, Webhook, Zap } from "lucide-react";
-import { Button } from "@/components/ui/Button";
-import { Toggle } from "@/components/ui/Toggle";
-import { Input, Textarea } from "@/components/ui/Input";
+import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import { apiFetch } from "@/lib/api";
 import type { Flow } from "@/lib/types";
 import { nodeTypes, SmallNodeIcon } from "@/components/flow/nodes/FlowNodes";
@@ -127,7 +129,10 @@ export function FlowEditor({ flow, onSaved }: { flow: Flow; onSaved: (flow: Flow
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <Toggle checked={active} onChange={setActive} label="Fluxo ativo" />
+            <label className="flex items-center gap-2 text-sm font-bold text-brand-ink cursor-pointer">
+              <Switch checked={active} onCheckedChange={setActive} aria-label="Fluxo ativo" />
+              Fluxo ativo
+            </label>
             <Button onClick={() => void save()} disabled={saving}>
               <Save size={16} />
               {saving ? "Salvando" : "Salvar"}

@@ -8,7 +8,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useSocket } from "@/hooks/useSocket";
 import type { Conversation, Message } from "@/lib/types";
 import { ChannelIcon } from "@/components/ui/ChannelIcon";
-import { Toggle } from "@/components/ui/Toggle";
+import { Toggle } from "@/components/ui/toggle";
 import { MessageBubble } from "@/components/chat/MessageBubble";
 import { MessageInput } from "@/components/chat/MessageInput";
 import { formatDateTime } from "@/lib/utils";

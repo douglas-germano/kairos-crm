@@ -3,17 +3,29 @@
 export const runtime = "edge";
 
 import { useEffect, useRef, useState } from "react";
-import type { FormEvent, MouseEvent } from "react";
+import type { FormEvent } from "react";
 import useSWR from "swr";
 import { useRouter } from "next/navigation";
 import {
-  MessageCircle, Search, Upload, Users, Loader2,
-  AlertCircle, ChevronLeft, ChevronRight, Pencil, Trash2, X,
+  MessageCircle, Search, Upload, Users,
+  Loader2, AlertCircle, ChevronLeft, ChevronRight, Pencil, Trash2,
 } from "lucide-react";
 import { swrFetcher, apiFetch, ApiError } from "@/lib/api";
 import type { Contact, ContactPage, Conversation } from "@/lib/types";
 import { ChannelIcon } from "@/components/ui/ChannelIcon";
-import { Button } from "@/components/ui/Button";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { PageHeader } from "@/components/layout/AppShell";
 import { cn, initials, formatRelativeTime } from "@/lib/utils";
 
@@ -49,7 +61,6 @@ export default function ContactsPage() {
     `/api/contacts?${params.toString()}`,
     swrFetcher
   );
-
   const contacts = data?.items ?? [];
 
   async function startConversation(contact: Contact) {
@@ -67,10 +78,9 @@ export default function ContactsPage() {
   }
 
   async function deleteContact(contact: Contact) {
-    const name = contact.name || contact.external_id;
-    const confirmed = window.confirm(`Excluir o contato "${name}" e todas as conversas vinculadas?`);
+    const label = contact.name || contact.external_id;
+    const confirmed = window.confirm(`Excluir o contato "${label}" e todas as conversas vinculadas?`);
     if (!confirmed) return;
-
     setDeletingContact(contact.id);
     try {
       await apiFetch(`/api/contacts/${contact.id}`, { method: "DELETE" });
@@ -80,208 +90,214 @@ export default function ContactsPage() {
     }
   }
 
-  function handleSearchChange(val: string) {
-    setSearch(val);
-    setPage(1);
-  }
-
-  function handleChannelChange(val: string) {
-    setChannel(val);
-    setPage(1);
-  }
-
   return (
-    <div className="flex h-full flex-col overflow-hidden">
-      <PageHeader
-        eyebrow=""
-        title="Contatos"
-        action={
-          <Button onClick={() => setImportOpen(true)} className="flex items-center gap-2">
-            <Upload size={14} />
-            Importar CSV
-          </Button>
-        }
-      />
+    <TooltipProvider>
+      <div className="flex h-full flex-col overflow-hidden">
+        <PageHeader
+          eyebrow=""
+          title="Contatos"
+          action={
+            <Button onClick={() => setImportOpen(true)}>
+              <Upload size={14} />
+              Importar CSV
+            </Button>
+          }
+        />
 
-      {/* Filters */}
-      <div className="border-b border-brand-line bg-white px-4 py-3 sm:px-7">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          <div className="relative flex-1">
-            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-muted" />
-            <input
-              value={search}
-              onChange={(e) => handleSearchChange(e.target.value)}
-              placeholder="Buscar por nome ou número..."
-              className="focus-ring w-full rounded-card border border-brand-line bg-brand-canvas py-2 pl-9 pr-3 text-sm font-medium placeholder:text-brand-muted"
-            />
-          </div>
-          <div className="flex gap-1.5">
-            {(["", "whatsapp", "instagram"] as const).map((ch) => (
-              <button
-                key={ch}
-                onClick={() => handleChannelChange(ch)}
-                className={cn(
-                  "focus-ring rounded-card px-3 py-1.5 text-[11px] font-extrabold transition",
-                  channel === ch
-                    ? "bg-brand-charcoal text-white"
-                    : "bg-brand-canvas text-brand-muted hover:bg-brand-neutral hover:text-brand-ink"
-                )}
-              >
-                {ch === "" ? "Todos" : ch === "whatsapp" ? "WhatsApp" : "Instagram"}
-              </button>
-            ))}
+        {/* Filters */}
+        <div className="border-b border-brand-line bg-white px-4 py-3 sm:px-7">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <div className="relative flex-1">
+              <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-muted" />
+              <Input
+                value={search}
+                onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                placeholder="Buscar por nome ou número..."
+                className="pl-9"
+              />
+            </div>
+            <div className="flex gap-1.5">
+              {(["", "whatsapp", "instagram"] as const).map((ch) => (
+                <button
+                  key={ch}
+                  onClick={() => { setChannel(ch); setPage(1); }}
+                  className={cn(
+                    "focus-ring rounded-card px-3 py-1.5 text-[11px] font-extrabold transition",
+                    channel === ch
+                      ? "bg-brand-charcoal text-white"
+                      : "bg-brand-canvas text-brand-muted hover:bg-brand-neutral hover:text-brand-ink"
+                  )}
+                >
+                  {ch === "" ? "Todos" : ch === "whatsapp" ? "WhatsApp" : "Instagram"}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Table */}
-      <div className="flex-1 overflow-y-auto scrollbar-thin">
-        {isLoading ? (
-          <LoadingSkeleton />
-        ) : error ? (
-          <div className="flex h-64 flex-col items-center justify-center gap-3 text-center">
-            <AlertCircle size={28} className="text-brand-red" />
-            <p className="ui-meta">Erro ao carregar contatos</p>
-          </div>
-        ) : contacts.length === 0 ? (
-          <EmptyState search={search} />
-        ) : (
-          <>
-            <table className="w-full text-sm">
-              <thead className="sticky top-0 z-10 border-b border-brand-line bg-white/95 backdrop-blur">
-                <tr>
-                  <th className="px-4 py-3 text-left text-[11px] font-extrabold uppercase tracking-wider text-brand-muted sm:px-7">
-                    Contato
-                  </th>
-                  <th className="hidden px-4 py-3 text-left text-[11px] font-extrabold uppercase tracking-wider text-brand-muted md:table-cell">
-                    Canal
-                  </th>
-                  <th className="hidden px-4 py-3 text-left text-[11px] font-extrabold uppercase tracking-wider text-brand-muted lg:table-cell">
-                    Adicionado
-                  </th>
-                  <th className="px-4 py-3 text-right text-[11px] font-extrabold uppercase tracking-wider text-brand-muted sm:px-7">
-                    Ações
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-brand-line/60">
-                {contacts.map((contact) => {
-                  const name = contact.name || contact.external_id;
-                  const palette = avatarColor(name);
-                  return (
-                    <tr key={contact.id} className="transition-colors hover:bg-brand-canvas/60">
-                      <td className="px-4 py-3 sm:px-7">
-                        <div className="flex items-center gap-3">
-                          <span
-                            className={cn(
-                              "flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-black",
-                              palette
-                            )}
-                          >
-                            {initials(name)}
-                          </span>
-                          <div className="min-w-0">
-                            <p className="truncate font-bold text-brand-ink">{name}</p>
-                            <p className="truncate text-[11px] text-brand-muted">
-                              {contact.external_id}
-                            </p>
+        {/* Table */}
+        <div className="flex-1 overflow-y-auto scrollbar-thin">
+          {isLoading ? (
+            <LoadingSkeleton />
+          ) : error ? (
+            <div className="flex h-64 flex-col items-center justify-center gap-3 text-center">
+              <AlertCircle size={28} className="text-brand-red" />
+              <p className="ui-meta">Erro ao carregar contatos</p>
+            </div>
+          ) : contacts.length === 0 ? (
+            <EmptyState search={search} />
+          ) : (
+            <>
+              <table className="w-full text-sm">
+                <thead className="sticky top-0 z-10 border-b border-brand-line bg-white/95 backdrop-blur">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-[11px] font-extrabold uppercase tracking-wider text-brand-muted sm:px-7">
+                      Contato
+                    </th>
+                    <th className="hidden px-4 py-3 text-left text-[11px] font-extrabold uppercase tracking-wider text-brand-muted md:table-cell">
+                      Canal
+                    </th>
+                    <th className="hidden px-4 py-3 text-left text-[11px] font-extrabold uppercase tracking-wider text-brand-muted lg:table-cell">
+                      Adicionado
+                    </th>
+                    <th className="px-4 py-3 text-right text-[11px] font-extrabold uppercase tracking-wider text-brand-muted sm:px-7">
+                      Ações
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-brand-line/60">
+                  {contacts.map((contact) => {
+                    const name = contact.name || contact.external_id;
+                    return (
+                      <tr key={contact.id} className="transition-colors hover:bg-brand-canvas/60">
+                        <td className="px-4 py-3 sm:px-7">
+                          <div className="flex items-center gap-3">
+                            <Avatar className={cn("h-8 w-8 text-xs font-black", avatarColor(name))}>
+                              <AvatarFallback className={cn("text-xs font-black", avatarColor(name))}>
+                                {initials(name)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="min-w-0">
+                              <p className="truncate font-bold text-brand-ink">{name}</p>
+                              <p className="truncate text-[11px] text-brand-muted">{contact.external_id}</p>
+                            </div>
                           </div>
-                        </div>
-                      </td>
-                      <td className="hidden px-4 py-3 md:table-cell">
-                        <div className="flex items-center gap-1.5">
-                          <ChannelIcon channel={contact.channel} className="h-3.5 w-3.5" />
-                          <span className="text-xs font-semibold text-brand-muted capitalize">
-                            {contact.channel === "whatsapp" ? "WhatsApp" : "Instagram"}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="hidden px-4 py-3 text-xs text-brand-muted lg:table-cell">
-                        {formatRelativeTime(contact.created_at)}
-                      </td>
-                      <td className="px-4 py-3 text-right sm:px-7">
-                        <div className="flex justify-end gap-1.5">
-                          {contact.channel === "whatsapp" && (
-                            <button
-                              onClick={() => void startConversation(contact)}
-                              disabled={startingConv === contact.id}
-                              title="Iniciar conversa"
-                              className="focus-ring inline-flex h-8 w-8 items-center justify-center rounded-card border border-brand-line bg-white text-brand-muted transition hover:border-brand-charcoal/20 hover:text-brand-ink disabled:opacity-50"
-                            >
-                              {startingConv === contact.id ? (
-                                <Loader2 size={13} className="animate-spin" />
-                              ) : (
-                                <MessageCircle size={13} />
-                              )}
-                            </button>
-                          )}
-                          <button
-                            onClick={() => setEditingContact(contact)}
-                            title="Editar contato"
-                            className="focus-ring inline-flex h-8 w-8 items-center justify-center rounded-card border border-brand-line bg-white text-brand-muted transition hover:border-brand-charcoal/20 hover:text-brand-ink"
-                          >
-                            <Pencil size={13} />
-                          </button>
-                          <button
-                            onClick={() => void deleteContact(contact)}
-                            disabled={deletingContact === contact.id}
-                            title="Excluir contato"
-                            className="focus-ring inline-flex h-8 w-8 items-center justify-center rounded-card border border-brand-line bg-white text-brand-muted transition hover:border-brand-red/30 hover:bg-brand-red50 hover:text-brand-red disabled:opacity-50"
-                          >
-                            {deletingContact === contact.id ? (
-                              <Loader2 size={13} className="animate-spin" />
-                            ) : (
-                              <Trash2 size={13} />
+                        </td>
+                        <td className="hidden px-4 py-3 md:table-cell">
+                          <div className="flex items-center gap-1.5">
+                            <ChannelIcon channel={contact.channel} className="h-3.5 w-3.5" />
+                            <span className="text-xs font-semibold capitalize text-brand-muted">
+                              {contact.channel === "whatsapp" ? "WhatsApp" : "Instagram"}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="hidden px-4 py-3 text-xs text-brand-muted lg:table-cell">
+                          {formatRelativeTime(contact.created_at)}
+                        </td>
+                        <td className="px-4 py-3 text-right sm:px-7">
+                          <div className="flex justify-end gap-1.5">
+                            {contact.channel === "whatsapp" && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    size="icon"
+                                    className="h-8 w-8"
+                                    onClick={() => void startConversation(contact)}
+                                    disabled={startingConv === contact.id}
+                                  >
+                                    {startingConv === contact.id ? (
+                                      <Loader2 size={13} className="animate-spin" />
+                                    ) : (
+                                      <MessageCircle size={13} />
+                                    )}
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Iniciar conversa</TooltipContent>
+                              </Tooltip>
                             )}
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  size="icon"
+                                  className="h-8 w-8"
+                                  onClick={() => setEditingContact(contact)}
+                                >
+                                  <Pencil size={13} />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Editar contato</TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  size="icon"
+                                  className="h-8 w-8 hover:border-brand-red/30 hover:bg-brand-red50 hover:text-brand-red"
+                                  onClick={() => void deleteContact(contact)}
+                                  disabled={deletingContact === contact.id}
+                                >
+                                  {deletingContact === contact.id ? (
+                                    <Loader2 size={13} className="animate-spin" />
+                                  ) : (
+                                    <Trash2 size={13} />
+                                  )}
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Excluir contato</TooltipContent>
+                            </Tooltip>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
 
-            {/* Pagination */}
-            {(data?.pages ?? 1) > 1 && (
-              <div className="flex items-center justify-between border-t border-brand-line px-4 py-3 sm:px-7">
-                <p className="text-xs text-brand-muted">
-                  {data?.total} contatos · página {data?.page} de {data?.pages}
-                </p>
-                <div className="flex gap-1">
-                  <button
-                    disabled={page <= 1}
-                    onClick={() => setPage((p) => p - 1)}
-                    className="focus-ring rounded-card border border-brand-line p-1.5 text-brand-muted transition hover:text-brand-ink disabled:opacity-40"
-                  >
-                    <ChevronLeft size={14} />
-                  </button>
-                  <button
-                    disabled={page >= (data?.pages ?? 1)}
-                    onClick={() => setPage((p) => p + 1)}
-                    className="focus-ring rounded-card border border-brand-line p-1.5 text-brand-muted transition hover:text-brand-ink disabled:opacity-40"
-                  >
-                    <ChevronRight size={14} />
-                  </button>
+              {(data?.pages ?? 1) > 1 && (
+                <div className="flex items-center justify-between border-t border-brand-line px-4 py-3 sm:px-7">
+                  <p className="text-xs text-brand-muted">
+                    {data?.total} contatos · página {data?.page} de {data?.pages}
+                  </p>
+                  <div className="flex gap-1">
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-7 w-7"
+                      disabled={page <= 1}
+                      onClick={() => setPage((p) => p - 1)}
+                    >
+                      <ChevronLeft size={14} />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-7 w-7"
+                      disabled={page >= (data?.pages ?? 1)}
+                      onClick={() => setPage((p) => p + 1)}
+                    >
+                      <ChevronRight size={14} />
+                    </Button>
+                  </div>
                 </div>
-              </div>
-            )}
-          </>
-        )}
-      </div>
+              )}
+            </>
+          )}
+        </div>
 
-      <ImportModal open={importOpen} onClose={() => setImportOpen(false)} onImported={() => void mutate()} />
-      <EditContactModal
-        contact={editingContact}
-        onClose={() => setEditingContact(null)}
-        onSaved={() => {
-          setEditingContact(null);
-          void mutate();
-        }}
-      />
-    </div>
+        <ImportModal open={importOpen} onClose={() => setImportOpen(false)} onImported={() => void mutate()} />
+        <EditContactModal
+          contact={editingContact}
+          onClose={() => setEditingContact(null)}
+          onSaved={() => { setEditingContact(null); void mutate(); }}
+        />
+      </div>
+    </TooltipProvider>
   );
 }
+
+// ── Edit Modal ─────────────────────────────────────────────────────────────────
 
 function EditContactModal({
   contact,
@@ -303,12 +319,6 @@ function EditContactModal({
     setError(null);
   }, [contact]);
 
-  if (!contact) return null;
-
-  function handleBackdrop(e: MouseEvent<HTMLDivElement>) {
-    if (e.target === e.currentTarget) onClose();
-  }
-
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!contact) return;
@@ -328,59 +338,58 @@ function EditContactModal({
   }
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
-      onClick={handleBackdrop}
-    >
-      <form onSubmit={handleSubmit} className="w-full max-w-md rounded-panel border border-brand-line bg-white shadow-2xl">
-        <div className="flex items-center justify-between border-b border-brand-line px-5 py-4">
+    <Dialog open={!!contact} onOpenChange={(v) => { if (!v) onClose(); }}>
+      <DialogContent className="max-w-md p-0">
+        <DialogHeader>
           <div className="flex items-center gap-2.5">
-            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-canvas text-brand-ink">
-              <Pencil size={15} />
+            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-canvas">
+              <Pencil size={15} className="text-brand-ink" />
             </span>
             <div>
-              <h2 className="text-sm font-black text-brand-ink">Editar contato</h2>
-              <p className="text-[11px] text-brand-muted">{contact.channel === "whatsapp" ? "WhatsApp" : "Instagram"}</p>
+              <DialogTitle>Editar contato</DialogTitle>
+              <DialogDescription>
+                {contact?.channel === "whatsapp" ? "WhatsApp" : "Instagram"}
+              </DialogDescription>
             </div>
           </div>
-          <button type="button" onClick={onClose} className="focus-ring rounded-card p-1.5 text-brand-muted hover:text-brand-ink">
-            <X size={16} />
-          </button>
-        </div>
+        </DialogHeader>
 
-        <div className="space-y-4 p-5">
-          <div>
-            <label className="mb-1.5 block text-xs font-extrabold text-brand-ink">Nome</label>
-            <input
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-              className="focus-ring w-full rounded-card border border-brand-line bg-white px-3 py-2 text-sm text-brand-ink"
-            />
+        <form onSubmit={(e) => void handleSubmit(e)}>
+          <div className="space-y-4 px-5 py-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="contact-name-edit">Nome</Label>
+              <Input
+                id="contact-name-edit"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="contact-external-id">Identificador</Label>
+              <Input
+                id="contact-external-id"
+                value={externalId}
+                onChange={(e) => setExternalId(e.target.value)}
+              />
+            </div>
+            {error && (
+              <p className="rounded-card border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-600">
+                {error}
+              </p>
+            )}
           </div>
-          <div>
-            <label className="mb-1.5 block text-xs font-extrabold text-brand-ink">Identificador</label>
-            <input
-              value={externalId}
-              onChange={(event) => setExternalId(event.target.value)}
-              className="focus-ring w-full rounded-card border border-brand-line bg-white px-3 py-2 text-sm text-brand-ink"
-            />
-          </div>
 
-          {error && (
-            <p className="rounded-card border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-600">
-              {error}
-            </p>
-          )}
-
-          <div className="flex justify-end gap-2 pt-1">
-            <Button type="button" variant="ghost" onClick={onClose}>Cancelar</Button>
+          <DialogFooter>
+            <Button type="button" variant="ghost" onClick={onClose}>
+              Cancelar
+            </Button>
             <Button type="submit" disabled={saving}>
               {saving ? <><Loader2 size={14} className="animate-spin" /> Salvando...</> : "Salvar"}
             </Button>
-          </div>
-        </div>
-      </form>
-    </div>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -417,10 +426,8 @@ function ImportModal({
     setLoading(true);
     setError(null);
     setResult(null);
-
     const form = new FormData();
     form.append("file", file);
-
     try {
       const res = await apiFetch<{ imported: number; skipped: number; errors: { row: number; reason: string }[] }>(
         "/api/contacts/import",
@@ -435,54 +442,42 @@ function ImportModal({
     }
   }
 
-  function handleBackdrop(e: React.MouseEvent) {
-    if (e.target === e.currentTarget) handleClose();
-  }
-
-  if (!open) return null;
-
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
-      onClick={handleBackdrop}
-    >
-      <div className="w-full max-w-lg rounded-panel border border-brand-line bg-white shadow-2xl">
-        {/* Header */}
-        <div className="flex items-center justify-between border-b border-brand-line px-5 py-4">
+    <Dialog open={open} onOpenChange={(v) => { if (!v) handleClose(); }}>
+      <DialogContent className="max-w-lg p-0">
+        <DialogHeader>
           <div className="flex items-center gap-2.5">
-            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-canvas text-brand-ink">
-              <Upload size={15} />
+            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-canvas">
+              <Upload size={15} className="text-brand-ink" />
             </span>
             <div>
-              <h2 className="text-sm font-black text-brand-ink">Importar contatos</h2>
-              <p className="text-[11px] text-brand-muted">CSV com colunas: name, phone[, channel]</p>
+              <DialogTitle>Importar contatos</DialogTitle>
+              <DialogDescription>CSV com colunas: name, phone[, channel]</DialogDescription>
             </div>
           </div>
-        </div>
+        </DialogHeader>
 
-        <div className="p-5 space-y-4">
-          {/* Template hint */}
+        <div className="space-y-4 px-5 py-4">
           <div className="rounded-card border border-brand-line bg-brand-canvas px-3 py-2.5 font-mono text-[11px] text-brand-muted">
             name,phone,channel<br />
             João Silva,5511999999999,whatsapp<br />
             Maria Souza,5521988888888,whatsapp
           </div>
 
-          {/* File input */}
-          <div>
-            <label className="mb-1.5 block text-xs font-extrabold text-brand-ink">
+          <div className="space-y-1.5">
+            <Label htmlFor="csv-file">
               Arquivo CSV <span className="text-brand-red">*</span>
-            </label>
-            <input
+            </Label>
+            <Input
+              id="csv-file"
               ref={fileRef}
               type="file"
               accept=".csv,text/csv"
-              className="focus-ring w-full rounded-card border border-brand-line bg-white px-3 py-2 text-sm text-brand-ink file:mr-3 file:rounded file:border-0 file:bg-brand-canvas file:px-2 file:py-1 file:text-xs file:font-bold file:text-brand-ink"
               onChange={reset}
+              className="file:mr-3 file:rounded file:border-0 file:bg-brand-canvas file:px-2 file:py-1 file:text-xs file:font-bold file:text-brand-ink"
             />
           </div>
 
-          {/* Result */}
           {result && (
             <div className="rounded-card border border-brand-success/30 bg-brand-successSoft px-3 py-2.5 text-sm">
               <p className="font-extrabold text-brand-successStrong">
@@ -505,28 +500,22 @@ function ImportModal({
               {error}
             </p>
           )}
-
-          <div className="flex justify-end gap-2 pt-1">
-            <Button type="button" variant="ghost" onClick={handleClose}>
-              {result ? "Fechar" : "Cancelar"}
-            </Button>
-            {!result && (
-              <Button onClick={() => void handleUpload()} disabled={loading}>
-                {loading ? (
-                  <><Loader2 size={14} className="animate-spin" /> Importando…</>
-                ) : (
-                  "Importar"
-                )}
-              </Button>
-            )}
-          </div>
         </div>
-      </div>
-    </div>
+
+        <DialogFooter>
+          <Button type="button" variant="ghost" onClick={handleClose}>
+            {result ? "Fechar" : "Cancelar"}
+          </Button>
+          {!result && (
+            <Button onClick={() => void handleUpload()} disabled={loading}>
+              {loading ? <><Loader2 size={14} className="animate-spin" /> Importando…</> : "Importar"}
+            </Button>
+          )}
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
-
-// ── Helpers ────────────────────────────────────────────────────────────────────
 
 function EmptyState({ search }: { search: string }) {
   return (

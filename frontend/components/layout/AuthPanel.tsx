@@ -1,69 +1,45 @@
-import { ReactNode } from "react";
-import { MessageSquare, Zap, Bot } from "lucide-react";
+"use client";
 
-const features = [
-  { icon: MessageSquare, text: "WhatsApp via Evolution API" },
-  { icon: Zap, text: "Instagram via Meta Cloud API" },
-  { icon: Bot, text: "Agentes com automação inteligente" },
-];
+import { ReactNode } from "react";
 
 export function AuthPanel({
-  children,
   title,
   subtitle,
+  children
 }: {
-  children: ReactNode;
   title: string;
   subtitle: string;
+  children: ReactNode;
 }) {
   return (
-    <main className="min-h-screen lg:grid lg:grid-cols-[500px_1fr]">
-      {/* Left panel */}
-      <section className="relative hidden overflow-hidden bg-brand-charcoal lg:flex lg:flex-col lg:justify-between lg:p-12">
-        <div className="pointer-events-none absolute -right-24 -top-24 h-[480px] w-[480px] rounded-full bg-brand-red opacity-[0.13] blur-[90px]" />
-        <div className="pointer-events-none absolute -bottom-32 -left-12 h-[380px] w-[380px] rounded-full bg-brand-red opacity-[0.07] blur-[110px]" />
-
-        <div className="relative z-10 flex items-center gap-3">
-          <span className="icon-tile icon-tile-red h-10 w-10 text-base font-black">K</span>
+    <main className="grid min-h-screen bg-white lg:grid-cols-[440px_1fr]">
+      <section className="flex min-h-[44vh] flex-col justify-between bg-brand-charcoal p-8 text-white lg:min-h-screen">
+        <div className="flex items-center gap-3">
+          <span className="flex h-11 w-11 items-center justify-center rounded-card bg-brand-red font-serif text-xl font-bold shadow-sm">K</span>
           <div>
-            <div className="text-base font-black leading-none text-white">KairosCRM</div>
-            <div className="mt-0.5 text-xs text-white/50">CRM para canais digitais</div>
+            <p className="text-lg font-extrabold leading-tight">KairosCRM</p>
+            <p className="text-sm text-white/64">CRM para canais digitais</p>
           </div>
         </div>
 
-        <div className="relative z-10">
-          <p className="mb-4 text-[0.7rem] font-extrabold uppercase tracking-[0.18em] text-brand-red">
-            Atendimento e automação
-          </p>
-          <h1 className="max-w-[340px] text-[2.8rem] font-black leading-[1.03] tracking-tight text-white">
-            Gerencie conversas, agentes e integrações com clareza.
+        <div className="max-w-[360px] py-12 lg:py-0">
+          <p className="eyebrow mb-5 text-red-100">Atendimento e automação</p>
+          <h1 className="display-title text-[2.15rem] text-white sm:text-[2.5rem]">
+            Gerencie conversas, agentes e integrações com clareza operacional.
           </h1>
         </div>
 
-        <div className="relative z-10 space-y-3 border-t border-white/10 pt-8">
-          {features.map(({ icon: Icon, text }) => (
-            <div key={text} className="flex items-center gap-3">
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/10">
-                <Icon className="h-4 w-4 text-white/70" />
-              </span>
-              <span className="text-sm font-semibold text-white/65">{text}</span>
-            </div>
-          ))}
+        <div className="hidden border-t border-white/12 pt-6 text-sm text-white/72 lg:block">
+          <p>WhatsApp via Evolution API</p>
+          <p className="mt-3">Instagram via Meta</p>
+          <p className="mt-3">Agentes com automações</p>
         </div>
       </section>
 
-      {/* Right panel */}
-      <section className="flex min-h-screen flex-col items-center justify-center bg-white px-6 py-12 sm:px-10">
-        <div className="mb-10 flex items-center gap-2.5 lg:hidden">
-          <span className="icon-tile icon-tile-red h-9 w-9 text-sm font-black">K</span>
-          <span className="text-base font-black text-brand-ink">KairosCRM</span>
-        </div>
-
-        <div className="w-full max-w-[420px]">
-          <div className="mb-8">
-            <p className="eyebrow mb-2">{subtitle}</p>
-            <h2 className="heading-xl">{title}</h2>
-          </div>
+      <section className="flex items-center justify-center bg-gradient-to-b from-white to-brand-canvas p-5">
+        <div className="surface-card w-full max-w-[448px] p-7">
+          <p className="eyebrow mb-3">{subtitle}</p>
+          <h2 className="heading-xl mb-6">{title}</h2>
           {children}
         </div>
       </section>

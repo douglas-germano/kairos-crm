@@ -3,25 +3,34 @@
 export const runtime = "edge";
 
 import { useState } from "react";
-import type { FormEvent, MouseEvent } from "react";
+import type { FormEvent } from "react";
 import useSWR from "swr";
 import {
   AlertCircle, CheckCircle2, ChevronDown, ChevronUp, Clock,
-  Loader2, Megaphone, Play, Plus, Trash2, X, XCircle,
+  Loader2, Megaphone, Play, Plus, Trash2, XCircle,
 } from "lucide-react";
 import { swrFetcher, apiFetch, ApiError } from "@/lib/api";
 import type { Broadcast, BroadcastDetail, Contact, ContactPage } from "@/lib/types";
-import { Button } from "@/components/ui/Button";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { PageHeader } from "@/components/layout/AppShell";
 import { cn, formatRelativeTime } from "@/lib/utils";
 
-// ── Status helpers ─────────────────────────────────────────────────────────────
-
 const STATUS_CONFIG = {
-  draft:     { label: "Rascunho",    color: "text-brand-muted",       bg: "bg-brand-canvas",      icon: Clock },
-  sending:   { label: "Enviando…",   color: "text-brand-warning",     bg: "bg-amber-50",           icon: Loader2 },
-  completed: { label: "Concluído",   color: "text-brand-successStrong", bg: "bg-brand-successSoft", icon: CheckCircle2 },
-  failed:    { label: "Falhou",      color: "text-brand-red",         bg: "bg-red-50",             icon: XCircle },
+  draft:     { label: "Rascunho",    color: "text-brand-muted",         bg: "bg-brand-canvas",      icon: Clock },
+  sending:   { label: "Enviando…",   color: "text-brand-warning",       bg: "bg-amber-50",           icon: Loader2 },
+  completed: { label: "Concluído",   color: "text-brand-successStrong", bg: "bg-brand-successSoft",  icon: CheckCircle2 },
+  failed:    { label: "Falhou",      color: "text-brand-red",           bg: "bg-red-50",             icon: XCircle },
 } as const;
 
 function StatusBadge({ status }: { status: Broadcast["status"] }) {
@@ -35,8 +44,6 @@ function StatusBadge({ status }: { status: Broadcast["status"] }) {
   );
 }
 
-// ── Progress bar ───────────────────────────────────────────────────────────────
-
 function ProgressBar({ sent, failed, total }: { sent: number; failed: number; total: number }) {
   if (total === 0) return null;
   const sentPct = Math.round((sent / total) * 100);
@@ -48,8 +55,6 @@ function ProgressBar({ sent, failed, total }: { sent: number; failed: number; to
     </div>
   );
 }
-
-// ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function BroadcastsPage() {
   const [createOpen, setCreateOpen] = useState(false);
@@ -91,7 +96,7 @@ export default function BroadcastsPage() {
         eyebrow=""
         title="Broadcasts"
         action={
-          <Button onClick={() => setCreateOpen(true)} className="flex items-center gap-2">
+          <Button onClick={() => setCreateOpen(true)}>
             <Plus size={14} />
             Novo broadcast
           </Button>
@@ -126,25 +131,14 @@ export default function BroadcastsPage() {
       <CreateBroadcastModal
         open={createOpen}
         onClose={() => setCreateOpen(false)}
-        onCreated={() => {
-          setCreateOpen(false);
-          void mutate();
-        }}
+        onCreated={() => { setCreateOpen(false); void mutate(); }}
       />
     </div>
   );
 }
 
-// ── Broadcast row ─────────────────────────────────────────────────────────────
-
 function BroadcastRow({
-  broadcast: b,
-  expanded,
-  onToggle,
-  onSend,
-  onDelete,
-  sending,
-  deleting,
+  broadcast: b, expanded, onToggle, onSend, onDelete, sending, deleting,
 }: {
   broadcast: Broadcast;
   expanded: boolean;
@@ -158,7 +152,6 @@ function BroadcastRow({
     expanded ? `/api/broadcasts/${b.id}` : null,
     swrFetcher
   );
-
   const canSend = b.status === "draft" || b.status === "failed";
   const canDelete = b.status !== "sending";
 
@@ -188,32 +181,38 @@ function BroadcastRow({
 
         <div className="flex shrink-0 items-center gap-1.5">
           {canSend && (
-            <button
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-8 w-8 hover:border-green-300 hover:bg-green-50 hover:text-green-600"
               onClick={onSend}
               disabled={sending}
               title="Disparar broadcast"
-              className="focus-ring inline-flex h-8 w-8 items-center justify-center rounded-card border border-brand-line bg-white text-brand-muted transition hover:border-green-300 hover:bg-green-50 hover:text-green-600 disabled:opacity-50"
             >
               {sending ? <Loader2 size={13} className="animate-spin" /> : <Play size={13} />}
-            </button>
+            </Button>
           )}
           {canDelete && (
-            <button
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-8 w-8 hover:border-red-200 hover:bg-red-50 hover:text-brand-red"
               onClick={onDelete}
               disabled={deleting}
               title="Excluir"
-              className="focus-ring inline-flex h-8 w-8 items-center justify-center rounded-card border border-brand-line bg-white text-brand-muted transition hover:border-red-200 hover:bg-red-50 hover:text-brand-red disabled:opacity-50"
             >
               {deleting ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
-            </button>
+            </Button>
           )}
-          <button
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-8 w-8"
             onClick={onToggle}
             title={expanded ? "Recolher" : "Ver destinatários"}
-            className="focus-ring inline-flex h-8 w-8 items-center justify-center rounded-card border border-brand-line bg-white text-brand-muted transition hover:text-brand-ink"
           >
             {expanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -262,8 +261,6 @@ function RecipientStatus({ status }: { status: "pending" | "sent" | "failed" }) 
   return <Clock size={14} className="shrink-0 text-brand-muted" />;
 }
 
-// ── Create modal ──────────────────────────────────────────────────────────────
-
 function CreateBroadcastModal({ open, onClose, onCreated }: {
   open: boolean;
   onClose: () => void;
@@ -295,44 +292,22 @@ function CreateBroadcastModal({ open, onClose, onCreated }: {
 
   function toggleAll() {
     if (contacts.every((c) => selectedIds.has(c.id))) {
-      setSelectedIds((prev) => {
-        const next = new Set(prev);
-        contacts.forEach((c) => next.delete(c.id));
-        return next;
-      });
+      setSelectedIds((prev) => { const next = new Set(prev); contacts.forEach((c) => next.delete(c.id)); return next; });
     } else {
-      setSelectedIds((prev) => {
-        const next = new Set(prev);
-        contacts.forEach((c) => next.add(c.id));
-        return next;
-      });
+      setSelectedIds((prev) => { const next = new Set(prev); contacts.forEach((c) => next.add(c.id)); return next; });
     }
   }
 
   function reset() {
-    setName("");
-    setMessage("");
-    setContactSearch("");
-    setSelectedIds(new Set());
-    setApiError(null);
+    setName(""); setMessage(""); setContactSearch(""); setSelectedIds(new Set()); setApiError(null);
   }
 
-  function handleClose() {
-    reset();
-    onClose();
-  }
-
-  function handleBackdrop(e: MouseEvent<HTMLDivElement>) {
-    if (e.target === e.currentTarget) handleClose();
-  }
+  function handleClose() { reset(); onClose(); }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setApiError(null);
-    if (selectedIds.size === 0) {
-      setApiError("Selecione ao menos um contato.");
-      return;
-    }
+    if (selectedIds.size === 0) { setApiError("Selecione ao menos um contato."); return; }
     setSaving(true);
     try {
       await apiFetch("/api/broadcasts", {
@@ -348,142 +323,126 @@ function CreateBroadcastModal({ open, onClose, onCreated }: {
     }
   }
 
-  if (!open) return null;
-
   const allSelected = contacts.length > 0 && contacts.every((c) => selectedIds.has(c.id));
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
-      onClick={handleBackdrop}
-    >
-      <form
-        onSubmit={(e) => void handleSubmit(e)}
-        className="flex w-full max-w-2xl flex-col rounded-panel border border-brand-line bg-white shadow-2xl"
-        style={{ maxHeight: "90vh" }}
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between border-b border-brand-line px-5 py-4">
+    <Dialog open={open} onOpenChange={(v) => { if (!v) handleClose(); }}>
+      <DialogContent className="flex max-h-[90vh] max-w-2xl flex-col p-0">
+        <DialogHeader>
           <div className="flex items-center gap-2.5">
-            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-canvas text-brand-ink">
-              <Megaphone size={15} />
+            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-canvas">
+              <Megaphone size={15} className="text-brand-ink" />
             </span>
             <div>
-              <h2 className="text-sm font-black text-brand-ink">Novo broadcast</h2>
-              <p className="text-[11px] text-brand-muted">Disparo em massa via WhatsApp</p>
+              <DialogTitle>Novo broadcast</DialogTitle>
+              <DialogDescription>Disparo em massa via WhatsApp</DialogDescription>
             </div>
           </div>
-          <button type="button" onClick={handleClose} className="focus-ring rounded-card p-1.5 text-brand-muted hover:text-brand-ink">
-            <X size={16} />
-          </button>
-        </div>
+        </DialogHeader>
 
-        {/* Body */}
-        <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-5">
-          <div>
-            <label className="mb-1.5 block text-xs font-extrabold text-brand-ink">
-              Nome do broadcast <span className="text-brand-red">*</span>
-            </label>
-            <input
-              required
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Ex: Promoção de maio"
-              className="focus-ring w-full rounded-card border border-brand-line bg-white px-3 py-2 text-sm text-brand-ink placeholder:text-brand-muted"
-            />
-          </div>
+        <form onSubmit={(e) => void handleSubmit(e)} className="flex flex-1 flex-col overflow-hidden">
+          <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-5 py-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="broadcast-name">
+                Nome do broadcast <span className="text-brand-red">*</span>
+              </Label>
+              <Input
+                id="broadcast-name"
+                required
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Ex: Promoção de maio"
+              />
+            </div>
 
-          <div>
-            <label className="mb-1.5 block text-xs font-extrabold text-brand-ink">
-              Mensagem <span className="text-brand-red">*</span>
-            </label>
-            <textarea
-              required
-              rows={4}
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              placeholder="Olá! Temos uma novidade especial para você…"
-              className="focus-ring w-full resize-none rounded-card border border-brand-line bg-white px-3 py-2 text-sm text-brand-ink placeholder:text-brand-muted"
-            />
-            <p className="mt-1 text-right text-[11px] text-brand-muted">{message.length} caracteres</p>
-          </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="broadcast-message">
+                Mensagem <span className="text-brand-red">*</span>
+              </Label>
+              <Textarea
+                id="broadcast-message"
+                required
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                placeholder="Olá! Temos uma novidade especial para você…"
+                className="min-h-[100px]"
+              />
+              <p className="text-right text-[11px] text-brand-muted">{message.length} caracteres</p>
+            </div>
 
-          <div className="flex-1">
-            <div className="mb-2 flex items-center justify-between gap-2">
-              <label className="text-xs font-extrabold text-brand-ink">
-                Destinatários (WhatsApp)
-                {selectedIds.size > 0 && (
-                  <span className="ml-1.5 rounded-full bg-brand-red px-1.5 py-0.5 text-[10px] text-white">
-                    {selectedIds.size}
-                  </span>
+            <div className="flex-1 space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <Label>
+                  Destinatários (WhatsApp)
+                  {selectedIds.size > 0 && (
+                    <span className="ml-1.5 rounded-full bg-brand-red px-1.5 py-0.5 text-[10px] text-white">
+                      {selectedIds.size}
+                    </span>
+                  )}
+                </Label>
+                <button
+                  type="button"
+                  onClick={toggleAll}
+                  className="text-[11px] font-bold text-brand-red hover:underline"
+                >
+                  {allSelected ? "Desmarcar todos" : "Selecionar todos"}
+                </button>
+              </div>
+
+              <Input
+                value={contactSearch}
+                onChange={(e) => setContactSearch(e.target.value)}
+                placeholder="Buscar contato…"
+              />
+
+              <div className="max-h-52 overflow-y-auto rounded-card border border-brand-line">
+                {loadingContacts ? (
+                  <div className="flex h-20 items-center justify-center">
+                    <Loader2 size={16} className="animate-spin text-brand-muted" />
+                  </div>
+                ) : contacts.length === 0 ? (
+                  <p className="p-4 text-center text-sm text-brand-muted">Nenhum contato WhatsApp encontrado</p>
+                ) : (
+                  <ul className="divide-y divide-brand-line/60">
+                    {contacts.map((c) => (
+                      <ContactItem
+                        key={c.id}
+                        contact={c}
+                        selected={selectedIds.has(c.id)}
+                        onToggle={() => toggleContact(c.id)}
+                      />
+                    ))}
+                  </ul>
                 )}
-              </label>
-              <button
-                type="button"
-                onClick={toggleAll}
-                className="text-[11px] font-bold text-brand-red hover:underline"
-              >
-                {allSelected ? "Desmarcar todos" : "Selecionar todos"}
-              </button>
+              </div>
             </div>
 
-            <input
-              value={contactSearch}
-              onChange={(e) => setContactSearch(e.target.value)}
-              placeholder="Buscar contato…"
-              className="focus-ring mb-2 w-full rounded-card border border-brand-line bg-brand-canvas px-3 py-2 text-sm placeholder:text-brand-muted"
-            />
-
-            <div className="max-h-52 overflow-y-auto rounded-card border border-brand-line">
-              {loadingContacts ? (
-                <div className="flex h-20 items-center justify-center">
-                  <Loader2 size={16} className="animate-spin text-brand-muted" />
-                </div>
-              ) : contacts.length === 0 ? (
-                <p className="p-4 text-center text-sm text-brand-muted">Nenhum contato WhatsApp encontrado</p>
-              ) : (
-                <ul className="divide-y divide-brand-line/60">
-                  {contacts.map((c) => (
-                    <ContactItem
-                      key={c.id}
-                      contact={c}
-                      selected={selectedIds.has(c.id)}
-                      onToggle={() => toggleContact(c.id)}
-                    />
-                  ))}
-                </ul>
-              )}
-            </div>
+            {apiError && (
+              <p className="rounded-card border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-600">
+                {apiError}
+              </p>
+            )}
           </div>
 
-          {apiError && (
-            <p className="rounded-card border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-600">
-              {apiError}
-            </p>
-          )}
-        </div>
-
-        {/* Footer */}
-        <div className="flex justify-end gap-2 border-t border-brand-line px-5 py-4">
-          <Button type="button" variant="ghost" onClick={handleClose}>Cancelar</Button>
-          <Button type="submit" disabled={saving || !name.trim() || !message.trim()}>
-            {saving ? (
-              <><Loader2 size={14} className="animate-spin" /> Criando…</>
-            ) : (
-              `Criar broadcast${selectedIds.size > 0 ? ` (${selectedIds.size})` : ""}`
-            )}
-          </Button>
-        </div>
-      </form>
-    </div>
+          <DialogFooter>
+            <Button type="button" variant="ghost" onClick={handleClose}>
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={saving || !name.trim() || !message.trim()}>
+              {saving ? (
+                <><Loader2 size={14} className="animate-spin" /> Criando…</>
+              ) : (
+                `Criar broadcast${selectedIds.size > 0 ? ` (${selectedIds.size})` : ""}`
+              )}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }
 
-function ContactItem({ contact, selected, onToggle }: {
-  contact: Contact;
-  selected: boolean;
-  onToggle: () => void;
-}) {
+function ContactItem({ contact, selected, onToggle }: { contact: Contact; selected: boolean; onToggle: () => void }) {
   return (
     <li>
       <label className="flex cursor-pointer items-center gap-3 px-3 py-2.5 transition hover:bg-brand-canvas">
@@ -495,16 +454,12 @@ function ContactItem({ contact, selected, onToggle }: {
         />
         <div className="min-w-0">
           <p className="truncate text-sm font-bold text-brand-ink">{contact.name || contact.external_id}</p>
-          {contact.name && (
-            <p className="truncate text-[11px] text-brand-muted">{contact.external_id}</p>
-          )}
+          {contact.name && <p className="truncate text-[11px] text-brand-muted">{contact.external_id}</p>}
         </div>
       </label>
     </li>
   );
 }
-
-// ── Empty / error / loading ───────────────────────────────────────────────────
 
 function EmptyState({ onNew }: { onNew: () => void }) {
   return (
@@ -514,10 +469,7 @@ function EmptyState({ onNew }: { onNew: () => void }) {
         <p className="font-black text-brand-ink">Nenhum broadcast</p>
         <p className="mt-1 text-sm text-brand-muted">Crie um disparo em massa para seus contatos WhatsApp.</p>
       </div>
-      <Button onClick={onNew} className="flex items-center gap-2">
-        <Plus size={14} />
-        Criar broadcast
-      </Button>
+      <Button onClick={onNew}><Plus size={14} />Criar broadcast</Button>
     </div>
   );
 }
@@ -535,7 +487,7 @@ function LoadingSkeleton() {
   return (
     <div className="divide-y divide-brand-line/60 px-4 sm:px-7">
       {Array.from({ length: 4 }).map((_, i) => (
-        <div key={i} className="py-4 space-y-2">
+        <div key={i} className="space-y-2 py-4">
           <div className="flex items-center gap-2">
             <div className="h-4 w-1/3 animate-pulse rounded bg-brand-neutral" />
             <div className="h-5 w-16 animate-pulse rounded-full bg-brand-neutral" />

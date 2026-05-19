@@ -2,7 +2,8 @@
 
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { Mic, MicOff, SendHorizontal, Square } from "lucide-react";
-import { Button } from "@/components/ui/Button";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 
 type Props = {
   onSend: (content: string, contentType?: string) => Promise<void>;
@@ -151,7 +152,7 @@ export function MessageInput({ onSend, disabled }: Props) {
         ) : (
           // Estado normal
           <>
-            <textarea
+            <Textarea
               value={content}
               onChange={(e) => setContent(e.target.value)}
               onKeyDown={(e) => {
@@ -163,7 +164,7 @@ export function MessageInput({ onSend, disabled }: Props) {
               disabled={disabled || loading}
               placeholder="Responder ao cliente..."
               rows={1}
-              className="focus-ring min-h-[44px] flex-1 resize-none rounded-card border border-brand-line bg-brand-canvas px-3.5 py-2.5 text-sm font-medium text-brand-ink placeholder:text-brand-muted"
+              className="min-h-[44px] flex-1 resize-none bg-brand-canvas py-2.5"
             />
             {/* Microfone */}
             <button
