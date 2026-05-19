@@ -33,7 +33,7 @@ export function useAuth(requireAuth = true) {
 
   const { data, error, isLoading, mutate } = useSWR<MeResponse>(hasToken ? "/auth/me" : null, swrFetcher);
 
-  async function login(email: string, password: string) {
+  async function login(email: string, password: string, rememberMe = true) {
     const response = await apiFetch<AuthResponse>(
       "/auth/login",
       {
@@ -42,18 +42,18 @@ export function useAuth(requireAuth = true) {
         skipAuth: true
       }
     );
-    setTokens(response.access_token, response.refresh_token);
+    setTokens(response.access_token, response.refresh_token, rememberMe);
     setHasToken(true);
     await mutate();
     router.replace("/conversations");
   }
 
-  async function register(name: string, email: string, password: string) {
+  async function register(name: string, email: string, password: string, workspaceName?: string, phone?: string) {
     const response = await apiFetch<AuthResponse>(
       "/auth/register",
       {
         method: "POST",
-        body: JSON.stringify({ name, email, password }),
+        body: JSON.stringify({ name, email, password, workspace_name: workspaceName, phone }),
         skipAuth: true
       }
     );
