@@ -1,7 +1,7 @@
 import logging
 from datetime import datetime, timezone
 from flask import Blueprint, request, jsonify, current_app
-from app.extensions import db, rq_queue
+from app.extensions import db, rq_queue, socketio
 from app.models import Integration, Contact, Conversation, Message
 
 logger = logging.getLogger(__name__)
@@ -34,7 +34,10 @@ def receive():
     for entry in data.get("entry", []):
         ig_user_id = entry.get("id")
         for event in entry.get("messaging", []):
-            _handle_messaging_event(ig_user_id, event)
+            if "read" in event:
+                _handle_read_event(ig_user_id, event)
+            elif "message" in event:
+                _handle_messaging_event(ig_user_id, event)
 
     # Retorna 200 imediatamente — processamento pesado vai para a fila
     return jsonify({"status": "ok"}), 200
@@ -124,6 +127,61 @@ def _handle_messaging_event(ig_user_id: str, event: dict):
         )
     except Exception as e:
         logger.error("Falha ao enfileirar mensagem", extra={"error": str(e)})
+
+
+def _handle_read_event(ig_user_id: str, event: dict):
+    """Processa o evento read do Instagram — marca mensagens anteriores ao watermark como lidas."""
+    watermark_ms = event.get("read", {}).get("watermark")
+    sender_id = event.get("sender", {}).get("id")
+    if not watermark_ms or not sender_id:
+        return
+
+    integration = _find_integration(ig_user_id)
+    if not integration:
+        return
+
+    workspace_id = integration.workspace_id
+    watermark_dt = datetime.fromtimestamp(watermark_ms / 1000, tz=timezone.utc)
+
+    contact = Contact.query.filter_by(
+        workspace_id=workspace_id, channel="instagram", external_id=sender_id
+    ).first()
+    if not contact:
+        return
+
+    conversation = Conversation.query.filter_by(
+        workspace_id=workspace_id, contact_id=contact.id, channel="instagram"
+    ).filter(Conversation.status != "closed").first()
+    if not conversation:
+        return
+
+    # Marca como lidas todas as mensagens outbound anteriores ao watermark
+    updated = (
+        Message.query
+        .filter(
+            Message.conversation_id == conversation.id,
+            Message.direction == "outbound",
+            Message.status != "read",
+            Message.created_at <= watermark_dt,
+        )
+        .update({"status": "read"}, synchronize_session=False)
+    )
+    db.session.commit()
+
+    if updated:
+        try:
+            socketio.emit(
+                "message_status_updated",
+                {"conversation_id": conversation.id, "status": "read", "watermark": watermark_ms},
+                room=f"workspace_{workspace_id}",
+            )
+        except Exception as exc:
+            logger.warning("Falha ao emitir message_status_updated Instagram | error=%s", exc)
+
+    logger.debug(
+        "Leitura Instagram processada | conv=%s mensagens_atualizadas=%s",
+        conversation.id, updated,
+    )
 
 
 def _find_integration(ig_user_id: str) -> Integration | None:
