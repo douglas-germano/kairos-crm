@@ -164,10 +164,37 @@ export function MessageBubble({ message }: { message: Message }) {
   );
 
   function renderContent() {
-    if (isAudio) return <AudioPlayer content={content} />;
-    if (isImage) return <MediaImage content={content} alt="Imagem" placeholder="🖼️ Imagem" className="max-h-64" />;
-    if (isSticker) return <MediaImage content={content} alt="Figurinha" placeholder="😀 Figurinha" className="max-h-32 max-w-[128px]" />;
-    if (isVideo) return <VideoPlayer content={content} />;
+    const caption = message.caption?.trim();
+    const captionNode = caption ? (
+      <p className={cn("ui-body mt-2 whitespace-pre-wrap", outbound ? "text-white" : "text-brand-ink")}>
+        {caption}
+      </p>
+    ) : null;
+
+    if (isAudio) return (
+      <>
+        <AudioPlayer content={content} />
+        {captionNode}
+      </>
+    );
+    if (isImage) return (
+      <>
+        <MediaImage content={content} alt="Imagem" placeholder="🖼️ Imagem" className="max-h-64" />
+        {captionNode}
+      </>
+    );
+    if (isSticker) return (
+      <>
+        <MediaImage content={content} alt="Figurinha" placeholder="😀 Figurinha" className="max-h-32 max-w-[128px]" />
+        {captionNode}
+      </>
+    );
+    if (isVideo) return (
+      <>
+        <VideoPlayer content={content} />
+        {captionNode}
+      </>
+    );
     return <p className="ui-body whitespace-pre-wrap">{content}</p>;
   }
 

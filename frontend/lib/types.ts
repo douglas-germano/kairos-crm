@@ -62,6 +62,7 @@ export type Message = {
   direction: "inbound" | "outbound";
   content: string;
   content_type: "text" | "image" | "audio" | "video" | "template" | "sticker";
+  caption: string | null;
   status: "sent" | "delivered" | "read" | "failed";
   external_id: string | null;
   created_at: string;

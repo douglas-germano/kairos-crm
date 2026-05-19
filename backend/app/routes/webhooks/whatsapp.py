@@ -121,7 +121,7 @@ def _handle_message(instance_name: str, msg_data: dict):
     message_obj = msg_data.get("message", {})
     push_name = msg_data.get("pushName", contact_external_id)
 
-    content, content_type = _extract_message_content(message_obj, msg_data, instance_name)
+    content, content_type, caption = _extract_message_content(message_obj, msg_data, instance_name)
 
     if not content:
         _mark_webhook_ignored(
@@ -206,6 +206,8 @@ def _handle_message(instance_name: str, msg_data: dict):
             external_id=external_id,
         ).first()
         if existing:
+            if caption and not existing.caption:
+                existing.caption = caption
             db.session.commit()
             return
 
@@ -216,6 +218,7 @@ def _handle_message(instance_name: str, msg_data: dict):
         direction="outbound" if from_me else "inbound",
         content=content,
         content_type=content_type,
+        caption=caption or None,
         status="sent" if from_me else "delivered",
         external_id=external_id,
     )
@@ -274,7 +277,7 @@ def _message_items(data) -> list[dict]:
     return [data] if isinstance(data.get("key"), dict) or isinstance(data.get("message"), dict) else []
 
 
-def _extract_message_content(message_obj: dict, raw_msg: dict | None = None, instance_name: str | None = None) -> tuple[str, str]:
+def _extract_message_content(message_obj: dict, raw_msg: dict | None = None, instance_name: str | None = None) -> tuple[str, str, str]:
     """Extrai (content, content_type) de um objeto de mensagem da Evolution API."""
     m = message_obj or {}
 
@@ -284,7 +287,7 @@ def _extract_message_content(message_obj: dict, raw_msg: dict | None = None, ins
             return _extract_message_content(wrapped, raw_msg, instance_name)
 
     if text := (m.get("conversation") or (m.get("extendedTextMessage") or {}).get("text", "")):
-        return text, "text"
+        return text, "text", ""
 
     if img := m.get("imageMessage"):
         return _extract_media_content(raw_msg or {"message": message_obj}, img, "image", "[imagem]", instance_name)
@@ -303,9 +306,9 @@ def _extract_message_content(message_obj: dict, raw_msg: dict | None = None, ins
 
     if reaction := m.get("reactionMessage"):
         data = reaction.get("text") or ""
-        return data or "[reação]", "text"
+        return data or "[reação]", "text", ""
 
-    return "", "text"
+    return "", "text", ""
 
 
 def _extract_media_content(
@@ -314,16 +317,17 @@ def _extract_media_content(
     content_type: str,
     placeholder: str,
     instance_name: str | None = None,
-) -> tuple[str, str]:
+) -> tuple[str, str, str]:
+    caption = _extract_caption(media_obj)
     if base64_content := media_obj.get("base64"):
-        return _media_data_url(base64_content, media_obj.get("mimetype") or media_obj.get("mimeType"), content_type), content_type
+        return _media_data_url(base64_content, media_obj.get("mimetype") or media_obj.get("mimeType"), content_type), content_type, caption
 
     if instance_name:
         try:
             from app.services import evolution as evo_svc
             media = evo_svc.get_media_base64(instance_name, raw_msg)
             if media.get("base64"):
-                return _media_data_url(media["base64"], media.get("mimetype") or media_obj.get("mimetype"), content_type), content_type
+                return _media_data_url(media["base64"], media.get("mimetype") or media_obj.get("mimetype"), content_type), content_type, caption
             logger.warning(
                 "Evolution não retornou base64 de mídia | ext_id=%s content_type=%s media_keys=%s",
                 (raw_msg.get("key") or {}).get("id"),
@@ -338,13 +342,16 @@ def _extract_media_content(
             )
 
     if thumbnail := _extract_thumbnail(media_obj):
-        return _media_data_url(thumbnail, "image/jpeg", "image"), content_type
+        return _media_data_url(thumbnail, "image/jpeg", "image"), content_type, caption
 
     if direct_url := _extract_public_media_url(media_obj):
-        return direct_url, content_type
+        return direct_url, content_type, caption
 
-    caption = media_obj.get("caption") or media_obj.get("title") or ""
-    return caption or placeholder, content_type
+    return caption or placeholder, content_type, ""
+
+
+def _extract_caption(media_obj: dict) -> str:
+    return (media_obj.get("caption") or media_obj.get("title") or "").strip()
 
 
 def _extract_public_media_url(media_obj: dict) -> str:

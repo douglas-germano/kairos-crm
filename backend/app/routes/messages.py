@@ -143,7 +143,7 @@ def send_message(conversation_id: int):
 
 # ── Helpers para parsear mensagens da Evolution API ────────────────────────────
 
-def _extract_content(msg_obj: dict, instance_name: str | None = None) -> tuple[str, str]:
+def _extract_content(msg_obj: dict, instance_name: str | None = None) -> tuple[str, str, str]:
     """
     Extrai (content, content_type) de um objeto de mensagem da Evolution API.
     Retorna ("", "text") se não reconhecer o tipo.
@@ -151,7 +151,7 @@ def _extract_content(msg_obj: dict, instance_name: str | None = None) -> tuple[s
     m = msg_obj.get("message") or {}
 
     if text := (m.get("conversation") or (m.get("extendedTextMessage") or {}).get("text", "")):
-        return text, "text"
+        return text, "text", ""
     if img := m.get("imageMessage"):
         return _extract_media_content(msg_obj, img, "image", "[imagem]", instance_name)
     if sticker := m.get("stickerMessage"):
@@ -163,7 +163,7 @@ def _extract_content(msg_obj: dict, instance_name: str | None = None) -> tuple[s
     if doc := m.get("documentMessage"):
         return _extract_media_content(msg_obj, doc, "template", "[documento]", instance_name)
 
-    return "", "text"
+    return "", "text", ""
 
 
 def _extract_media_content(
@@ -172,16 +172,17 @@ def _extract_media_content(
     content_type: str,
     placeholder: str,
     instance_name: str | None = None,
-) -> tuple[str, str]:
+) -> tuple[str, str, str]:
+    caption = _extract_caption(media_obj)
     if base64_content := media_obj.get("base64"):
-        return _media_data_url(base64_content, media_obj.get("mimetype") or media_obj.get("mimeType"), content_type), content_type
+        return _media_data_url(base64_content, media_obj.get("mimetype") or media_obj.get("mimeType"), content_type), content_type, caption
 
     if instance_name:
         try:
             from app.services import evolution as evo_svc
             media = evo_svc.get_media_base64(instance_name, raw_msg)
             if media.get("base64"):
-                return _media_data_url(media["base64"], media.get("mimetype") or media_obj.get("mimetype"), content_type), content_type
+                return _media_data_url(media["base64"], media.get("mimetype") or media_obj.get("mimetype"), content_type), content_type, caption
             logger.warning(
                 "Evolution não retornou base64 de mídia | ext_id=%s content_type=%s media_keys=%s",
                 (raw_msg.get("key") or {}).get("id"),
@@ -196,13 +197,16 @@ def _extract_media_content(
             )
 
     if thumbnail := _extract_thumbnail(media_obj):
-        return _media_data_url(thumbnail, "image/jpeg", "image"), content_type
+        return _media_data_url(thumbnail, "image/jpeg", "image"), content_type, caption
 
     if direct_url := _extract_public_media_url(media_obj):
-        return direct_url, content_type
+        return direct_url, content_type, caption
 
-    caption = media_obj.get("caption") or media_obj.get("title") or ""
-    return caption or placeholder, content_type
+    return caption or placeholder, content_type, ""
+
+
+def _extract_caption(media_obj: dict) -> str:
+    return (media_obj.get("caption") or media_obj.get("title") or "").strip()
 
 
 def _extract_public_media_url(media_obj: dict) -> str:
@@ -324,15 +328,17 @@ def sync_messages(conversation_id: int):
 
             existing_msg = existing_messages.get(ext_id)
             if existing_msg:
+                content, content_type, caption = _extract_content(raw, instance_name)
                 if _should_refresh_media(existing_msg):
-                    content, content_type = _extract_content(raw, instance_name)
                     if content and not _is_placeholder(content):
                         existing_msg.content = content
                         existing_msg.content_type = content_type
                         updated_media += 1
+                if caption and not existing_msg.caption:
+                    existing_msg.caption = caption
                 continue
 
-            content, content_type = _extract_content(raw, instance_name)
+            content, content_type, caption = _extract_content(raw, instance_name)
             if not content:
                 continue
 
@@ -345,6 +351,7 @@ def sync_messages(conversation_id: int):
                 direction=direction,
                 content=content,
                 content_type=content_type,
+                caption=caption or None,
                 status="read" if direction == "inbound" else "delivered",
                 external_id=ext_id,
                 created_at=created_at,
