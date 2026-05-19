@@ -11,7 +11,7 @@ DELETE /api/conversations/<id>      — exclui a conversa e suas mensagens
 import logging
 import re
 from datetime import datetime
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, current_app, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from sqlalchemy.orm import joinedload
 from app.extensions import db, socketio
@@ -34,6 +34,11 @@ def _get_workspace_id(user_id: int) -> int | None:
 def _normalize_phone(phone: str) -> str:
     """Remove qualquer caractere não-numérico."""
     return re.sub(r"[^\d]", "", phone)
+
+
+def _webhook_url() -> str:
+    base = current_app.config.get("APP_BASE_URL", "http://localhost:5001").rstrip("/")
+    return f"{base}/webhooks/whatsapp"
 
 
 @bp.get("")
@@ -92,7 +97,9 @@ def sync_whatsapp_conversations():
 
     meta = integration.meta or {}
     instance_name = meta.get("instance_name") or f"kairos-crm-{user_id}"
+    webhook_url = _webhook_url()
     try:
+        evo_svc.set_webhook(instance_name, webhook_url)
         try:
             evo_svc.set_settings(instance_name, groups_ignore=False, sync_full_history=True)
         except EvolutionError as exc:
@@ -171,6 +178,8 @@ def sync_whatsapp_conversations():
         last_chat_sync_imported=imported,
         last_chat_sync_updated=updated,
         last_chat_sync_skipped=skipped,
+        webhook_url=webhook_url,
+        last_webhook_refresh_at=datetime.utcnow().isoformat(),
     )
     db.session.commit()
 
