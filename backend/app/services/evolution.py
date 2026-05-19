@@ -113,13 +113,11 @@ def delete_instance(instance_name: str) -> dict:
 def set_webhook(instance_name: str, webhook_url: str) -> dict:
     """Atualiza (ou cria) a configuração de webhook de uma instância existente."""
     payload = {
-        "webhook": {
-            "enabled": True,
-            "url": webhook_url,
-            "webhookByEvents": False,
-            "webhookBase64": True,
-            "events": ["MESSAGES_UPSERT", "CONNECTION_UPDATE", "QRCODE_UPDATED"],
-        }
+        "enabled": True,
+        "url": webhook_url,
+        "webhookByEvents": False,
+        "webhookBase64": True,
+        "events": ["MESSAGES_UPSERT", "CONNECTION_UPDATE", "QRCODE_UPDATED"],
     }
     return _request("POST", f"/webhook/set/{instance_name}", json=payload)
 
