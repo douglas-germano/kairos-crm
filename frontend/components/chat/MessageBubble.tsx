@@ -92,6 +92,10 @@ function MediaImage({
 }) {
   const [failed, setFailed] = useState(false);
 
+  useEffect(() => {
+    setFailed(false);
+  }, [content]);
+
   if (isPlaceholder(content) || failed) {
     return (
       <span className="flex items-center gap-1.5 ui-meta opacity-70">

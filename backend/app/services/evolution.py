@@ -196,16 +196,28 @@ def get_media_base64(instance_name: str, message: dict) -> dict:
     if not isinstance(result, dict):
         return {}
 
-    data = result.get("data") if isinstance(result.get("data"), dict) else result
-    base64_value = (
-        data.get("base64")
-        or data.get("media")
-        or data.get("file")
-        or data.get("buffer")
-        or ""
-    )
-    mimetype = data.get("mimetype") or data.get("mimeType") or data.get("type") or ""
+    base64_value = _find_first_string(result, {"base64", "media", "file", "buffer"})
+    mimetype = _find_first_string(result, {"mimetype", "mimeType", "mediaType"})
     return {"base64": base64_value, "mimetype": mimetype}
+
+
+def _find_first_string(value, keys: set[str]) -> str:
+    """Procura recursivamente uma string em respostas variáveis da Evolution."""
+    if isinstance(value, dict):
+        for key in keys:
+            found = value.get(key)
+            if isinstance(found, str) and found:
+                return found
+        for nested in value.values():
+            found = _find_first_string(nested, keys)
+            if found:
+                return found
+    elif isinstance(value, list):
+        for item in value:
+            found = _find_first_string(item, keys)
+            if found:
+                return found
+    return ""
 
 
 def find_chats(instance_name: str, limit: int = 200, offset: int = 0) -> list:

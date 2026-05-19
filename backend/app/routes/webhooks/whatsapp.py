@@ -330,6 +330,12 @@ def _extract_media_content(
             media = evo_svc.get_media_base64(instance_name, raw_msg)
             if media.get("base64"):
                 return _media_data_url(media["base64"], media.get("mimetype") or media_obj.get("mimetype"), content_type), content_type
+            logger.warning(
+                "Evolution não retornou base64 de mídia | ext_id=%s content_type=%s media_keys=%s",
+                (raw_msg.get("key") or {}).get("id"),
+                content_type,
+                list(media_obj.keys()),
+            )
         except Exception as exc:
             logger.warning(
                 "Falha ao baixar mídia Evolution | ext_id=%s error=%s",
@@ -337,8 +343,19 @@ def _extract_media_content(
                 exc,
             )
 
+    if thumbnail := _extract_thumbnail(media_obj):
+        return _media_data_url(thumbnail, "image/jpeg", "image"), content_type
+
     caption = media_obj.get("caption") or media_obj.get("title") or ""
     return caption or placeholder, content_type
+
+
+def _extract_thumbnail(media_obj: dict) -> str:
+    for key in ("jpegThumbnail", "thumbnail"):
+        value = media_obj.get(key)
+        if isinstance(value, str) and value:
+            return value
+    return ""
 
 
 def _media_data_url(content: str, mimetype: str | None = None, content_type: str | None = None) -> str:
