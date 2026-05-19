@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import useSWRInfinite from "swr/infinite";
-import { AlertCircle, Bot, CircleSlash, Loader2, MoreHorizontal, RefreshCw, Trash2, X } from "lucide-react";
+import { AlertCircle, ArrowLeft, Bot, CircleSlash, Loader2, MoreHorizontal, RefreshCw, Trash2, X } from "lucide-react";
 import { apiFetch, swrFetcher } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 import { useSocket } from "@/hooks/useSocket";
@@ -21,9 +21,10 @@ type Props = {
   conversation?: Conversation;
   onConversationChange: () => void;
   onConversationDeleted?: (conversationId: number) => void;
+  onBack?: () => void;
 };
 
-export function ChatWindow({ conversation, onConversationChange, onConversationDeleted }: Props) {
+export function ChatWindow({ conversation, onConversationChange, onConversationDeleted, onBack }: Props) {
   const { workspace } = useAuth(false);
   const [sendError, setSendError] = useState<string | null>(null);
   const [syncState, setSyncState] = useState<SyncState>("idle");
@@ -216,13 +217,26 @@ export function ChatWindow({ conversation, onConversationChange, onConversationD
 
   if (!conversation) {
     return (
-      <section className="flex h-full items-center justify-center app-canvas p-6">
-        <div className="surface-card max-w-md rounded-panel p-8 text-center">
-          <CircleSlash className="mx-auto mb-4 text-brand-red" size={34} />
-          <h2 className="heading-xl">Selecione uma conversa</h2>
-          <p className="body-muted mt-2">
-            A janela de atendimento mostra o histórico, o canal e o controle de IA por conversa.
-          </p>
+      <section className="flex h-full flex-col app-canvas">
+        {onBack && (
+          <div className="flex items-center border-b border-brand-line bg-white/92 px-4 py-3 xl:hidden">
+            <button
+              onClick={onBack}
+              className="focus-ring flex items-center gap-1.5 rounded-card p-1.5 text-brand-muted hover:text-brand-ink"
+              aria-label="Voltar para conversas"
+            >
+              <ArrowLeft size={18} />
+            </button>
+          </div>
+        )}
+        <div className="flex flex-1 items-center justify-center p-6">
+          <div className="surface-card max-w-md rounded-panel p-8 text-center">
+            <CircleSlash className="mx-auto mb-4 text-brand-red" size={34} />
+            <h2 className="heading-xl">Selecione uma conversa</h2>
+            <p className="body-muted mt-2">
+              A janela de atendimento mostra o histórico, o canal e o controle de IA por conversa.
+            </p>
+          </div>
         </div>
       </section>
     );
@@ -238,19 +252,34 @@ export function ChatWindow({ conversation, onConversationChange, onConversationD
   return (
     <section className="flex h-full flex-col overflow-hidden bg-white/90">
       {/* Header */}
-      <header className="shrink-0 border-b border-brand-line bg-white/92 p-4 backdrop-blur">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex min-w-0 items-center gap-3">
-            <ChannelIcon channel={conversation.channel} className="h-9 w-9 shrink-0" />
+      <header className="shrink-0 border-b border-brand-line bg-white/92 px-3 py-3 backdrop-blur sm:px-4">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex min-w-0 items-center gap-2">
+            {/* Botão voltar — apenas mobile */}
+            {onBack && (
+              <button
+                onClick={onBack}
+                className="focus-ring -ml-1 flex shrink-0 items-center justify-center rounded-card p-1.5 text-brand-muted transition hover:text-brand-ink xl:hidden"
+                aria-label="Voltar para conversas"
+              >
+                <ArrowLeft size={18} />
+              </button>
+            )}
+            <ChannelIcon channel={conversation.channel} className="h-8 w-8 shrink-0 sm:h-9 sm:w-9" />
             <div className="min-w-0">
-              <h2 className="card-title truncate">{name}</h2>
-              <div className="ui-meta mt-0.5">
+              <h2 className="card-title truncate text-sm sm:text-base">{name}</h2>
+              <div className="ui-meta mt-0.5 hidden sm:block">
                 Última atividade: {formatDateTime(conversation.last_message_at)}
               </div>
             </div>
           </div>
-          <div className="flex shrink-0 items-center gap-3">
-            <Toggle checked={conversation.ai_enabled} onChange={toggleAi} label="IA ativa" />
+          <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+            <Toggle
+              checked={conversation.ai_enabled}
+              onChange={toggleAi}
+              label="IA"
+              labelClass="hidden sm:inline"
+            />
 
             {/* Sync button — WhatsApp only */}
             {isWhatsApp && (
@@ -263,15 +292,15 @@ export function ChatWindow({ conversation, onConversationChange, onConversationD
 
             <button
               onClick={() => void deleteConversation()}
-              className="focus-ring rounded-card bg-brand-canvas p-2 text-brand-muted transition hover:bg-brand-red50 hover:text-brand-red"
+              className="focus-ring rounded-card bg-brand-canvas p-1.5 text-brand-muted transition hover:bg-brand-red50 hover:text-brand-red sm:p-2"
               aria-label="Excluir conversa"
               title="Excluir conversa"
             >
-              <Trash2 size={18} />
+              <Trash2 size={17} />
             </button>
 
             <button
-              className="focus-ring rounded-card bg-brand-canvas p-2 text-brand-muted transition hover:text-brand-ink"
+              className="focus-ring hidden rounded-card bg-brand-canvas p-2 text-brand-muted transition hover:text-brand-ink sm:block"
               aria-label="Mais opções"
             >
               <MoreHorizontal size={18} />

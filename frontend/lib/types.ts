@@ -111,6 +111,8 @@ export type Broadcast = {
   status: BroadcastStatus;
   total_count: number;
   sent_count: number;
+  delivered_count: number;
+  read_count: number;
   failed_count: number;
   created_at: string;
   started_at: string | null;
@@ -121,8 +123,10 @@ export type BroadcastRecipient = {
   id: number;
   broadcast_id: number;
   contact_id: number;
-  status: "pending" | "sent" | "failed";
+  status: "pending" | "sent" | "delivered" | "read" | "failed";
   sent_at: string | null;
+  delivered_at: string | null;
+  read_at: string | null;
   error_message: string | null;
   contact: Contact | null;
 };
