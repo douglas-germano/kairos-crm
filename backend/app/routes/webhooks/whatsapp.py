@@ -315,14 +315,8 @@ def _extract_media_content(
     placeholder: str,
     instance_name: str | None = None,
 ) -> tuple[str, str]:
-    content = (
-        media_obj.get("base64")
-        or media_obj.get("url")
-        or media_obj.get("mediaUrl")
-        or ""
-    )
-    if content:
-        return _media_data_url(content, media_obj.get("mimetype") or media_obj.get("mimeType"), content_type), content_type
+    if base64_content := media_obj.get("base64"):
+        return _media_data_url(base64_content, media_obj.get("mimetype") or media_obj.get("mimeType"), content_type), content_type
 
     if instance_name:
         try:
@@ -346,8 +340,23 @@ def _extract_media_content(
     if thumbnail := _extract_thumbnail(media_obj):
         return _media_data_url(thumbnail, "image/jpeg", "image"), content_type
 
+    if direct_url := _extract_public_media_url(media_obj):
+        return direct_url, content_type
+
     caption = media_obj.get("caption") or media_obj.get("title") or ""
     return caption or placeholder, content_type
+
+
+def _extract_public_media_url(media_obj: dict) -> str:
+    for key in ("mediaUrl", "url"):
+        value = media_obj.get(key)
+        if isinstance(value, str) and value.startswith(("http://", "https://")):
+            # URLs do WhatsApp/Baileys normalmente são criptografadas e não
+            # renderizam direto no navegador; só usamos URL pública como último
+            # recurso quando não parece ser CDN interna do WhatsApp.
+            if "whatsapp.net" not in value and "mmg.whatsapp" not in value:
+                return value
+    return ""
 
 
 def _extract_thumbnail(media_obj: dict) -> str:
