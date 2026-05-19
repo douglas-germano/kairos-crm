@@ -112,14 +112,22 @@ def delete_instance(instance_name: str) -> dict:
 
 def set_webhook(instance_name: str, webhook_url: str) -> dict:
     """Atualiza (ou cria) a configuração de webhook de uma instância existente."""
-    payload = {
+    webhook = {
         "enabled": True,
         "url": webhook_url,
         "webhookByEvents": False,
         "webhookBase64": True,
         "events": ["MESSAGES_UPSERT", "CONNECTION_UPDATE", "QRCODE_UPDATED"],
     }
-    return _request("POST", f"/webhook/set/{instance_name}", json=payload)
+    try:
+        return _request("POST", f"/webhook/set/{instance_name}", json={"webhook": webhook})
+    except EvolutionError as exc:
+        # Algumas builds da Evolution v2 aceitam o corpo plano documentado; a
+        # instância em produção exige {"webhook": {...}}. Mantemos fallback para
+        # evitar regressão se o servidor for atualizado.
+        if exc.status == 400:
+            return _request("POST", f"/webhook/set/{instance_name}", json=webhook)
+        raise
 
 
 def set_settings(
