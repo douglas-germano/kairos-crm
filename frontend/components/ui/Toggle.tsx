@@ -6,10 +6,11 @@ type ToggleProps = {
   checked: boolean;
   onChange: (checked: boolean) => void;
   label?: string;
+  labelClass?: string;
   disabled?: boolean;
 };
 
-export function Toggle({ checked, onChange, label, disabled }: ToggleProps) {
+export function Toggle({ checked, onChange, label, labelClass, disabled }: ToggleProps) {
   return (
     <button
       type="button"
@@ -17,11 +18,12 @@ export function Toggle({ checked, onChange, label, disabled }: ToggleProps) {
       onClick={() => onChange(!checked)}
       className="focus-ring inline-flex items-center gap-2 rounded-[32px] text-sm font-extrabold text-brand-ink"
       aria-pressed={checked}
+      aria-label={label}
     >
       <span className={cn("relative h-6 w-11 rounded-[32px] shadow-inner transition", checked ? "bg-brand-red" : "bg-slate-300")}>
         <span className={cn("absolute top-1 h-4 w-4 rounded-full bg-white shadow-sm transition", checked ? "left-6" : "left-1")} />
       </span>
-      {label ? <span>{label}</span> : null}
+      {label ? <span className={labelClass}>{label}</span> : null}
     </button>
   );
 }

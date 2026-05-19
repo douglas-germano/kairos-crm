@@ -7,7 +7,7 @@ import type { FormEvent, MouseEvent } from "react";
 import useSWR from "swr";
 import {
   AlertCircle, CheckCircle2, ChevronDown, ChevronUp, Clock,
-  Loader2, Megaphone, Play, Plus, Trash2, X, XCircle,
+  Eye, Loader2, Megaphone, Play, Plus, Trash2, X, XCircle,
 } from "lucide-react";
 import { swrFetcher, apiFetch, ApiError } from "@/lib/api";
 import type { Broadcast, BroadcastDetail, Contact, ContactPage } from "@/lib/types";
@@ -171,11 +171,17 @@ function BroadcastRow({
             <StatusBadge status={b.status} />
           </div>
           <p className="mt-1 line-clamp-2 text-sm text-brand-muted">{b.message}</p>
-          <div className="mt-2 flex flex-wrap items-center gap-3 text-[11px] text-brand-muted">
+          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-brand-muted">
             <span>{b.total_count} destinatário{b.total_count !== 1 ? "s" : ""}</span>
             {(b.status === "sending" || b.status === "completed") && (
               <>
                 <span className="text-brand-success">{b.sent_count} enviados</span>
+                {(b.delivered_count ?? 0) > 0 && (
+                  <span className="text-brand-info">{b.delivered_count} entregues</span>
+                )}
+                {(b.read_count ?? 0) > 0 && (
+                  <span className="text-brand-info">{b.read_count} lidas</span>
+                )}
                 {b.failed_count > 0 && <span className="text-brand-red">{b.failed_count} falhas</span>}
               </>
             )}
@@ -256,10 +262,12 @@ function BroadcastRow({
   );
 }
 
-function RecipientStatus({ status }: { status: "pending" | "sent" | "failed" }) {
-  if (status === "sent") return <CheckCircle2 size={14} className="shrink-0 text-brand-success" />;
-  if (status === "failed") return <XCircle size={14} className="shrink-0 text-brand-red" />;
-  return <Clock size={14} className="shrink-0 text-brand-muted" />;
+function RecipientStatus({ status }: { status: "pending" | "sent" | "delivered" | "read" | "failed" }) {
+  if (status === "read") return <span title="Lida"><Eye size={14} className="shrink-0 text-brand-info" /></span>;
+  if (status === "delivered") return <span title="Entregue"><CheckCircle2 size={14} className="shrink-0 text-brand-info" /></span>;
+  if (status === "sent") return <span title="Enviada"><CheckCircle2 size={14} className="shrink-0 text-brand-success" /></span>;
+  if (status === "failed") return <span title="Falhou"><XCircle size={14} className="shrink-0 text-brand-red" /></span>;
+  return <span title="Pendente"><Clock size={14} className="shrink-0 text-brand-muted" /></span>;
 }
 
 // ── Create modal ──────────────────────────────────────────────────────────────
