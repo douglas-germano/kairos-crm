@@ -38,14 +38,14 @@ export default function LoginPage() {
             E-mail
           </label>
           <div className="relative">
-            <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-brand-muted" />
+            <Mail className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-brand-muted" />
             <Input
               id="email"
               type="email"
               placeholder="seu@email.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="pl-9"
+              className="h-12 pl-10 text-base"
               required
             />
           </div>
@@ -56,20 +56,20 @@ export default function LoginPage() {
             Senha
           </label>
           <div className="relative">
-            <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-brand-muted" />
+            <Lock className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-brand-muted" />
             <Input
               id="password"
               type={showPassword ? "text" : "password"}
               placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="pl-9 pr-10"
+              className="h-12 pl-10 pr-11 text-base"
               required
             />
             <button
               type="button"
               onClick={() => setShowPassword((v) => !v)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-brand-muted transition hover:text-brand-ink"
+              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-brand-muted transition hover:text-brand-ink"
               tabIndex={-1}
               aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
             >
@@ -92,19 +92,19 @@ export default function LoginPage() {
         </div>
 
         {error && (
-          <p className="rounded-card border border-brand-red200 bg-brand-red50 px-3 py-2.5 text-sm font-semibold text-brand-red">
+          <p className="rounded-card border border-brand-red200 bg-brand-red50 px-3.5 py-2.5 text-sm font-semibold text-brand-red">
             {error}
           </p>
         )}
 
-        <Button type="submit" className="w-full" disabled={loading}>
+        <Button type="submit" className="h-12 w-full text-base" disabled={loading}>
           {loading ? "Entrando..." : "Entrar"}
         </Button>
       </form>
 
-      <p className="mt-6 text-sm text-brand-muted">
+      <p className="mt-7 text-center text-sm text-brand-muted">
         Ainda não tem conta?{" "}
-        <Link className="font-bold text-brand-red underline" href="/register">
+        <Link className="font-bold text-brand-red underline underline-offset-2" href="/register">
           Criar workspace
         </Link>
       </p>

@@ -1,8 +1,9 @@
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from flask import Blueprint, request, jsonify
 from app.extensions import db, rq_queue, socketio
 from app.models import Integration, Contact, Conversation, Message
+from app.models.broadcast import BroadcastRecipient, Broadcast
 from app.services.whatsapp_identity import (
     canonical_external_id,
     lookup_external_ids,
@@ -15,6 +16,15 @@ bp = Blueprint("webhook_whatsapp", __name__)
 # Eventos que atualizam o status de conexão
 _MESSAGE_EVENTS = {"messages.upsert", "MESSAGES_UPSERT"}
 _CONNECTION_EVENTS = {"connection.update", "CONNECTION_UPDATE"}
+_STATUS_EVENTS = {"messages.update", "MESSAGES_UPDATE"}
+
+# Mapeamento dos status da Evolution API para os status internos
+_EVOLUTION_STATUS_MAP = {
+    "SERVER_ACK": "sent",
+    "DELIVERY_ACK": "delivered",
+    "READ": "read",
+    "PLAYED": "read",
+}
 
 
 @bp.post("/whatsapp")
@@ -30,6 +40,8 @@ def receive():
             _handle_messages(instance_name, data.get("data", {}))
         elif event in _CONNECTION_EVENTS:
             _handle_connection_update(instance_name, data.get("data", {}))
+        elif event in _STATUS_EVENTS:
+            _handle_status_updates(instance_name, data.get("data", []))
         else:
             logger.debug("Evento WhatsApp ignorado", extra={"event": event})
     except Exception as exc:
@@ -250,6 +262,81 @@ def _handle_message(instance_name: str, msg_data: dict):
             )
         except Exception as exc:
             logger.error("Falha ao enfileirar mensagem WhatsApp", extra={"error": str(exc)})
+
+
+def _handle_status_updates(instance_name: str, data):
+    """Processa eventos messages.update — entrega e leitura de mensagens enviadas."""
+    items = data if isinstance(data, list) else [data] if isinstance(data, dict) else []
+    for item in items:
+        try:
+            _process_status_update(instance_name, item)
+        except Exception as exc:
+            db.session.rollback()
+            logger.warning("Falha ao processar status update WhatsApp | error=%s", exc)
+
+
+def _process_status_update(instance_name: str, item: dict):
+    """Atualiza o status de uma mensagem e do recipient de broadcast, se aplicável."""
+    key = item.get("key", {})
+    external_id = key.get("id", "")
+    raw_status = (item.get("update") or item).get("status", "")
+    new_status = _EVOLUTION_STATUS_MAP.get(raw_status)
+
+    if not external_id or not new_status:
+        return
+
+    now = datetime.now(timezone.utc)
+    workspace_id = None
+
+    # Atualiza a mensagem regular se existir
+    msg = Message.query.filter_by(external_id=external_id).first()
+    if msg:
+        _status_rank = {"sent": 1, "delivered": 2, "read": 3}
+        if _status_rank.get(new_status, 0) > _status_rank.get(msg.status, 0):
+            msg.status = new_status
+            db.session.flush()
+        workspace_id = (
+            db.session.query(Conversation)
+            .filter_by(id=msg.conversation_id)
+            .with_entities(Conversation.workspace_id)
+            .scalar()
+        )
+
+    # Atualiza o recipient de broadcast se este external_id foi enviado via broadcast
+    recipient = BroadcastRecipient.query.filter_by(message_external_id=external_id).first()
+    if recipient:
+        broadcast = db.session.get(Broadcast, recipient.broadcast_id)
+        if broadcast:
+            if new_status == "delivered" and recipient.status not in ("delivered", "read"):
+                recipient.status = "delivered"
+                recipient.delivered_at = now
+                broadcast.delivered_count = (broadcast.delivered_count or 0) + 1
+                workspace_id = workspace_id or broadcast.workspace_id
+            elif new_status == "read" and recipient.status != "read":
+                if recipient.status not in ("delivered",):
+                    # Também incrementa delivered se pulamos esse status
+                    broadcast.delivered_count = (broadcast.delivered_count or 0) + 1
+                recipient.status = "read"
+                recipient.read_at = now
+                broadcast.read_count = (broadcast.read_count or 0) + 1
+                workspace_id = workspace_id or broadcast.workspace_id
+
+    db.session.commit()
+
+    if workspace_id:
+        try:
+            socketio.emit(
+                "message_status_updated",
+                {"external_id": external_id, "status": new_status},
+                room=f"workspace_{workspace_id}",
+            )
+        except Exception as exc:
+            logger.warning("Falha ao emitir message_status_updated | error=%s", exc)
+
+    logger.debug(
+        "Status WhatsApp atualizado | ext_id=%s status=%s",
+        external_id, new_status,
+    )
 
 
 def _message_items(data) -> list[dict]:

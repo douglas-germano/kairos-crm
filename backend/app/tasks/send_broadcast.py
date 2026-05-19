@@ -60,9 +60,13 @@ def run(broadcast_id: int):
         for recipient in recipients:
             contact = recipient.contact
             try:
-                svc.send_text(contact.external_id, broadcast.message)
+                result = svc.send_text(contact.external_id, broadcast.message)
                 recipient.status = "sent"
                 recipient.sent_at = datetime.now(timezone.utc)
+                # Guarda o ID da mensagem para rastrear confirmações de entrega/leitura
+                ext_id = (result or {}).get("key", {}).get("id")
+                if ext_id:
+                    recipient.message_external_id = ext_id
                 broadcast.sent_count += 1
             except Exception as exc:
                 recipient.status = "failed"

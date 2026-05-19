@@ -41,19 +41,19 @@ export default function RegisterPage() {
   return (
     <AuthPanel title="Crie seu workspace" subtitle="Cadastro gratuito">
       <form onSubmit={onSubmit} className="space-y-4">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1.5">
             <label className="block text-sm font-semibold text-brand-ink" htmlFor="name">
               Nome completo
             </label>
             <div className="relative">
-              <User className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-brand-muted" />
+              <User className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-brand-muted" />
               <Input
                 id="name"
                 placeholder="Seu nome"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="pl-9"
+                className="h-11 pl-10"
                 required
               />
             </div>
@@ -61,16 +61,16 @@ export default function RegisterPage() {
 
           <div className="space-y-1.5">
             <label className="block text-sm font-semibold text-brand-ink" htmlFor="workspaceName">
-              Nome do workspace
+              Workspace
             </label>
             <div className="relative">
-              <Building2 className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-brand-muted" />
+              <Building2 className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-brand-muted" />
               <Input
                 id="workspaceName"
                 placeholder="Sua empresa"
                 value={workspaceName}
                 onChange={(e) => setWorkspaceName(e.target.value)}
-                className="pl-9"
+                className="h-11 pl-10"
                 required
               />
             </div>
@@ -82,14 +82,14 @@ export default function RegisterPage() {
             Telefone
           </label>
           <div className="relative">
-            <Phone className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-brand-muted" />
+            <Phone className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-brand-muted" />
             <Input
               id="phone"
               type="tel"
               placeholder="+55 (11) 99999-9999"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
-              className="pl-9"
+              className="h-11 pl-10"
             />
           </div>
         </div>
@@ -99,40 +99,40 @@ export default function RegisterPage() {
             E-mail
           </label>
           <div className="relative">
-            <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-brand-muted" />
+            <Mail className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-brand-muted" />
             <Input
               id="email"
               type="email"
               placeholder="seu@email.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="pl-9"
+              className="h-11 pl-10"
               required
             />
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1.5">
             <label className="block text-sm font-semibold text-brand-ink" htmlFor="password">
               Senha
             </label>
             <div className="relative">
-              <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-brand-muted" />
+              <Lock className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-brand-muted" />
               <Input
                 id="password"
                 type={showPassword ? "text" : "password"}
                 placeholder="Mín. 6 caracteres"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="pl-9 pr-10"
+                className="h-11 pl-10 pr-10"
                 required
                 minLength={6}
               />
               <button
                 type="button"
                 onClick={() => setShowPassword((v) => !v)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-brand-muted transition hover:text-brand-ink"
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-brand-muted transition hover:text-brand-ink"
                 tabIndex={-1}
                 aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
               >
@@ -146,21 +146,21 @@ export default function RegisterPage() {
               Confirmar senha
             </label>
             <div className="relative">
-              <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-brand-muted" />
+              <Lock className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-brand-muted" />
               <Input
                 id="confirmPassword"
                 type={showConfirmPassword ? "text" : "password"}
                 placeholder="Repita a senha"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                className="pl-9 pr-10"
+                className="h-11 pl-10 pr-10"
                 required
                 minLength={6}
               />
               <button
                 type="button"
                 onClick={() => setShowConfirmPassword((v) => !v)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-brand-muted transition hover:text-brand-ink"
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-brand-muted transition hover:text-brand-ink"
                 tabIndex={-1}
                 aria-label={showConfirmPassword ? "Ocultar senha" : "Mostrar senha"}
               >
@@ -171,19 +171,19 @@ export default function RegisterPage() {
         </div>
 
         {error && (
-          <p className="rounded-card border border-brand-red200 bg-brand-red50 px-3 py-2.5 text-sm font-semibold text-brand-red">
+          <p className="rounded-card border border-brand-red200 bg-brand-red50 px-3.5 py-2.5 text-sm font-semibold text-brand-red">
             {error}
           </p>
         )}
 
-        <Button type="submit" className="w-full" disabled={loading}>
+        <Button type="submit" className="h-12 w-full text-base" disabled={loading}>
           {loading ? "Criando workspace..." : "Criar workspace"}
         </Button>
       </form>
 
-      <p className="mt-5 text-sm text-brand-muted">
+      <p className="mt-6 text-center text-sm text-brand-muted">
         Já tem conta?{" "}
-        <Link className="font-bold text-brand-red underline" href="/login">
+        <Link className="font-bold text-brand-red underline underline-offset-2" href="/login">
           Entrar
         </Link>
       </p>
