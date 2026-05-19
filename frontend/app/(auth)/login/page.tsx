@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { FormEvent, useState } from "react";
+import { Eye, EyeOff, Mail, Lock } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { AuthPanel } from "@/components/layout/AuthPanel";
 import { Button } from "@/components/ui/Button";
@@ -11,6 +12,8 @@ export default function LoginPage() {
   const { login } = useAuth(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(true);
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -19,26 +22,88 @@ export default function LoginPage() {
     setError("");
     setLoading(true);
     try {
-      await login(email, password);
+      await login(email, password, rememberMe);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Nao foi possivel entrar");
+      setError(err instanceof Error ? err.message : "Não foi possível entrar");
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <AuthPanel title="Entrar no workspace" subtitle="Acesso seguro">
-      <form onSubmit={onSubmit} className="space-y-4">
-        <Input type="email" placeholder="email@empresa.com" value={email} onChange={(event) => setEmail(event.target.value)} required />
-        <Input type="password" placeholder="Senha" value={password} onChange={(event) => setPassword(event.target.value)} required />
-        {error ? <p className="rounded-card border border-brand-red200 bg-brand-red50 px-3 py-2 text-sm font-semibold text-brand-red">{error}</p> : null}
+    <AuthPanel title="Bem-vindo de volta" subtitle="Acesse sua conta">
+      <form onSubmit={onSubmit} className="space-y-5">
+        <div className="space-y-1.5">
+          <label className="block text-sm font-semibold text-brand-ink" htmlFor="email">
+            E-mail
+          </label>
+          <div className="relative">
+            <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-brand-muted" />
+            <Input
+              id="email"
+              type="email"
+              placeholder="seu@email.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="pl-9"
+              required
+            />
+          </div>
+        </div>
+
+        <div className="space-y-1.5">
+          <label className="block text-sm font-semibold text-brand-ink" htmlFor="password">
+            Senha
+          </label>
+          <div className="relative">
+            <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-brand-muted" />
+            <Input
+              id="password"
+              type={showPassword ? "text" : "password"}
+              placeholder="••••••••"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="pl-9 pr-10"
+              required
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword((v) => !v)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-brand-muted transition hover:text-brand-ink"
+              tabIndex={-1}
+              aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
+            >
+              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </button>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2.5">
+          <input
+            id="rememberMe"
+            type="checkbox"
+            checked={rememberMe}
+            onChange={(e) => setRememberMe(e.target.checked)}
+            className="h-4 w-4 cursor-pointer rounded accent-brand-red"
+          />
+          <label htmlFor="rememberMe" className="cursor-pointer select-none text-sm text-brand-muted">
+            Lembrar de mim
+          </label>
+        </div>
+
+        {error && (
+          <p className="rounded-card border border-brand-red200 bg-brand-red50 px-3 py-2.5 text-sm font-semibold text-brand-red">
+            {error}
+          </p>
+        )}
+
         <Button type="submit" className="w-full" disabled={loading}>
-          {loading ? "Entrando" : "Entrar"}
+          {loading ? "Entrando..." : "Entrar"}
         </Button>
       </form>
+
       <p className="mt-6 text-sm text-brand-muted">
-        Ainda nao tem conta?{" "}
+        Ainda não tem conta?{" "}
         <Link className="font-bold text-brand-red underline" href="/register">
           Criar workspace
         </Link>
