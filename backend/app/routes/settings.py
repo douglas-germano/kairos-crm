@@ -9,7 +9,7 @@ GET   /api/settings/whatsapp/status        — verifica estado de conexão da in
 POST  /api/settings/whatsapp/disconnect    — desconecta e remove instância
 """
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from flask import Blueprint, request, jsonify, current_app
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from app.extensions import db
@@ -36,7 +36,11 @@ def _instance_name(user_id: int) -> str:
 
 def _webhook_url() -> str:
     base = current_app.config.get("APP_BASE_URL", "http://localhost:5001").rstrip("/")
-    return f"{base}/webhooks/whatsapp"
+    url = f"{base}/webhooks/whatsapp"
+    secret = current_app.config.get("WEBHOOK_SECRET", "")
+    if secret:
+        url += f"?token={secret}"
+    return url
 
 
 def _refresh_instance_config(instance_name: str, webhook_url: str):
@@ -69,7 +73,10 @@ def update_workspace():
 
     data = request.get_json() or {}
     if "name" in data:
-        ws.name = data["name"]
+        name = str(data["name"]).strip()
+        if not name:
+            return jsonify({"error": "name não pode ser vazio", "code": "MISSING_FIELD"}), 400
+        ws.name = name
     db.session.commit()
     return jsonify(ws.to_dict())
 
@@ -139,9 +146,9 @@ def whatsapp_connect():
     integration.meta = meta
     _update_health(
         integration,
-        last_connect_at=datetime.utcnow().isoformat(),
+        last_connect_at=datetime.now(timezone.utc).isoformat(),
         webhook_url=webhook_url,
-        last_webhook_refresh_at=datetime.utcnow().isoformat(),
+        last_webhook_refresh_at=datetime.now(timezone.utc).isoformat(),
         last_error=None,
     )
     db.session.commit()
@@ -193,8 +200,8 @@ def whatsapp_status():
         _update_health(
             integration,
             connection_state=state,
-            last_status_check_at=datetime.utcnow().isoformat(),
-            last_webhook_refresh_at=datetime.utcnow().isoformat(),
+            last_status_check_at=datetime.now(timezone.utc).isoformat(),
+            last_webhook_refresh_at=datetime.now(timezone.utc).isoformat(),
             last_error=None,
         )
         db.session.commit()
@@ -204,7 +211,7 @@ def whatsapp_status():
         _update_health(
             integration,
             connection_state=state,
-            last_status_check_at=datetime.utcnow().isoformat(),
+            last_status_check_at=datetime.now(timezone.utc).isoformat(),
             last_error=str(exc),
         )
         db.session.commit()

@@ -3,13 +3,14 @@ from flask_jwt_extended import (
     create_access_token, create_refresh_token,
     jwt_required, get_jwt_identity,
 )
-from app.extensions import db
+from app.extensions import db, limiter
 from app.models import User, Workspace, WorkspaceMember
 
 bp = Blueprint("auth", __name__)
 
 
 @bp.post("/register")
+@limiter.limit("10 per hour")
 def register():
     data = request.get_json() or {}
     required = ("email", "password", "name")
@@ -45,6 +46,7 @@ def register():
 
 
 @bp.post("/login")
+@limiter.limit("20 per minute; 100 per hour")
 def login():
     data = request.get_json() or {}
     if not data.get("email") or not data.get("password"):

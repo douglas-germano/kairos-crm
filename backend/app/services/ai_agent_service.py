@@ -4,12 +4,22 @@ Modelo: claude-sonnet-4-20250514
 """
 import logging
 import anthropic
-from flask import current_app
+from flask import current_app, g
 from app.models import Agent, Conversation, Message
 
 logger = logging.getLogger(__name__)
 
 MAX_HISTORY = 20  # últimas mensagens incluídas no contexto
+
+
+def _get_anthropic_client() -> anthropic.Anthropic:
+    """Retorna um cliente Anthropic reutilizável dentro do contexto da requisição."""
+    if not hasattr(g, "anthropic_client"):
+        api_key = current_app.config.get("ANTHROPIC_API_KEY", "")
+        if not api_key:
+            raise ValueError("ANTHROPIC_API_KEY não configurado")
+        g.anthropic_client = anthropic.Anthropic(api_key=api_key)
+    return g.anthropic_client
 
 
 def get_active_agent_for_conversation(conversation: Conversation) -> Agent | None:
@@ -54,11 +64,7 @@ def generate_reply(agent: Agent, conversation: Conversation) -> str:
     Gera uma resposta da IA para a conversa informada.
     Retorna o texto gerado.
     """
-    api_key = current_app.config.get("ANTHROPIC_API_KEY", "")
-    if not api_key:
-        raise ValueError("ANTHROPIC_API_KEY não configurado")
-
-    client = anthropic.Anthropic(api_key=api_key)
+    client = _get_anthropic_client()
 
     messages = build_messages(conversation)
     if not messages:

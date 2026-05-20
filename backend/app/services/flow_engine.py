@@ -9,11 +9,48 @@ Nodes suportados no MVP:
   - AINode        : gera resposta da IA com prompt customizado
   - WebhookNode   : chama URL externa via POST
 """
+import ipaddress
 import logging
-import requests
+import socket
 from datetime import datetime, timezone
+from urllib.parse import urlparse
+
+import requests
 
 logger = logging.getLogger(__name__)
+
+# Redes bloqueadas para prevenir SSRF
+_BLOCKED_NETWORKS = [
+    ipaddress.ip_network("10.0.0.0/8"),
+    ipaddress.ip_network("172.16.0.0/12"),
+    ipaddress.ip_network("192.168.0.0/16"),
+    ipaddress.ip_network("127.0.0.0/8"),
+    ipaddress.ip_network("169.254.0.0/16"),  # link-local / AWS metadata
+    ipaddress.ip_network("::1/128"),
+    ipaddress.ip_network("fc00::/7"),
+]
+
+
+def _is_safe_url(url: str) -> bool:
+    """Rejeita URLs que apontam para redes internas (anti-SSRF)."""
+    try:
+        parsed = urlparse(url)
+        if parsed.scheme not in ("http", "https"):
+            return False
+        hostname = parsed.hostname
+        if not hostname:
+            return False
+        if hostname.lower() in ("localhost", "localhost.localdomain"):
+            return False
+        addrs = socket.getaddrinfo(hostname, None)
+        for addr in addrs:
+            ip = ipaddress.ip_address(addr[4][0])
+            for network in _BLOCKED_NETWORKS:
+                if ip in network:
+                    return False
+        return True
+    except Exception:
+        return False
 
 
 class FlowEngine:
@@ -65,6 +102,7 @@ class FlowEngine:
             logger.warning("Nenhum TriggerNode encontrado no fluxo", extra={"flow_id": self.flow.id})
             return
 
+        self._visited: set[str] = set()
         next_ids = self._get_next_node_ids(trigger_node["id"])
         for node_id in next_ids:
             self._execute_node(node_id)
@@ -87,6 +125,14 @@ class FlowEngine:
         return targets
 
     def _execute_node(self, node_id: str):
+        # Detecção de ciclos — impede recursão infinita em grafos com loops
+        if not hasattr(self, "_visited"):
+            self._visited: set[str] = set()
+        if node_id in self._visited:
+            logger.warning("Ciclo detectado no fluxo — node ignorado", extra={"node_id": node_id, "flow_id": self.flow.id})
+            return
+        self._visited.add(node_id)
+
         node = self._nodes_by_id.get(node_id)
         if not node:
             return
@@ -166,6 +212,14 @@ class FlowEngine:
         payload = data.get("payload", {})
         if not url:
             logger.warning("WebhookNode sem URL configurada", extra={"node_id": node_id})
+            return
+
+        # Bloqueia URLs internas (SSRF)
+        if not _is_safe_url(url):
+            logger.error(
+                "WebhookNode bloqueado — URL aponta para rede interna",
+                extra={"url": url, "node_id": node_id},
+            )
             return
 
         # Substitui variáveis básicas no payload

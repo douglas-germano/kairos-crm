@@ -172,14 +172,20 @@ def import_contacts():
     if not workspace_id:
         return jsonify({"error": "Workspace não encontrado", "code": "NO_WORKSPACE"}), 404
 
+    MAX_CSV_BYTES = 5 * 1024 * 1024  # 5 MB
+
     file = request.files.get("file")
     if not file:
         return jsonify({"error": "Arquivo CSV não enviado", "code": "MISSING_FILE"}), 400
 
+    raw = file.read()
+    if len(raw) > MAX_CSV_BYTES:
+        return jsonify({"error": "Arquivo muito grande (máx 5 MB)", "code": "FILE_TOO_LARGE"}), 413
+
     try:
-        content = file.read().decode("utf-8-sig")
+        content = raw.decode("utf-8-sig")
     except UnicodeDecodeError:
-        content = file.read().decode("latin-1")
+        content = raw.decode("latin-1")
 
     reader = csv.DictReader(io.StringIO(content))
     if not reader.fieldnames:

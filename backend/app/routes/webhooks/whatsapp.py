@@ -1,9 +1,8 @@
 import logging
 from datetime import datetime, timezone
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 from app.extensions import db, rq_queue, socketio
 from app.models import Integration, Contact, Conversation, Message
-from app.models.broadcast import BroadcastRecipient, Broadcast
 from app.services.whatsapp_identity import (
     canonical_external_id,
     lookup_external_ids,
@@ -16,20 +15,16 @@ bp = Blueprint("webhook_whatsapp", __name__)
 # Eventos que atualizam o status de conexão
 _MESSAGE_EVENTS = {"messages.upsert", "MESSAGES_UPSERT"}
 _CONNECTION_EVENTS = {"connection.update", "CONNECTION_UPDATE"}
-_STATUS_EVENTS = {"messages.update", "MESSAGES_UPDATE"}
-
-# Mapeamento dos status da Evolution API para os status internos
-_EVOLUTION_STATUS_MAP = {
-    "SERVER_ACK": "sent",
-    "DELIVERY_ACK": "delivered",
-    "READ": "read",
-    "PLAYED": "read",
-}
 
 
 @bp.post("/whatsapp")
 def receive():
     """Recebe mensagens e eventos do WhatsApp via Evolution API webhooks."""
+    expected_token = current_app.config.get("WEBHOOK_SECRET", "")
+    if expected_token and request.args.get("token") != expected_token:
+        logger.warning("Token de webhook WhatsApp inválido ou ausente")
+        return jsonify({"error": "Unauthorized", "code": "INVALID_TOKEN"}), 401
+
     data = request.get_json(silent=True) or {}
 
     event = data.get("event", "")
@@ -40,8 +35,6 @@ def receive():
             _handle_messages(instance_name, data.get("data", {}))
         elif event in _CONNECTION_EVENTS:
             _handle_connection_update(instance_name, data.get("data", {}))
-        elif event in _STATUS_EVENTS:
-            _handle_status_updates(instance_name, data.get("data", []))
         else:
             logger.debug("Evento WhatsApp ignorado", extra={"event": event})
     except Exception as exc:
@@ -53,7 +46,7 @@ def receive():
                 integration,
                 last_webhook_error=str(exc),
                 last_webhook_event=event,
-                last_webhook_at=datetime.utcnow().isoformat(),
+                last_webhook_at=datetime.now(timezone.utc).isoformat(),
             )
             db.session.commit()
         return jsonify({"status": "error", "message": "webhook processing failed"}), 500
@@ -81,7 +74,7 @@ def _handle_connection_update(instance_name: str, data: dict):
     _update_health(
         integration,
         last_connection_state=state,
-        last_connection_event_at=datetime.utcnow().isoformat(),
+        last_connection_event_at=datetime.now(timezone.utc).isoformat(),
         last_webhook_error=None,
     )
     db.session.commit()
@@ -103,7 +96,7 @@ def _handle_messages(instance_name: str, data: dict):
         if integration:
             _update_health(
                 integration,
-                last_webhook_at=datetime.utcnow().isoformat(),
+                last_webhook_at=datetime.now(timezone.utc).isoformat(),
                 last_webhook_event="MESSAGES_UPSERT",
                 last_webhook_error="payload sem mensagens processaveis",
                 last_webhook_payload_shape=type(data).__name__,
@@ -157,7 +150,7 @@ def _handle_message(instance_name: str, msg_data: dict):
     workspace_id = integration.workspace_id
     _update_health(
         integration,
-        last_webhook_at=datetime.utcnow().isoformat(),
+        last_webhook_at=datetime.now(timezone.utc).isoformat(),
         last_webhook_event="MESSAGES_UPSERT",
         last_remote_jid=remote_jid,
         last_sender_pn=sender_pn,
@@ -235,7 +228,7 @@ def _handle_message(instance_name: str, msg_data: dict):
         external_id=external_id,
     )
     db.session.add(msg)
-    conversation.last_message_at = datetime.utcnow()
+    conversation.last_message_at = datetime.now(timezone.utc)
     db.session.commit()
 
     logger.info(
@@ -262,81 +255,6 @@ def _handle_message(instance_name: str, msg_data: dict):
             )
         except Exception as exc:
             logger.error("Falha ao enfileirar mensagem WhatsApp", extra={"error": str(exc)})
-
-
-def _handle_status_updates(instance_name: str, data):
-    """Processa eventos messages.update — entrega e leitura de mensagens enviadas."""
-    items = data if isinstance(data, list) else [data] if isinstance(data, dict) else []
-    for item in items:
-        try:
-            _process_status_update(instance_name, item)
-        except Exception as exc:
-            db.session.rollback()
-            logger.warning("Falha ao processar status update WhatsApp | error=%s", exc)
-
-
-def _process_status_update(instance_name: str, item: dict):
-    """Atualiza o status de uma mensagem e do recipient de broadcast, se aplicável."""
-    key = item.get("key", {})
-    external_id = key.get("id", "")
-    raw_status = (item.get("update") or item).get("status", "")
-    new_status = _EVOLUTION_STATUS_MAP.get(raw_status)
-
-    if not external_id or not new_status:
-        return
-
-    now = datetime.now(timezone.utc)
-    workspace_id = None
-
-    # Atualiza a mensagem regular se existir
-    msg = Message.query.filter_by(external_id=external_id).first()
-    if msg:
-        _status_rank = {"sent": 1, "delivered": 2, "read": 3}
-        if _status_rank.get(new_status, 0) > _status_rank.get(msg.status, 0):
-            msg.status = new_status
-            db.session.flush()
-        workspace_id = (
-            db.session.query(Conversation)
-            .filter_by(id=msg.conversation_id)
-            .with_entities(Conversation.workspace_id)
-            .scalar()
-        )
-
-    # Atualiza o recipient de broadcast se este external_id foi enviado via broadcast
-    recipient = BroadcastRecipient.query.filter_by(message_external_id=external_id).first()
-    if recipient:
-        broadcast = db.session.get(Broadcast, recipient.broadcast_id)
-        if broadcast:
-            if new_status == "delivered" and recipient.status not in ("delivered", "read"):
-                recipient.status = "delivered"
-                recipient.delivered_at = now
-                broadcast.delivered_count = (broadcast.delivered_count or 0) + 1
-                workspace_id = workspace_id or broadcast.workspace_id
-            elif new_status == "read" and recipient.status != "read":
-                if recipient.status not in ("delivered",):
-                    # Também incrementa delivered se pulamos esse status
-                    broadcast.delivered_count = (broadcast.delivered_count or 0) + 1
-                recipient.status = "read"
-                recipient.read_at = now
-                broadcast.read_count = (broadcast.read_count or 0) + 1
-                workspace_id = workspace_id or broadcast.workspace_id
-
-    db.session.commit()
-
-    if workspace_id:
-        try:
-            socketio.emit(
-                "message_status_updated",
-                {"external_id": external_id, "status": new_status},
-                room=f"workspace_{workspace_id}",
-            )
-        except Exception as exc:
-            logger.warning("Falha ao emitir message_status_updated | error=%s", exc)
-
-    logger.debug(
-        "Status WhatsApp atualizado | ext_id=%s status=%s",
-        external_id, new_status,
-    )
 
 
 def _message_items(data) -> list[dict]:
@@ -481,7 +399,7 @@ def _mark_webhook_ignored(instance_name: str, reason: str, **fields):
         return
     _update_health(
         integration,
-        last_webhook_at=datetime.utcnow().isoformat(),
+        last_webhook_at=datetime.now(timezone.utc).isoformat(),
         last_webhook_event="MESSAGES_UPSERT",
         last_webhook_ignored_reason=reason,
         last_webhook_ignored_fields=fields,
@@ -491,23 +409,20 @@ def _mark_webhook_ignored(instance_name: str, reason: str, **fields):
 
 
 def _find_integration(instance_name: str) -> Integration | None:
-    """Busca integração ativa pelo instance_name — usada para processar mensagens."""
-    integrations = Integration.query.filter_by(
-        channel="whatsapp", status="active"
-    ).all()
-    for integ in integrations:
-        if integ.meta and integ.meta.get("instance_name") == instance_name:
-            return integ
-    return None
+    """Busca integração ativa pelo instance_name usando query JSON no banco."""
+    return Integration.query.filter(
+        Integration.channel == "whatsapp",
+        Integration.status == "active",
+        Integration.meta["instance_name"].astext == instance_name,
+    ).first()
 
 
 def _find_integration_any_status(instance_name: str) -> Integration | None:
-    """Busca integração por instance_name independente do status — usada para atualizar conexão."""
-    integrations = Integration.query.filter_by(channel="whatsapp").all()
-    for integ in integrations:
-        if integ.meta and integ.meta.get("instance_name") == instance_name:
-            return integ
-    return None
+    """Busca integração por instance_name independente do status."""
+    return Integration.query.filter(
+        Integration.channel == "whatsapp",
+        Integration.meta["instance_name"].astext == instance_name,
+    ).first()
 
 
 def _update_health(integration: Integration, **fields):

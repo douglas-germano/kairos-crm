@@ -7,7 +7,7 @@ POST /api/messages/<conversation_id>/sync   — sincroniza histórico do WhatsAp
 """
 import logging
 import traceback
-from datetime import datetime
+from datetime import datetime, timezone
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from sqlalchemy.exc import IntegrityError
@@ -97,7 +97,7 @@ def send_message(conversation_id: int):
         external_id=None,
     )
     db.session.add(msg)
-    conv.last_message_at = datetime.utcnow()
+    conv.last_message_at = datetime.now(timezone.utc)
     db.session.commit()
 
     # Tenta enviar pelo canal — falhas não removem a mensagem do banco
@@ -298,7 +298,7 @@ def sync_messages(conversation_id: int):
         if not raw_msgs and sync_errors:
             _update_integration_health(
                 integration,
-                last_sync_at=datetime.utcnow().isoformat(),
+                last_sync_at=datetime.now(timezone.utc).isoformat(),
                 last_sync_status="error",
                 last_sync_errors=sync_errors,
                 last_sync_jids=remote_jids,
@@ -344,7 +344,7 @@ def sync_messages(conversation_id: int):
 
             direction = "outbound" if key.get("fromMe") else "inbound"
             ts = raw.get("messageTimestamp")
-            created_at = datetime.utcfromtimestamp(int(ts)) if ts else datetime.utcnow()
+            created_at = datetime.fromtimestamp(int(ts), tz=timezone.utc).replace(tzinfo=None) if ts else datetime.now(timezone.utc)
 
             msg = Message(
                 conversation_id=conv.id,
@@ -365,7 +365,7 @@ def sync_messages(conversation_id: int):
             except IntegrityError:
                 logger.warning("Mensagem duplicada ignorada no sync | ext_id=%s conv=%s", ext_id, conv.id)
 
-        conv.synced_at = datetime.utcnow()
+        conv.synced_at = datetime.now(timezone.utc)
         conv.last_message_at = (
             db.session.query(db.func.max(Message.created_at))
             .filter(Message.conversation_id == conv.id)
@@ -374,7 +374,7 @@ def sync_messages(conversation_id: int):
         )
         _update_integration_health(
             integration,
-            last_sync_at=datetime.utcnow().isoformat(),
+            last_sync_at=datetime.now(timezone.utc).isoformat(),
             last_sync_status="partial" if sync_errors else "ok",
             last_sync_inserted=inserted,
             last_sync_media_updated=updated_media,

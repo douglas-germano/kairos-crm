@@ -3,14 +3,18 @@ from pythonjsonlogger import jsonlogger
 from flask import Flask
 from flask_cors import CORS
 from .config import get_config
-from .extensions import db, migrate, jwt, socketio, init_redis
+from .extensions import db, migrate, jwt, socketio, limiter, init_redis
 
 
 def create_app():
     app = Flask(__name__)
-    CORS(app, resources={r"/*": {"origins": "*"}})
     cfg = get_config()
     app.config.from_object(cfg)
+
+    # CORS — em produção, restrinja ALLOWED_ORIGINS no .env
+    allowed = app.config.get("ALLOWED_ORIGINS", "*")
+    origins = [o.strip() for o in allowed.split(",")] if allowed != "*" else "*"
+    CORS(app, resources={r"/*": {"origins": origins}}, supports_credentials=True)
 
     _setup_logging(app)
 
@@ -19,7 +23,12 @@ def create_app():
     migrate.init_app(app, db)
     jwt.init_app(app)
     init_redis(app)
-    socketio.init_app(app, message_queue=app.config["REDIS_URL"])
+    socketio.init_app(
+        app,
+        cors_allowed_origins=origins,
+        message_queue=app.config["REDIS_URL"],
+    )
+    limiter.init_app(app)
 
     # Blueprints
     from .routes.auth import bp as auth_bp

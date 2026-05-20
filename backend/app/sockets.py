@@ -21,12 +21,23 @@ def on_join(data):
     if not workspace_id or not token:
         return
 
-    # Valida JWT para garantir que o cliente tem acesso
     try:
         decoded = decode_token(token)
-        user_id = decoded.get("sub")
+        user_id = int(decoded.get("sub"))
     except Exception as exc:
         logger.warning("Token inválido no join_workspace", extra={"error": str(exc)})
+        return
+
+    # Verifica que o usuário realmente pertence ao workspace solicitado
+    from app.models import WorkspaceMember
+    member = WorkspaceMember.query.filter_by(
+        user_id=user_id, workspace_id=workspace_id
+    ).first()
+    if not member:
+        logger.warning(
+            "Tentativa de acesso não autorizado a workspace via SocketIO",
+            extra={"user_id": user_id, "workspace_id": workspace_id},
+        )
         return
 
     room = f"workspace_{workspace_id}"

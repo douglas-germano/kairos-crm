@@ -27,6 +27,11 @@ class Config:
 
     LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 
+    # CORS — lista de origens separadas por vírgula; "*" só em dev
+    ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "*")
+    # Token secreto para autenticar webhooks da Evolution API (?token=...)
+    WEBHOOK_SECRET = os.getenv("WEBHOOK_SECRET", "")
+
 
 class DevelopmentConfig(Config):
     DEBUG = True

@@ -1,7 +1,9 @@
+import hashlib
+import hmac
 import logging
 from datetime import datetime, timezone
 from flask import Blueprint, request, jsonify, current_app
-from app.extensions import db, rq_queue, socketio
+from app.extensions import db, rq_queue
 from app.models import Integration, Contact, Conversation, Message
 
 logger = logging.getLogger(__name__)
@@ -26,6 +28,13 @@ def verify():
 @bp.post("/instagram")
 def receive():
     """Recebe mensagens/eventos do Instagram via Meta Webhooks."""
+    app_secret = current_app.config.get("META_APP_SECRET", "")
+    if app_secret:
+        signature = request.headers.get("X-Hub-Signature-256", "")
+        if not _verify_meta_signature(request.get_data(), signature, app_secret):
+            logger.warning("Assinatura Meta inválida no webhook Instagram")
+            return jsonify({"error": "Assinatura inválida", "code": "INVALID_SIGNATURE"}), 403
+
     data = request.get_json(silent=True) or {}
 
     if data.get("object") != "instagram":
@@ -34,10 +43,7 @@ def receive():
     for entry in data.get("entry", []):
         ig_user_id = entry.get("id")
         for event in entry.get("messaging", []):
-            if "read" in event:
-                _handle_read_event(ig_user_id, event)
-            elif "message" in event:
-                _handle_messaging_event(ig_user_id, event)
+            _handle_messaging_event(ig_user_id, event)
 
     # Retorna 200 imediatamente — processamento pesado vai para a fila
     return jsonify({"status": "ok"}), 200
@@ -129,65 +135,20 @@ def _handle_messaging_event(ig_user_id: str, event: dict):
         logger.error("Falha ao enfileirar mensagem", extra={"error": str(e)})
 
 
-def _handle_read_event(ig_user_id: str, event: dict):
-    """Processa o evento read do Instagram — marca mensagens anteriores ao watermark como lidas."""
-    watermark_ms = event.get("read", {}).get("watermark")
-    sender_id = event.get("sender", {}).get("id")
-    if not watermark_ms or not sender_id:
-        return
-
-    integration = _find_integration(ig_user_id)
-    if not integration:
-        return
-
-    workspace_id = integration.workspace_id
-    watermark_dt = datetime.fromtimestamp(watermark_ms / 1000, tz=timezone.utc)
-
-    contact = Contact.query.filter_by(
-        workspace_id=workspace_id, channel="instagram", external_id=sender_id
-    ).first()
-    if not contact:
-        return
-
-    conversation = Conversation.query.filter_by(
-        workspace_id=workspace_id, contact_id=contact.id, channel="instagram"
-    ).filter(Conversation.status != "closed").first()
-    if not conversation:
-        return
-
-    # Marca como lidas todas as mensagens outbound anteriores ao watermark
-    updated = (
-        Message.query
-        .filter(
-            Message.conversation_id == conversation.id,
-            Message.direction == "outbound",
-            Message.status != "read",
-            Message.created_at <= watermark_dt,
-        )
-        .update({"status": "read"}, synchronize_session=False)
-    )
-    db.session.commit()
-
-    if updated:
-        try:
-            socketio.emit(
-                "message_status_updated",
-                {"conversation_id": conversation.id, "status": "read", "watermark": watermark_ms},
-                room=f"workspace_{workspace_id}",
-            )
-        except Exception as exc:
-            logger.warning("Falha ao emitir message_status_updated Instagram | error=%s", exc)
-
-    logger.debug(
-        "Leitura Instagram processada | conv=%s mensagens_atualizadas=%s",
-        conversation.id, updated,
-    )
-
-
 def _find_integration(ig_user_id: str) -> Integration | None:
-    """Busca integração ativa pelo ig_user_id armazenado em meta."""
-    integrations = Integration.query.filter_by(channel="instagram", status="active").all()
-    for integ in integrations:
-        if integ.meta and integ.meta.get("ig_user_id") == ig_user_id:
-            return integ
-    return None
+    """Busca integração ativa pelo ig_user_id usando query JSON no banco."""
+    return Integration.query.filter(
+        Integration.channel == "instagram",
+        Integration.status == "active",
+        Integration.meta["ig_user_id"].astext == ig_user_id,
+    ).first()
+
+
+def _verify_meta_signature(payload: bytes, signature_header: str, app_secret: str) -> bool:
+    """Verifica assinatura HMAC-SHA256 enviada pelo Meta."""
+    if not signature_header.startswith("sha256="):
+        return False
+    expected = "sha256=" + hmac.new(
+        app_secret.encode(), payload, hashlib.sha256
+    ).hexdigest()
+    return hmac.compare_digest(expected, signature_header)

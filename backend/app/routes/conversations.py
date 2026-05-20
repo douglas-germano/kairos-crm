@@ -10,7 +10,7 @@ DELETE /api/conversations/<id>      — exclui a conversa e suas mensagens
 """
 import logging
 import re
-from datetime import datetime
+from datetime import datetime, timezone
 from flask import Blueprint, current_app, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from sqlalchemy.orm import joinedload
@@ -38,7 +38,11 @@ def _normalize_phone(phone: str) -> str:
 
 def _webhook_url() -> str:
     base = current_app.config.get("APP_BASE_URL", "http://localhost:5001").rstrip("/")
-    return f"{base}/webhooks/whatsapp"
+    url = f"{base}/webhooks/whatsapp"
+    secret = current_app.config.get("WEBHOOK_SECRET", "")
+    if secret:
+        url += f"?token={secret}"
+    return url
 
 
 @bp.get("")
@@ -159,7 +163,7 @@ def sync_whatsapp_conversations():
                 contact_id=contact.id,
                 channel="whatsapp",
                 status="open",
-                last_message_at=last_message_at or datetime.utcnow(),
+                last_message_at=last_message_at or datetime.now(timezone.utc),
             )
             db.session.add(conversation)
             imported += 1
@@ -172,14 +176,14 @@ def sync_whatsapp_conversations():
 
     _update_integration_health(
         integration,
-        last_chat_sync_at=datetime.utcnow().isoformat(),
+        last_chat_sync_at=datetime.now(timezone.utc).isoformat(),
         last_chat_sync_status="ok",
         last_chat_sync_total=len(chats),
         last_chat_sync_imported=imported,
         last_chat_sync_updated=updated,
         last_chat_sync_skipped=skipped,
         webhook_url=webhook_url,
-        last_webhook_refresh_at=datetime.utcnow().isoformat(),
+        last_webhook_refresh_at=datetime.now(timezone.utc).isoformat(),
     )
     db.session.commit()
 
@@ -272,7 +276,7 @@ def initiate_conversation():
             contact_id=contact.id,
             channel="whatsapp",
             status="open",
-            last_message_at=datetime.utcnow(),
+            last_message_at=datetime.now(timezone.utc),
         )
         db.session.add(conversation)
         db.session.flush()
@@ -287,7 +291,7 @@ def initiate_conversation():
             status="sent",
         )
         db.session.add(msg)
-        conversation.last_message_at = datetime.utcnow()
+        conversation.last_message_at = datetime.now(timezone.utc)
         db.session.flush()
 
         try:
@@ -469,7 +473,7 @@ def _parse_chat_datetime(value) -> datetime | None:
         timestamp = int(value)
         if timestamp > 10_000_000_000:
             timestamp = timestamp / 1000
-        return datetime.utcfromtimestamp(timestamp)
+        return datetime.fromtimestamp(timestamp, tz=timezone.utc).replace(tzinfo=None)
     if isinstance(value, str):
         try:
             return datetime.fromisoformat(value.replace("Z", "+00:00")).replace(tzinfo=None)

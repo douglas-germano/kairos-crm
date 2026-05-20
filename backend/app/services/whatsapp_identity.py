@@ -8,7 +8,7 @@ metadata do contato para que webhook e sync encontrem a mesma conversa.
 from __future__ import annotations
 
 import re
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Iterable
 
 
@@ -126,7 +126,7 @@ def remember_contact_identity(contact, remote_jid: str | None, sender_pn: str | 
     if push_name:
         whatsapp["last_push_name"] = push_name
 
-    whatsapp["last_seen_at"] = datetime.utcnow().isoformat()
+    whatsapp["last_seen_at"] = datetime.now(timezone.utc).isoformat()
     whatsapp["jids"] = jids
     whatsapp["phones"] = phones
     meta["whatsapp"] = whatsapp

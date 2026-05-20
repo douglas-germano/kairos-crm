@@ -158,11 +158,6 @@ def find_messages(instance_name: str, remote_jid: str, limit: int = 100, offset:
     }
     result = _request("POST", f"/chat/findMessages/{instance_name}", json=payload)
 
-    # Log do resultado bruto para diagnóstico de formato
-    result_type = type(result).__name__
-    sample = str(result)[:300] if result else "empty"
-    print(f"[find_messages] type={result_type} sample={sample}", flush=True)
-
     # Normaliza qualquer formato da Evolution API para uma lista plana de objetos
     if isinstance(result, list):
         items = result
@@ -180,7 +175,7 @@ def find_messages(instance_name: str, remote_jid: str, limit: int = 100, offset:
 
     # Filtra apenas dicts (descarta IDs textuais que a API pode incluir)
     filtered = [m for m in items if isinstance(m, dict)]
-    print(f"[find_messages] items_total={len(items)} items_dict={len(filtered)}", flush=True)
+    logger.debug("Evolution find_messages | total=%s dicts=%s", len(items), len(filtered))
     return filtered
 
 

@@ -6,11 +6,12 @@ Fluxo OAuth do Instagram (Meta):
   4. DELETE /api/integrations/<id>       → desconecta integração
 """
 import logging
+import secrets
 import urllib.parse
 import requests
 from flask import Blueprint, request, jsonify, redirect, current_app
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from app.extensions import db
+from app.extensions import db, redis_client
 from app.models import Integration, WorkspaceMember
 
 logger = logging.getLogger(__name__)
@@ -47,12 +48,17 @@ def instagram_auth():
     base_url = current_app.config["APP_BASE_URL"]
     redirect_uri = f"{base_url}/api/integrations/instagram/callback"
 
+    # Gera state aleatório e armazena no Redis (TTL 10 min) para prevenir CSRF
+    user_id = get_jwt_identity()
+    state = secrets.token_urlsafe(32)
+    redis_client.setex(f"oauth_state:{state}", 600, str(user_id))
+
     params = {
         "client_id": app_id,
         "redirect_uri": redirect_uri,
         "scope": IG_SCOPES,
         "response_type": "code",
-        "state": get_jwt_identity(),  # user_id como state para identificar na callback
+        "state": state,
     }
     oauth_url = "https://www.facebook.com/v19.0/dialog/oauth?" + urllib.parse.urlencode(params)
     return redirect(oauth_url)
@@ -65,7 +71,7 @@ def instagram_callback():
     Troca o code por um token de longa duração e salva no banco.
     """
     code = request.args.get("code")
-    state = request.args.get("state")  # user_id
+    state = request.args.get("state")
     error = request.args.get("error")
 
     if error:
@@ -74,6 +80,14 @@ def instagram_callback():
 
     if not code or not state:
         return jsonify({"error": "Parâmetros inválidos", "code": "INVALID_CALLBACK"}), 400
+
+    # Valida e consome o state token (previne CSRF)
+    stored = redis_client.get(f"oauth_state:{state}")
+    if not stored:
+        logger.warning("OAuth state inválido ou expirado", extra={"state": state[:8]})
+        return redirect(f"{current_app.config['APP_BASE_URL']}/settings?error=invalid_state")
+    redis_client.delete(f"oauth_state:{state}")
+    stored_user_id = int(stored.decode())
 
     app_id = current_app.config["META_APP_ID"]
     app_secret = current_app.config["META_APP_SECRET"]
@@ -133,8 +147,7 @@ def instagram_callback():
         return redirect(f"{base_url}/settings?error=no_ig_business_account")
 
     # 4. Salva/atualiza integração no banco
-    user_id = int(state)
-    workspace_id = _get_workspace_id(user_id)
+    workspace_id = _get_workspace_id(stored_user_id)
     if not workspace_id:
         return redirect(f"{base_url}/settings?error=no_workspace")
 
@@ -161,7 +174,7 @@ def instagram_callback():
     db.session.commit()
 
     logger.info("Instagram conectado com sucesso", extra={
-        "workspace_id": workspace_id, "ig_user_id": ig_user_id
+        "workspace_id": workspace_id, "ig_user_id": ig_user_id, "user_id": stored_user_id
     })
     return redirect(f"{base_url}/settings?success=instagram_connected")
 
