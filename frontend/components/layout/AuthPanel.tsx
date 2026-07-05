@@ -15,7 +15,7 @@ export function AuthPanel({
     <main className="grid min-h-screen bg-white lg:grid-cols-[440px_1fr]">
       <section className="flex min-h-[44vh] flex-col justify-between bg-brand-charcoal p-8 text-white lg:min-h-screen">
         <div className="flex items-center gap-3">
-          <span className="flex h-11 w-11 items-center justify-center rounded-card bg-brand-red font-serif text-xl font-bold shadow-sm">K</span>
+          <span className="flex h-11 w-11 items-center justify-center rounded-card bg-brand-red font-serif text-xl font-bold">K</span>
           <div>
             <p className="text-lg font-extrabold leading-tight">KairosCRM</p>
             <p className="text-sm text-white/64">CRM para canais digitais</p>
@@ -36,7 +36,7 @@ export function AuthPanel({
         </div>
       </section>
 
-      <section className="flex items-center justify-center bg-gradient-to-b from-white to-brand-canvas p-5">
+      <section className="flex items-center justify-center bg-white p-5">
         <div className="surface-card w-full max-w-[448px] p-7">
           <p className="eyebrow mb-3">{subtitle}</p>
           <h2 className="heading-xl mb-6">{title}</h2>

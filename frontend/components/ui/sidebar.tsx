@@ -120,7 +120,7 @@ export function Sidebar({
         data-variant={variant}
         data-side={side}
         className={cn(
-          "fixed inset-y-0 z-50 flex h-svh w-[var(--sidebar-width)] flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground shadow-sidebar transition-[left,right,width] duration-300 ease-out md:left-0",
+          "fixed inset-y-0 z-50 flex h-svh w-[var(--sidebar-width)] flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-[left,right,width] duration-300 ease-out md:left-0",
           side === "left" ? "left-0" : "right-0 border-l border-r-0",
           !openMobile && side === "left" ? "-left-[var(--sidebar-width)] md:left-0" : null,
           !openMobile && side === "right" ? "-right-[var(--sidebar-width)] md:right-0" : null,
@@ -134,7 +134,7 @@ export function Sidebar({
           data-sidebar="inner"
           className={cn(
             "flex h-full w-full flex-col bg-sidebar",
-            variant === "floating" ? "rounded-panel border border-sidebar-border shadow-card" : null
+            variant === "floating" ? "rounded-panel border border-sidebar-border" : null
           )}
         >
           {children}

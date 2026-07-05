@@ -5,30 +5,30 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "focus-ring inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-card text-sm font-extrabold shadow-sm transition disabled:pointer-events-none disabled:translate-y-0 disabled:opacity-55 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+  "focus-ring inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[2px] text-sm font-extrabold transition disabled:pointer-events-none disabled:opacity-55 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
   {
     variants: {
       variant: {
-        default: "border border-brand-red bg-brand-red text-white hover:bg-brand-redDark active:translate-y-px",
-        red: "border border-brand-red bg-brand-red text-white hover:bg-brand-redDark active:translate-y-px",
+        default: "border border-brand-red bg-brand-red text-white hover:bg-brand-redDark active:opacity-90",
+        red: "border border-brand-red bg-brand-red text-white hover:bg-brand-redDark active:opacity-90",
         destructive:
-          "border border-destructive bg-destructive text-destructive-foreground hover:bg-destructive/90 active:translate-y-px",
+          "border border-destructive bg-destructive text-destructive-foreground hover:bg-destructive/90 active:opacity-90",
         outline:
-          "border border-input bg-background text-foreground hover:bg-accent hover:text-accent-foreground active:translate-y-px",
+          "border border-input bg-background text-foreground hover:bg-accent hover:text-accent-foreground active:opacity-90",
         secondary:
-          "border border-secondary bg-secondary text-secondary-foreground hover:bg-secondary/80 active:translate-y-px",
+          "border border-secondary bg-secondary text-secondary-foreground hover:bg-secondary/80 active:opacity-90",
         ghost:
-          "border border-brand-line bg-white text-brand-ink hover:border-brand-charcoal/25 hover:bg-brand-canvas active:translate-y-px",
-        link: "text-primary underline-offset-4 shadow-none hover:underline",
-        pill: "rounded-[60px] border border-brand-red bg-brand-red text-white hover:bg-brand-redDark active:translate-y-px",
-        dark: "border border-brand-charcoal bg-brand-charcoal text-white hover:bg-brand-ink active:translate-y-px",
-        subtle: "rounded-[60px] border border-transparent bg-red-50 text-brand-red shadow-none hover:bg-red-100 active:translate-y-px"
+          "border border-brand-line bg-white text-brand-ink hover:border-brand-charcoal/25 hover:bg-brand-canvas active:opacity-90",
+        link: "rounded-none border-0 text-primary underline-offset-4 hover:underline",
+        pill: "rounded-[60px] border border-brand-red bg-brand-red text-white hover:bg-brand-redDark active:opacity-90",
+        dark: "border border-brand-charcoal bg-brand-charcoal text-white hover:bg-brand-ink active:opacity-90",
+        subtle: "rounded-[60px] border border-transparent bg-red-50 text-brand-red hover:bg-red-100 active:opacity-90"
       },
       size: {
         default: "min-h-10 px-3.5 py-2.5",
         sm: "h-9 px-3",
         lg: "h-11 px-8",
-        icon: "h-10 w-10 p-0"
+        icon: "h-10 w-10 rounded-full p-0"
       }
     },
     defaultVariants: {

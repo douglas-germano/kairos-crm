@@ -4,7 +4,7 @@ import { Handle, Position, NodeProps } from "@xyflow/react";
 import { Bot, GitBranch, MessageSquare, Radio, Webhook } from "lucide-react";
 
 const baseClass =
-  "min-w-[180px] rounded-card border border-brand-line bg-white px-3.5 py-3 shadow-node font-sans text-sm";
+  "min-w-[180px] rounded-card border border-brand-line bg-white px-3.5 py-3 font-sans text-sm";
 
 export function TriggerNode({ data }: NodeProps) {
   return (

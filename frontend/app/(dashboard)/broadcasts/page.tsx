@@ -28,7 +28,7 @@ import { cn, formatRelativeTime } from "@/lib/utils";
 
 const STATUS_CONFIG = {
   draft:     { label: "Rascunho",    color: "text-brand-muted",         bg: "bg-brand-canvas",      icon: Clock },
-  sending:   { label: "Enviando…",   color: "text-brand-warning",       bg: "bg-amber-50",           icon: Loader2 },
+  sending:   { label: "Enviando…",   color: "text-brand-warningStrong", bg: "bg-brand-warningSoft",  icon: Loader2 },
   completed: { label: "Concluído",   color: "text-brand-successStrong", bg: "bg-brand-successSoft",  icon: CheckCircle2 },
   failed:    { label: "Falhou",      color: "text-brand-red",           bg: "bg-red-50",             icon: XCircle },
 } as const;
@@ -184,7 +184,7 @@ function BroadcastRow({
             <Button
               variant="outline"
               size="icon"
-              className="h-8 w-8 hover:border-green-300 hover:bg-green-50 hover:text-green-600"
+              className="h-8 w-8 hover:border-brand-success/40 hover:bg-brand-successSoft hover:text-brand-successStrong"
               onClick={onSend}
               disabled={sending}
               title="Disparar broadcast"
