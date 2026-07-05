@@ -4,20 +4,22 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Visão Geral
 
-KairosCRM é uma plataforma SaaS de gerenciamento de mensagens e automação com IA para WhatsApp (Evolution API) e Instagram (Meta Cloud API). O prompt completo de arquitetura está em `PROMPT/PROMPT.MD`.
+KairosCRM é uma plataforma SaaS de gerenciamento de mensagens e automação com IA para WhatsApp (Evolution API) e Instagram (Meta Cloud API). O prompt original de arquitetura (plano do MVP) está em `prompt/PROMPT.MD`; `prompt/design-system.md` documenta o design system do frontend. Este documento descreve o estado real do código, que já diverge em alguns pontos do plano original (ver "Divergências do plano original" abaixo).
 
-## Stack Obrigatória
+## Stack Real
 
 | Camada | Tecnologia |
 |--------|-----------|
-| Backend | Flask (Python) + Flask-SocketIO |
-| Frontend | Next.js 14 (App Router) + TypeScript + Tailwind CSS |
+| Backend | Flask (Python) + Flask-SocketIO (`async_mode="gevent"`) |
+| Fila de tasks | Redis + **RQ** (não Celery — ver divergências) |
+| Frontend | Next.js 15 (App Router) + TypeScript + Tailwind, exportado estático e publicado no Cloudflare Pages via `@cloudflare/next-on-pages` |
 | Banco de dados | PostgreSQL + SQLAlchemy ORM + Alembic migrations |
-| Cache e filas | Redis + Celery (ou RQ) |
-| Editor de fluxo | React Flow |
-| Autenticação | JWT com refresh token |
-| IA | Claude API — modelo `claude-sonnet-4-20250514` |
-| Criptografia | Fernet (`cryptography` lib) para credentials de integrações |
+| Editor de fluxo | React Flow (`@xyflow/react`) |
+| Autenticação | JWT (`flask-jwt-extended`) com access + refresh token |
+| IA | Claude API (`anthropic` SDK) — modelo default `claude-sonnet-4-20250514` (`app/models/agent.py: CLAUDE_MODEL`), configurável por agente |
+| Criptografia | Fernet, chave derivada de `SECRET_KEY` via SHA-256 (`Integration._fernet`) |
+| Deploy backend | Railway (Docker + Gunicorn + worker gevent-websocket) |
+| Deploy frontend | Cloudflare Pages (Wrangler) |
 
 ## Comandos de Desenvolvimento
 
@@ -27,228 +29,117 @@ cd backend
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 
-# Servidor de desenvolvimento
+# Servidor de desenvolvimento (porta 8080 por padrão; PORT sobrescreve)
 python run.py
 
 # Migrations
 alembic upgrade head
 alembic revision --autogenerate -m "descrição"
 
-# Worker Celery
-celery -A app.extensions.celery worker --loglevel=info
+# Worker RQ — necessário para IA, flows e broadcasts funcionarem; sem ele
+# webhooks só salvam a mensagem e nada mais acontece
+rq worker default --url redis://localhost:6379/0
 ```
+Não há suíte de testes automatizada no repositório no momento.
 
 ### Frontend
 ```bash
 cd frontend
 npm install
-npm run dev        # porta 3000
+npm run dev          # porta 3000, aponta para NEXT_PUBLIC_API_URL (padrão :5001 em dev — ver frontend/lib/api.ts)
 npm run build
 npm run lint
-npm run type-check
+npm run type-check    # tsc --noEmit
+npm run build:cf      # build para Cloudflare Pages
+npm run deploy        # build:cf + wrangler pages deploy
 ```
 
-### Docker (ambiente local)
+### Docker (ambiente local completo)
 ```bash
-docker compose up -d     # sobe PostgreSQL + Redis
+docker compose up -d     # PostgreSQL + Redis + backend (python run.py) + worker (rq worker)
 docker compose logs -f
 ```
 
-## Estrutura do Projeto
+## Arquitetura
 
-```
-kairos-crm/
-├── backend/
-│   ├── app/
-│   │   ├── __init__.py
-│   │   ├── config.py
-│   │   ├── extensions.py         # db, redis, socketio, celery
-│   │   ├── models/
-│   │   │   ├── user.py
-│   │   │   ├── workspace.py
-│   │   │   ├── contact.py
-│   │   │   ├── conversation.py
-│   │   │   ├── message.py
-│   │   │   ├── agent.py
-│   │   │   └── flow.py
-│   │   ├── routes/
-│   │   │   ├── auth.py
-│   │   │   ├── conversations.py
-│   │   │   ├── messages.py
-│   │   │   ├── agents.py
-│   │   │   ├── flows.py
-│   │   │   ├── webhooks/
-│   │   │   │   ├── instagram.py
-│   │   │   │   └── whatsapp.py
-│   │   │   └── settings.py
-│   │   ├── services/
-│   │   │   ├── instagram_service.py
-│   │   │   ├── whatsapp_service.py
-│   │   │   ├── ai_agent_service.py
-│   │   │   ├── flow_engine.py
-│   │   │   └── queue_service.py
-│   │   └── tasks/
-│   │       ├── process_message.py
-│   │       └── ai_response.py
-│   ├── migrations/
-│   ├── requirements.txt
-│   └── run.py
-└── frontend/
-    ├── app/
-    │   ├── (auth)/
-    │   │   ├── login/page.tsx
-    │   │   └── register/page.tsx
-    │   └── (dashboard)/
-    │       ├── layout.tsx
-    │       ├── conversations/
-    │       │   ├── page.tsx              # lista unificada
-    │       │   └── [id]/page.tsx         # chat individual
-    │       ├── agents/
-    │       │   ├── page.tsx              # lista de agentes
-    │       │   └── [id]/editor/page.tsx  # editor drag and drop
-    │       └── settings/page.tsx
-    ├── components/
-    │   ├── chat/
-    │   │   ├── ConversationList.tsx
-    │   │   ├── ChatWindow.tsx
-    │   │   ├── MessageBubble.tsx
-    │   │   └── MessageInput.tsx
-    │   └── flow/
-    │       ├── FlowEditor.tsx            # React Flow wrapper
-    │       ├── FlowSidebar.tsx
-    │       └── nodes/
-    │           ├── TriggerNode.tsx
-    │           ├── MessageNode.tsx
-    │           ├── ConditionNode.tsx
-    │           ├── AINode.tsx
-    │           └── WebhookNode.tsx
-    ├── hooks/
-    │   ├── useSocket.ts
-    │   ├── useConversations.ts
-    │   └── useAgent.ts
-    └── lib/
-        ├── api.ts
-        └── socket.ts
-```
+### App factory e extensões
+`create_app()` (`backend/app/__init__.py`) monta config, CORS, logging JSON estruturado, inicializa `db`/`migrate`/`jwt`/`socketio`/`limiter`/Redis e registra todos os blueprints (`auth`, `conversations`, `messages`, `agents`, `flows`, `settings`, `integrations`, `contacts`, `broadcasts`, webhooks). SocketIO é inicializado com `message_queue=REDIS_URL` para poder emitir eventos a partir do worker RQ, que roda em processo separado do servidor web (`extensions.py`).
 
-## Banco de Dados — Modelos
+Em produção, `wsgi.py` faz `gevent.monkey.patch_all()` antes de qualquer outro import — obrigatório para o worker `GeventWebSocketWorker` do Gunicorn funcionar. `start.sh` roda `alembic upgrade head`, sobe um `rq worker` em background e então o Gunicorn, tudo no mesmo container Railway (não há worker Railway separado — só o Docker Compose local tem um serviço `worker` dedicado).
 
-| Tabela | Campos principais |
-|--------|-------------------|
-| `users` | id, email, password_hash, name, created_at |
-| `workspaces` | id, name, owner_id (FK users), plan, created_at |
-| `workspace_members` | workspace_id, user_id, role |
-| `integrations` | id, workspace_id, channel (`instagram\|whatsapp`), status (`active\|inactive`), credentials (JSON criptografado), meta (JSON) |
-| `contacts` | id, workspace_id, channel, external_id (IGSID ou número WhatsApp), name, avatar_url, metadata (JSON), created_at |
-| `conversations` | id, workspace_id, contact_id, channel, status (`open\|closed\|bot`), last_message_at, assigned_to (FK users), ai_enabled (bool), created_at |
-| `messages` | id, conversation_id, direction (`inbound\|outbound`), content, content_type (`text\|image\|audio\|video\|template`), status (`sent\|delivered\|read\|failed`), external_id, created_at |
-| `agents` | id, workspace_id, name, system_prompt, model, temperature, enabled (bool), channels (JSON array), created_at |
-| `flows` | id, agent_id, name, trigger_type, trigger_config (JSON), nodes (JSON), edges (JSON), active (bool), created_at |
+### Pipeline de mensagens (atravessa vários arquivos)
+1. Webhook (`routes/webhooks/whatsapp.py` ou `instagram.py`) recebe o payload, normaliza contato/conversa/mensagem, salva no banco e responde 200 imediatamente.
+2. Emite `new_message` via SocketIO na room `workspace_{workspace_id}`.
+3. Enfileira `app.tasks.process_message.run(message_id)` no RQ — só para mensagens inbound reais; ecos `fromMe=True` do WhatsApp são salvas mas não reenfileiradas.
+4. `tasks/process_message.py` roda no worker: recria o app Flask (`create_app()` + `app_context()`, pois o worker é um processo à parte sem contexto de request) e primeiro checa se algum `Flow` ativo do agente do canal dispara para essa mensagem (`FlowEngine.should_trigger`). Se sim, roda o flow inteiro (`FlowEngine.run`) e **não** chama a IA direta. Só se nenhum flow disparar e `conversation.ai_enabled = True` é que chama `ai_agent_service.generate_reply` diretamente.
+5. Tanto o flow (`AINode`/`MessageNode`) quanto a IA direta enviam a resposta pelo canal certo (`whatsapp_service`/`instagram_service`), salvam a mensagem outbound e emitem `agent_response_sent`.
 
-## Fluxo de Processamento de Mensagens
+Flow ativo e IA direta são **mutuamente exclusivos** por mensagem — um flow disparado "engole" a resposta automática do agente.
 
-1. Webhook recebe mensagem → salva no banco → retorna 200 imediatamente
-2. Enfileira task `process_message(message_id)` no Redis
-3. Task verifica se `ai_enabled = true` e agente ativo para o canal
-4. **Se sim:** monta histórico das últimas 20 mensagens → chama Claude API → salva resposta → envia via canal → salva mensagem outbound
-5. **Se não:** emite evento via SocketIO para o frontend atualizar sem refetch
+### Flow Engine (`services/flow_engine.py`)
+Interpreta o JSON de `flows.nodes`/`flows.edges` produzido pelo editor React Flow: acha o `TriggerNode` e percorre as arestas. Suporta `MessageNode`, `ConditionNode` (contains/equals/starts_with sobre a última mensagem), `AINode` (pode sobrescrever temporariamente o `system_prompt` do agente só para aquele passo) e `WebhookNode`. Tem detecção de ciclo (`_visited`) para não recursar infinitamente em grafos malformados, e bloqueio de SSRF (`_is_safe_url`) que resolve o hostname e rejeita ranges privados/loopback/link-local antes de deixar o `WebhookNode` chamar uma URL — é a única barreira contra o usuário configurar um webhook apontando para a rede interna, não remover ao mexer nesse código.
 
-## Real-time (eventos SocketIO)
+### Multi-tenant e autorização
+Toda tabela relevante tem `workspace_id`; toda query de rota deve filtrar por ele — nunca confiar em IDs vindos do payload sem checar o workspace do usuário autenticado. O mesmo vale para SocketIO: `sockets.py` decodifica o JWT manualmente (`decode_token`) no evento `join_workspace` e confirma que existe um `WorkspaceMember` para aquele `user_id`/`workspace_id` antes de dar `join_room` — sem essa checagem, qualquer cliente poderia entrar na room de outro workspace e receber mensagens de terceiros.
 
-| Evento | Payload |
-|--------|---------|
-| `new_message` | `{ conversation_id, message }` |
-| `conversation_updated` | `{ conversation_id, fields }` |
-| `agent_response_sent` | `{ conversation_id, message }` |
+### Credenciais de integração
+`Integration._credentials` guarda um blob criptografado com Fernet; a chave é derivada de `SECRET_KEY` (SHA-256 → base64), não é uma chave Fernet separada — trocar `SECRET_KEY` em produção invalida todas as credenciais salvas. Sempre usar `set_credentials`/`get_credentials`, nunca ler `_credentials` diretamente.
 
-O frontend escuta esses eventos e atualiza o estado local sem precisar fazer refetch.
+### Identidade de contato no WhatsApp (`services/whatsapp_identity.py`)
+A Evolution API pode reportar o mesmo contato com JIDs diferentes (`remoteJid` vs `senderPn`, com/sem `@s.whatsapp.net`, LID vs número de telefone). `canonical_external_id`/`lookup_external_ids`/`remember_contact_identity` existem para não duplicar `Contact`s quando isso acontece — ao mexer no parsing do webhook do WhatsApp, usar sempre essas funções em vez de comparar `remoteJid` cru.
 
-## Integrações
+### Autenticação no frontend (`frontend/lib/api.ts`, `lib/auth.ts`)
+`apiFetch` injeta o access token em todo request e, num 401, chama `/auth/refresh` uma única vez (`_refreshPromise` deduplica chamadas concorrentes) antes de tentar de novo com `retry=false` — não adicionar retries extras aqui. Tokens vão para `localStorage` ou `sessionStorage` dependendo da opção "lembrar-me" (`setTokens(..., remember)`).
 
-### WhatsApp — Evolution API
-- Base URL configurável por workspace (salva em `integrations.credentials`)
-- Enviar texto: `POST /message/sendText/{instance}`
-- Enviar mídia: `POST /message/sendMedia/{instance}`
-- Webhook entrada em `POST /webhooks/whatsapp` — extrair número removendo `@s.whatsapp.net`
+### Real-time no frontend (`hooks/useSocket.ts`, `lib/socket.ts`)
+O cliente chama `join_workspace` passando o JWT (não cookie de sessão) para o backend validar; eventos ouvidos são `new_message`, `conversation_updated`, `agent_response_sent` — mesmos nomes emitidos pelo backend.
 
-### Instagram — Meta Cloud API
-- Base: `https://graph.facebook.com/v19.0/`
-- Envio: `POST /{ig-user-id}/messages` com `Authorization: Bearer {page_access_token}`
-- Verificação do webhook (`GET /webhooks/instagram`): validar `hub.verify_token` contra o token salvo no workspace e retornar `hub.challenge`
-- Webhook entrada em `POST /webhooks/instagram`
+## Modelos principais (`backend/app/models/`)
+`users`, `workspaces`/`workspace_members`, `integrations` (channel `instagram|whatsapp`, credentials Fernet, `meta` JSON com `health` de webhook), `contacts`, `conversations` (`ai_enabled`, `assigned_to`, `synced_at`), `messages` (`direction`, `content_type` incluindo `sticker`/`caption`, `status`), `agents` (`channels` JSON, `model`, `temperature`), `flows` (`nodes`/`edges` JSON, pertence a um `agent`), `broadcasts`/`broadcast_recipients`. Migrations vivem em `backend/migrations/versions` — sempre gerar via `alembic revision --autogenerate`, nunca editar schema manualmente.
 
-## Editor de Fluxo (React Flow)
-
-Nodes disponíveis no MVP:
-
-| Node | Função |
-|------|--------|
-| `TriggerNode` | Gatilho: primeira mensagem, palavra-chave, horário |
-| `MessageNode` | Enviar texto fixo |
-| `ConditionNode` | if/else por conteúdo da mensagem ou tag do contato |
-| `AINode` | Acionar agente com prompt customizado para o passo |
-| `WebhookNode` | Chamar URL externa via POST com payload configurável |
-
-O JSON de nodes e edges é salvo diretamente em `flows.nodes` e `flows.edges`. O `flow_engine.py` interpreta esse JSON em runtime quando o trigger é ativado. O editor tem: sidebar de nodes, panel de configuração ao clicar, auto-save com debounce de 2s, botão ativar/desativar.
-
-## Telas do Frontend
-
-- **`/conversations`** — Layout três colunas: filtros/canais | lista de conversas (ícone do canal, nome, última mensagem, timestamp, badge IA) | chat (scroll infinito, Enter para enviar, toggle de IA por conversa)
-- **`/agents`** — Lista com toggle global, chips de canal (WhatsApp, Instagram), botão para abrir o editor
-- **`/agents/[id]/editor`** — Tela cheia React Flow: sidebar esquerda (nodes), canvas central, panel direita (config do node), header com status e botão salvar
+## Divergências do plano original (`prompt/PROMPT.MD`)
+- Fila de tasks é **RQ**, não Celery (`extensions.rq_queue`, `services/queue_service.py`, `tasks/*.run`).
+- Módulos extras não previstos no plano original: `contacts`, `integrations`, `broadcasts` (envio em massa) e `whatsapp_identity`.
+- Frontend não roda como servidor Node: é exportado estático e publicado no Cloudflare Pages (`wrangler.toml`, `npm run deploy`); o backend roda no Railway (URL hardcoded como fallback de produção em `frontend/lib/api.ts`).
+- Autenticação usa `flask-jwt-extended` puro.
 
 ## Regras de Implementação
-
-1. **Auth:** Toda rota (exceto `/webhooks/*` e `/auth/*`) exige `Authorization: Bearer {token}`.
-2. **Multi-tenant:** Toda query filtra por `workspace_id`. Nunca retornar dados de outro workspace.
-3. **Webhooks:** Responder 200 imediatamente; processar de forma assíncrona via fila.
-4. **Credentials:** Armazenar criptografadas com Fernet no banco.
-5. **Migrations:** Usar Alembic exclusivamente — nunca `ALTER TABLE` direto.
-6. **Frontend:** Usar SWR para fetching com revalidação automática.
-7. **Erros da API:** Sempre retornar `{ error: string, code: string }` com HTTP status adequado.
-8. **Logs:** JSON estruturado no backend; nível configurável via `LOG_LEVEL` no `.env`.
+1. **Auth:** toda rota (exceto `/webhooks/*` e `/auth/*`) exige `Authorization: Bearer {token}`.
+2. **Multi-tenant:** toda query filtra por `workspace_id`. Nunca retornar dados de outro workspace.
+3. **Webhooks:** responder 200 imediatamente; processamento pesado sempre via RQ.
+4. **Credentials:** sempre criptografadas com Fernet (`Integration.set_credentials`/`get_credentials`), nunca em texto plano no banco ou em logs.
+5. **Migrations:** usar Alembic exclusivamente — nunca `ALTER TABLE` direto.
+6. **Frontend:** usar SWR para fetching com revalidação automática (`swrFetcher` em `lib/api.ts`).
+7. **Erros da API:** sempre retornar `{ error: string, code: string }` com HTTP status adequado.
+8. **Logs:** JSON estruturado no backend (`python-json-logger`); nível configurável via `LOG_LEVEL`.
+9. **WebhookNode do flow engine:** nunca remover a checagem de SSRF (`_is_safe_url`) em `flow_engine.py`.
 
 ## Variáveis de Ambiente
 
-### Backend (`.env`)
+### Backend (`backend/.env`, ver `backend/.env.example`)
 ```
-DATABASE_URL=postgresql://user:pass@localhost/kairos_crm
-REDIS_URL=redis://localhost:6379/0
+DATABASE_URL=
+REDIS_URL=
+SECRET_KEY=          # também deriva a chave Fernet — não trocar em produção sem migrar credenciais
+JWT_SECRET_KEY=
 ANTHROPIC_API_KEY=
-SECRET_KEY=
 EVOLUTION_API_URL=
 EVOLUTION_API_KEY=
+META_APP_ID=
+META_APP_SECRET=
 META_VERIFY_TOKEN=
+APP_BASE_URL=
+WEBHOOK_SECRET=      # valida ?token= no webhook do WhatsApp
 LOG_LEVEL=INFO
+FLASK_ENV=development
+ALLOWED_ORIGINS=*    # CSV em produção
 ```
 
-### Frontend (`.env.local`)
+### Frontend (`frontend/.env.local`, ver `frontend/.env.local.example`)
 ```
-NEXT_PUBLIC_API_URL=http://localhost:5000
-NEXT_PUBLIC_SOCKET_URL=http://localhost:5000
+NEXT_PUBLIC_API_URL=http://localhost:5001
+NEXT_PUBLIC_SOCKET_URL=http://localhost:5001
 ```
-
-## Ordem de Implementação (MVP)
-
-1. Setup do projeto (estrutura de pastas, dependências, config)
-2. Models e migrations do banco de dados
-3. Autenticação JWT (register, login, refresh)
-4. Webhook WhatsApp (receber, parsear, salvar)
-5. Webhook Instagram (verificação + receber, parsear, salvar)
-6. Serviço de envio WhatsApp via Evolution API
-7. Serviço de envio Instagram via Graph API
-8. Fila Redis + task de processamento de mensagem
-9. Integração com Claude API no agente
-10. Rotas REST de conversations e messages
-11. Rotas REST de agents e flows
-12. SocketIO real-time
-13. Frontend: autenticação
-14. Frontend: tela de conversations com chat
-15. Frontend: tela de agents com toggles
-16. Frontend: editor de fluxo com React Flow
-17. Docker Compose para desenvolvimento local
-
-> Comece pelo passo 1. Pergunte antes de implementar se tiver dúvida sobre alguma decisão de arquitetura — não assuma.
 
 ## Fluxo Git Obrigatório
 
