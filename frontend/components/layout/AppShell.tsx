@@ -59,10 +59,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <Sidebar collapsible="icon" className="bg-white/95 backdrop-blur">
         <SidebarHeader className="h-16 justify-center px-3">
           <Link href="/conversations" className="focus-ring flex h-11 items-center gap-3 overflow-hidden rounded-card px-2">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-card bg-brand-red font-serif text-xl font-bold leading-none text-white">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-card bg-brand-red text-xl font-bold leading-none text-white">
               K
             </span>
-            <span className="min-w-0 font-serif text-[22px] font-bold leading-none text-brand-ink transition-opacity group-data-[state=collapsed]/sidebar-wrapper:w-0 group-data-[state=collapsed]/sidebar-wrapper:opacity-0">
+            <span className="min-w-0 text-[22px] font-bold leading-none text-brand-ink transition-opacity group-data-[state=collapsed]/sidebar-wrapper:w-0 group-data-[state=collapsed]/sidebar-wrapper:opacity-0">
               Kairos
             </span>
           </Link>
@@ -125,7 +125,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <div className="flex h-full flex-col">
           <div className="flex h-14 items-center gap-3 border-b border-brand-line bg-white/80 px-4 backdrop-blur md:hidden">
             <SidebarTrigger />
-            <span className="font-serif text-xl font-bold text-brand-ink">Kairos</span>
+            <span className="text-xl font-bold text-brand-ink">Kairos</span>
           </div>
           <div className="min-h-0 flex-1 overflow-y-auto">{children}</div>
         </div>

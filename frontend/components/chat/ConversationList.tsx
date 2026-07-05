@@ -265,7 +265,7 @@ function Pill({ label, value, tone }: { label: string; value: number; tone: "gre
   return (
     <div
       className={cn(
-        "flex items-center gap-1 rounded-card px-2 py-1 font-condensed text-[10px] font-extrabold",
+        "flex items-center gap-1 rounded-card px-2 py-1 text-[10px] font-extrabold",
         tone === "green" ? "bg-brand-successSoft text-brand-successStrong" : "bg-red-50 text-brand-red"
       )}
     >

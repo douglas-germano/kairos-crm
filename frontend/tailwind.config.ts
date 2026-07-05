@@ -84,10 +84,8 @@ const config: Config = {
         }
       },
       fontFamily: {
-        sans: ["var(--font-sans)"],
-        display: ["var(--font-display)"],
-        condensed: ["var(--font-condensed)"],
-        serif: ["var(--font-serif)"]
+        // Fonte única (Inter) — ver "Note on Font Substitutes" em prompt/design-system.md §3.
+        sans: ["var(--font-sans)"]
       },
       borderRadius: {
         lg: "var(--radius)",
