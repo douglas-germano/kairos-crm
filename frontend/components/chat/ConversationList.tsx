@@ -26,13 +26,12 @@ const FILTERS: Array<{ label: string; value: Channel | "all" }> = [
   { label: "Instagram", value: "instagram" },
 ];
 
+// Sem segunda cor de marca — só variações de charcoal/neutro/vermelho (design-system.md §7)
 const AVATAR_PALETTES = [
-  "bg-blue-100 text-blue-700",
-  "bg-violet-100 text-violet-700",
-  "bg-emerald-100 text-emerald-700",
-  "bg-orange-100 text-orange-700",
-  "bg-pink-100 text-pink-700",
-  "bg-teal-100 text-teal-700",
+  "bg-brand-canvas text-brand-charcoal",
+  "bg-brand-charcoal text-white",
+  "bg-red-50 text-brand-red",
+  "bg-brand-neutral text-brand-ink",
 ];
 
 function avatarColor(name: string) {
@@ -250,7 +249,7 @@ function ConversationItem({
               <span
                 className={cn(
                   "h-2 w-2 rounded-full",
-                  statusOpen ? "bg-emerald-400" : "bg-brand-grey/40"
+                  statusOpen ? "bg-brand-success" : "bg-brand-grey/40"
                 )}
                 title={statusOpen ? "Aberta" : conversation.status}
               />
@@ -267,7 +266,7 @@ function Pill({ label, value, tone }: { label: string; value: number; tone: "gre
     <div
       className={cn(
         "flex items-center gap-1 rounded-card px-2 py-1 font-condensed text-[10px] font-extrabold",
-        tone === "green" ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-brand-red"
+        tone === "green" ? "bg-brand-successSoft text-brand-successStrong" : "bg-red-50 text-brand-red"
       )}
     >
       <span>{value}</span>

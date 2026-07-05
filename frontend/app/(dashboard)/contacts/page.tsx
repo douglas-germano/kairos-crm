@@ -29,12 +29,13 @@ import {
 import { PageHeader } from "@/components/layout/AppShell";
 import { cn, initials, formatRelativeTime } from "@/lib/utils";
 
+// Sem segunda cor de marca — só variações de charcoal/neutro/vermelho (design-system.md §7)
 const AVATAR_PALETTES = [
-  "bg-brand-info text-white",
-  "bg-brand-success text-white",
-  "bg-brand-warning text-brand-ink",
-  "bg-brand-red text-white",
+  "bg-brand-canvas text-brand-charcoal",
   "bg-brand-charcoal text-white",
+  "bg-red-50 text-brand-red",
+  "bg-brand-neutral text-brand-ink",
+  "bg-brand-red text-white",
 ];
 
 function avatarColor(name: string) {

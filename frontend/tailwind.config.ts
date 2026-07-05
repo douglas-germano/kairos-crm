@@ -94,20 +94,20 @@ const config: Config = {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
+        // Vodafone-inspired scale: 2px sharp utility controls, 6px cards/containers,
+        // 32px filled badge pills, 60px editorial CTA pills, 50%/100% circles/portraits
         tight: "2px",
-        card: "8px",
-        panel: "12px",
+        card: "6px",
+        panel: "6px",
         pill: "32px"
       },
       borderWidth: {
-        control: "1.5px"
+        control: "1px"
       },
       boxShadow: {
-        focus: "0 0 0 3px rgba(230, 0, 0, 0.16), 0 0 0 1px rgba(230, 0, 0, 0.9)",
-        card: "0 1px 2px rgba(15, 23, 42, 0.04), 0 16px 40px rgba(15, 23, 42, 0.06)",
-        lift: "0 18px 48px rgba(15, 23, 42, 0.12)",
-        sidebar: "8px 0 30px rgba(15, 23, 42, 0.04)",
-        node: "0 10px 28px rgba(15, 23, 42, 0.08)"
+        // Flat system — the only permitted "elevation" is a crisp focus ring.
+        // No card/lift/sidebar/node shadows: surface color and 1px borders carry hierarchy.
+        focus: "0 0 0 2px rgba(230, 0, 0, 0.35), inset 0 0 0 1px #e60000"
       }
     }
   },

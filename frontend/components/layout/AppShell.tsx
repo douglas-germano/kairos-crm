@@ -59,7 +59,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <Sidebar collapsible="icon" className="bg-white/95 backdrop-blur">
         <SidebarHeader className="h-16 justify-center px-3">
           <Link href="/conversations" className="focus-ring flex h-11 items-center gap-3 overflow-hidden rounded-card px-2">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-card bg-brand-red font-serif text-xl font-bold leading-none text-white shadow-sm">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-card bg-brand-red font-serif text-xl font-bold leading-none text-white">
               K
             </span>
             <span className="min-w-0 font-serif text-[22px] font-bold leading-none text-brand-ink transition-opacity group-data-[state=collapsed]/sidebar-wrapper:w-0 group-data-[state=collapsed]/sidebar-wrapper:opacity-0">

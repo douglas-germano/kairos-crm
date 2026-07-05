@@ -147,7 +147,7 @@ export function MessageBubble({ message }: { message: Message }) {
   const isNakedMedia = isSticker;
 
   const bubbleClass = cn(
-    "max-w-[78%] rounded-panel shadow-sm",
+    "max-w-[78%] rounded-panel",
     isNakedMedia ? "" : "px-3.5 py-2.5",
     outbound
       ? failed
