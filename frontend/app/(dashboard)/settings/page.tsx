@@ -24,6 +24,7 @@ import {
 import { PageHeader } from "@/components/layout/AppShell";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { IconBadge } from "@/components/ui/IconBadge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
@@ -111,9 +112,9 @@ function WhatsAppConnectCard({ onConnected }: { onConnected: () => void }) {
 
   if (phase === "idle" || phase === "error") return (
     <div className="flex flex-col items-center gap-4 py-8 text-center">
-      <span className="flex h-14 w-14 items-center justify-center rounded-full bg-brand-canvas">
+      <IconBadge size="xl">
         <Phone size={28} className="text-brand-muted" />
-      </span>
+      </IconBadge>
       <div>
         <div className="item-title">Nenhum número conectado</div>
         <div className="body-muted mt-1">Gere o QR code e escaneie com o WhatsApp para vincular</div>
@@ -132,9 +133,9 @@ function WhatsAppConnectCard({ onConnected }: { onConnected: () => void }) {
 
   if (phase === "connected") return (
     <div className="flex flex-col items-center gap-3 py-8 text-center">
-      <span className="flex h-14 w-14 items-center justify-center rounded-full bg-brand-successSoft">
+      <IconBadge size="xl" tone="success">
         <CheckCircle2 size={28} className="text-brand-successStrong" />
-      </span>
+      </IconBadge>
       <div>
         <div className="item-title text-brand-successStrong">WhatsApp conectado</div>
         <div className="ui-meta mt-1 font-mono">{instanceName}</div>
@@ -189,9 +190,9 @@ function WhatsAppActiveCard({ integration, onDisconnect }: { integration: Integr
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center gap-3 rounded-card bg-brand-successSoft p-3">
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/75">
+        <IconBadge tone="successGlass" shrink>
           <Wifi size={18} className="text-brand-successStrong" />
-        </span>
+        </IconBadge>
         <div className="min-w-0">
           <div className="ui-label text-brand-successStrong">Conectado e ativo</div>
           <div className="ui-meta truncate font-mono text-brand-successStrong">{String(integration.meta?.instance_name || "")}</div>
@@ -288,9 +289,9 @@ function InstagramSection({ integration, onDisconnect }: { integration: Integrat
       {connected && integration ? (
         <div className="flex flex-col gap-4">
           <div className="flex items-center gap-3 rounded-card bg-brand-successSoft p-3">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/75">
+            <IconBadge tone="successGlass" shrink>
               <CheckCircle2 size={18} className="text-brand-successStrong" />
-            </span>
+            </IconBadge>
             <div className="min-w-0">
               <div className="ui-label text-brand-successStrong">{String(integration.meta?.page_name || "Página conectada")}</div>
               <div className="ui-meta truncate font-mono text-brand-successStrong">ID: {String(integration.meta?.ig_user_id || "")}</div>
@@ -303,9 +304,9 @@ function InstagramSection({ integration, onDisconnect }: { integration: Integrat
         </div>
       ) : (
         <div className="flex flex-col items-center gap-4 py-8 text-center">
-          <span className="flex h-14 w-14 items-center justify-center rounded-full bg-brand-canvas">
+          <IconBadge size="xl">
             <Instagram size={28} className="text-brand-muted" />
-          </span>
+          </IconBadge>
           <div>
             <div className="item-title">Nenhuma conta conectada</div>
             <div className="body-muted mt-1">Autorize via Meta para receber e enviar mensagens do Instagram</div>
@@ -366,9 +367,9 @@ function PerfilSection({ user, onSaved, onLogout }: { user: UserData | undefined
       <section className="surface-card rounded-panel p-4 sm:p-5">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex min-w-0 items-center gap-3">
-            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-brand-charcoal text-sm font-black text-white">
+            <IconBadge size="lg" tone="charcoal" shrink className="text-sm font-black">
               {user?.name?.[0]?.toUpperCase() || "K"}
-            </span>
+            </IconBadge>
             <div className="min-w-0">
               <p className="eyebrow mb-1">Conta</p>
               <h2 className="card-title truncate">{user?.name || "Operador"}</h2>
@@ -552,9 +553,9 @@ function WebhooksSection() {
       <div className="space-y-5">
         <div>
           <div className="mb-2 flex items-center gap-1.5">
-            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#25D366] text-white">
+            <IconBadge size="xs" tone="whatsapp">
               <Phone size={11} />
-            </span>
+            </IconBadge>
             <span className="ui-label text-brand-ink">WhatsApp</span>
           </div>
           <p className="ui-meta break-all rounded-card bg-brand-canvas p-3 font-mono text-brand-ink text-[11px] sm:text-xs">
@@ -564,9 +565,9 @@ function WebhooksSection() {
         </div>
         <div className="border-t border-brand-line pt-5">
           <div className="mb-2 flex items-center gap-1.5">
-            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-gradient-to-br from-[#f9ce34] via-[#ee2a7b] to-[#6228d7] text-white">
+            <IconBadge size="xs" tone="instagram">
               <Instagram size={11} />
-            </span>
+            </IconBadge>
             <span className="ui-label text-brand-ink">Instagram</span>
           </div>
           <p className="ui-meta break-all rounded-card bg-brand-canvas p-3 font-mono text-brand-ink text-[11px] sm:text-xs">

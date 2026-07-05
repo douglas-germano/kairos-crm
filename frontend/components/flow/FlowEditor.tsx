@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ReactFlow, addEdge, Background, Connection, Controls, Edge, MiniMap, Node, useEdgesState, useNodesState } from "@xyflow/react";
-import { Bot, GitBranch, MessageSquare, Radio, Save, Trash2, Webhook, Zap } from "lucide-react";
+import { Bot, GitBranch, MessageSquare, MonitorSmartphone, Radio, Save, Trash2, Webhook, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
@@ -94,7 +94,17 @@ export function FlowEditor({ flow, onSaved }: { flow: Flow; onSaved: (flow: Flow
   }
 
   return (
-    <div className="grid h-[calc(100vh-112px)] grid-cols-[280px_1fr_360px] app-canvas">
+    <>
+      {/* O canvas de 3 colunas precisa de largura de desktop — abaixo de lg mostramos um aviso em vez de quebrar o layout */}
+      <div className="flex min-h-[calc(100vh-112px)] flex-col items-center justify-center gap-3 p-6 text-center app-canvas lg:hidden">
+        <MonitorSmartphone className="text-brand-muted" size={32} />
+        <div>
+          <p className="item-title">Editor de fluxo requer uma tela maior</p>
+          <p className="body-muted mt-1 max-w-sm">Abra esta página em um desktop ou tablet em modo paisagem para montar e editar o fluxo.</p>
+        </div>
+      </div>
+
+      <div className="hidden h-[calc(100vh-112px)] grid-cols-[280px_1fr_360px] app-canvas lg:grid">
       <aside className="border-r border-brand-line bg-white/95">
         <div className="border-b border-brand-line p-4">
           <div className="heading-md">Blocos do fluxo</div>
@@ -231,7 +241,8 @@ export function FlowEditor({ flow, onSaved }: { flow: Flow; onSaved: (flow: Flow
           </div>
         )}
       </aside>
-    </div>
+      </div>
+    </>
   );
 }
 

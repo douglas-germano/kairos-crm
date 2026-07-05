@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { MessageCircle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { IconBadge } from "@/components/ui/IconBadge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -67,9 +68,9 @@ export function NewConversationModal({ open, onClose, onCreated }: Props) {
     <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
       <DialogContent className="max-w-md p-0">
         <DialogHeader className="flex-row items-center gap-2.5">
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-successSoft text-brand-successStrong">
+          <IconBadge size="sm" tone="success" shrink>
             <MessageCircle size={16} />
-          </span>
+          </IconBadge>
           <div>
             <DialogTitle>Nova conversa</DialogTitle>
             <DialogDescription>WhatsApp</DialogDescription>
@@ -126,7 +127,7 @@ export function NewConversationModal({ open, onClose, onCreated }: Props) {
           </div>
 
           {error && (
-            <p className="rounded-card border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-600">
+            <p className="rounded-card border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-brand-red">
               {error}
             </p>
           )}

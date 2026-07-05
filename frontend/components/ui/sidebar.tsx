@@ -120,7 +120,7 @@ export function Sidebar({
         data-variant={variant}
         data-side={side}
         className={cn(
-          "fixed inset-y-0 z-50 flex h-svh w-[var(--sidebar-width)] flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-[left,right,width] duration-300 ease-out md:left-0",
+          "fixed inset-y-0 z-50 flex h-svh w-[var(--sidebar-width)] flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-[left,right,width] duration-base ease-brand md:left-0",
           side === "left" ? "left-0" : "right-0 border-l border-r-0",
           !openMobile && side === "left" ? "-left-[var(--sidebar-width)] md:left-0" : null,
           !openMobile && side === "right" ? "-right-[var(--sidebar-width)] md:right-0" : null,
@@ -152,7 +152,7 @@ export function SidebarInset({ className, ...props }: React.ComponentProps<"main
       data-sidebar="inset"
       data-state={state}
       className={cn(
-        "min-h-svh flex-1 bg-background transition-[padding-left] duration-300 md:pl-[var(--sidebar-width)]",
+        "min-h-svh flex-1 bg-background transition-[padding-left] duration-base ease-brand md:pl-[var(--sidebar-width)]",
         state === "collapsed" ? "md:pl-[var(--sidebar-width-icon)]" : null,
         className
       )}

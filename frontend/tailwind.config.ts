@@ -1,7 +1,6 @@
 import type { Config } from "tailwindcss";
 
 const config: Config = {
-  darkMode: ["class"],
   content: [
     "./app/**/*.{js,ts,jsx,tsx,mdx}",
     "./components/**/*.{js,ts,jsx,tsx,mdx}",
@@ -65,7 +64,7 @@ const config: Config = {
           charcoal: "#25282b",
           ink: "#151719",
           grey: "#7e7e7e",
-          muted: "#6f7680",
+          muted: "#63697a", // 5.5:1 on white — margem segura acima do mínimo AA (4.5:1) para texto pequeno
           line: "#e3e6ea",
           neutral: "#f2f2f2",
           canvas: "#f5f6f8",
@@ -108,6 +107,14 @@ const config: Config = {
         // Flat system — the only permitted "elevation" is a crisp focus ring.
         // No card/lift/sidebar/node shadows: surface color and 1px borders carry hierarchy.
         focus: "0 0 0 2px rgba(230, 0, 0, 0.35), inset 0 0 0 1px #e60000"
+      },
+      transitionTimingFunction: {
+        brand: "var(--ease-out-expo)"
+      },
+      transitionDuration: {
+        fast: "var(--t-fast)",
+        base: "var(--t-base)",
+        slow: "var(--t-slow)"
       }
     }
   },

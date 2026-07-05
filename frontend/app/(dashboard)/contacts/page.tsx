@@ -14,6 +14,7 @@ import { swrFetcher, apiFetch, ApiError } from "@/lib/api";
 import type { Contact, ContactPage, Conversation } from "@/lib/types";
 import { ChannelIcon } from "@/components/ui/ChannelIcon";
 import { Button } from "@/components/ui/button";
+import { IconBadge } from "@/components/ui/IconBadge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -343,9 +344,9 @@ function EditContactModal({
       <DialogContent className="max-w-md p-0">
         <DialogHeader>
           <div className="flex items-center gap-2.5">
-            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-canvas">
-              <Pencil size={15} className="text-brand-ink" />
-            </span>
+            <IconBadge size="sm">
+              <Pencil size={15} />
+            </IconBadge>
             <div>
               <DialogTitle>Editar contato</DialogTitle>
               <DialogDescription>
@@ -374,7 +375,7 @@ function EditContactModal({
               />
             </div>
             {error && (
-              <p className="rounded-card border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-600">
+              <p className="rounded-card border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-brand-red">
                 {error}
               </p>
             )}
@@ -448,9 +449,9 @@ function ImportModal({
       <DialogContent className="max-w-lg p-0">
         <DialogHeader>
           <div className="flex items-center gap-2.5">
-            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-canvas">
-              <Upload size={15} className="text-brand-ink" />
-            </span>
+            <IconBadge size="sm">
+              <Upload size={15} />
+            </IconBadge>
             <div>
               <DialogTitle>Importar contatos</DialogTitle>
               <DialogDescription>CSV com colunas: name, phone[, channel]</DialogDescription>
@@ -523,7 +524,7 @@ function EmptyState({ search }: { search: string }) {
     <div className="flex h-64 flex-col items-center justify-center gap-3 text-center">
       <Users size={32} className="text-brand-muted/40" />
       <div>
-        <p className="font-bold text-brand-ink">
+        <p className="card-title">
           {search ? "Nenhum resultado" : "Sem contatos"}
         </p>
         <p className="mt-1 text-xs text-brand-muted">

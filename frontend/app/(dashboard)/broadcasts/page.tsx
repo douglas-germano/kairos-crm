@@ -12,6 +12,7 @@ import {
 import { swrFetcher, apiFetch, ApiError } from "@/lib/api";
 import type { Broadcast, BroadcastDetail, Contact, ContactPage } from "@/lib/types";
 import { Button } from "@/components/ui/button";
+import { IconBadge } from "@/components/ui/IconBadge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -330,9 +331,9 @@ function CreateBroadcastModal({ open, onClose, onCreated }: {
       <DialogContent className="flex max-h-[90vh] max-w-2xl flex-col p-0">
         <DialogHeader>
           <div className="flex items-center gap-2.5">
-            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-canvas">
-              <Megaphone size={15} className="text-brand-ink" />
-            </span>
+            <IconBadge size="sm">
+              <Megaphone size={15} />
+            </IconBadge>
             <div>
               <DialogTitle>Novo broadcast</DialogTitle>
               <DialogDescription>Disparo em massa via WhatsApp</DialogDescription>
@@ -418,7 +419,7 @@ function CreateBroadcastModal({ open, onClose, onCreated }: {
             </div>
 
             {apiError && (
-              <p className="rounded-card border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-600">
+              <p className="rounded-card border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-brand-red">
                 {apiError}
               </p>
             )}
@@ -466,7 +467,7 @@ function EmptyState({ onNew }: { onNew: () => void }) {
     <div className="flex h-64 flex-col items-center justify-center gap-4 text-center">
       <Megaphone size={36} className="text-brand-muted/30" />
       <div>
-        <p className="font-black text-brand-ink">Nenhum broadcast</p>
+        <p className="card-title">Nenhum broadcast</p>
         <p className="mt-1 text-sm text-brand-muted">Crie um disparo em massa para seus contatos WhatsApp.</p>
       </div>
       <Button onClick={onNew}><Plus size={14} />Criar broadcast</Button>

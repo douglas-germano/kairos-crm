@@ -29,7 +29,8 @@
   --charcoal: #25282b;
   --ink: #151719;
   --grey: #7e7e7e;
-  --muted: #6f7680;
+  /* 5.5:1 sobre branco — margem segura acima do mínimo AA (4.5:1) para texto pequeno de 10-12px */
+  --muted: #63697a;
   --line: #e3e6ea;
   --neutral: #f2f2f2;
   --canvas: #f5f6f8;
@@ -73,7 +74,7 @@
   --secondary: 216 8% 16%;          /* charcoal #25282b  */
   --secondary-foreground: 0 0% 100%;
   --muted: 220 10% 95%;             /* neutral #f2f2f2   */
-  --muted-foreground: 216 5% 44%;   /* muted #6f7680     */
+  --muted-foreground: 224 10% 43%;  /* muted #63697a     */
   --accent: 220 10% 95%;
   --accent-foreground: 222 12% 10%;
   --destructive: 0 100% 45%;        /* same as primary   */
