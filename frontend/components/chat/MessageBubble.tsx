@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, Check, CheckCheck, FileText, RefreshCw } from "lucide-react";
 import type { Message } from "@/lib/types";
 import { cn, formatDateTime } from "@/lib/utils";
 
@@ -126,14 +126,48 @@ function VideoPlayer({ content }: { content: string }) {
   return (
     <video
       controls
-      src={content}
+      src={resolveMediaSrc(content, "video/mp4")}
       className="max-w-full max-h-64 rounded-lg"
       preload="metadata"
     />
   );
 }
 
-export function MessageBubble({ message }: { message: Message }) {
+function DocumentFile({ content, fileName }: { content: string; fileName?: string | null }) {
+  if (isPlaceholder(content)) {
+    return (
+      <span className="flex items-center gap-1.5 ui-meta opacity-70">
+        📄 Documento
+      </span>
+    );
+  }
+  return (
+    <a
+      href={content}
+      download={fileName || "documento"}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="flex items-center gap-2 rounded-card border border-brand-line/60 bg-black/5 px-3 py-2 hover:bg-black/10"
+    >
+      <FileText size={20} className="shrink-0" />
+      <span className="ui-body truncate">{fileName || "Documento"}</span>
+    </a>
+  );
+}
+
+function StatusTicks({ status }: { status: Message["status"] }) {
+  if (status === "read") return <CheckCheck size={13} className="text-sky-300" />;
+  if (status === "delivered") return <CheckCheck size={13} />;
+  return <Check size={13} />;
+}
+
+export function MessageBubble({
+  message,
+  onRetry,
+}: {
+  message: Message;
+  onRetry?: (messageId: number) => void;
+}) {
   const outbound = message.direction === "outbound";
   const failed = message.status === "failed";
   const { content_type, content } = message;
@@ -142,6 +176,7 @@ export function MessageBubble({ message }: { message: Message }) {
   const isImage = content_type === "image";
   const isSticker = content_type === "sticker";
   const isVideo = content_type === "video";
+  const isDocument = content_type === "template";
 
   // Stickers render without the standard bubble padding / background
   const isNakedMedia = isSticker;
@@ -195,6 +230,12 @@ export function MessageBubble({ message }: { message: Message }) {
         {captionNode}
       </>
     );
+    if (isDocument) return (
+      <>
+        <DocumentFile content={content} fileName={message.file_name} />
+        {captionNode}
+      </>
+    );
     return <p className="ui-body whitespace-pre-wrap">{content}</p>;
   }
 
@@ -206,6 +247,16 @@ export function MessageBubble({ message }: { message: Message }) {
           <div className={metaClass}>
             {failed && <AlertCircle size={11} />}
             {failed ? "Falha na entrega" : formatDateTime(message.created_at)}
+            {outbound && !failed && <StatusTicks status={message.status} />}
+            {failed && onRetry && (
+              <button
+                type="button"
+                onClick={() => onRetry(message.id)}
+                className="focus-ring ml-1 flex items-center gap-1 rounded-pill bg-brand-red/10 px-1.5 py-0.5 font-bold text-brand-red hover:bg-brand-red/20"
+              >
+                <RefreshCw size={10} /> Reenviar
+              </button>
+            )}
           </div>
         )}
         {isNakedMedia && (

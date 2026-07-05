@@ -3,7 +3,7 @@ import hmac
 import logging
 from datetime import datetime, timezone
 from flask import Blueprint, request, jsonify, current_app
-from app.extensions import db, rq_queue
+from app.extensions import db, rq_queue, socketio
 from app.models import Integration, Contact, Conversation, Message
 
 logger = logging.getLogger(__name__)
@@ -118,11 +118,21 @@ def _handle_messaging_event(ig_user_id: str, event: dict):
     )
     db.session.add(msg)
     conversation.last_message_at = datetime.now(timezone.utc)
+    conversation.unread_count = (conversation.unread_count or 0) + 1
     db.session.commit()
 
     logger.info("Mensagem Instagram salva", extra={
         "message_id": msg.id, "conversation_id": conversation.id
     })
+
+    try:
+        socketio.emit(
+            "new_message",
+            {"conversation_id": conversation.id, "message": msg.to_dict()},
+            room=f"workspace_{workspace_id}",
+        )
+    except Exception as exc:
+        logger.warning("Falha ao emitir evento SocketIO new_message | conv=%s error=%s", conversation.id, exc)
 
     # Enfileira para processamento de IA
     try:
@@ -140,7 +150,7 @@ def _find_integration(ig_user_id: str) -> Integration | None:
     return Integration.query.filter(
         Integration.channel == "instagram",
         Integration.status == "active",
-        Integration.meta["ig_user_id"].astext == ig_user_id,
+        Integration.meta["ig_user_id"].as_string() == ig_user_id,
     ).first()
 
 

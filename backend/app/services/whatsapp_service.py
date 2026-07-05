@@ -75,23 +75,36 @@ class WhatsAppService:
             logger.error("Falha ao enviar áudio WhatsApp", extra={"to": to, "error": str(exc)})
             raise
 
-    def send_media(self, to: str, media_url: str, caption: str = "", media_type: str = "image") -> dict:
+    def send_media(
+        self,
+        to: str,
+        media: str,
+        caption: str = "",
+        media_type: str = "image",
+        file_name: str | None = None,
+    ) -> dict:
         """
-        Envia mídia (image, audio, video, document).
+        Envia mídia (image, video, document). O campo "media" aceita tanto uma
+        URL pública quanto o conteúdo bruto em base64 (a Evolution API detecta
+        automaticamente o formato).
         :param to: número no formato 5565999999999
-        :param media_url: URL pública da mídia
+        :param media: URL pública ou base64 da mídia
         :param caption: legenda (opcional)
-        :param media_type: image | audio | video | document
+        :param media_type: image | video | document
+        :param file_name: nome do arquivo (relevante para documentos)
         """
         url = f"{self.api_url}/message/sendMedia/{self.instance_name}"
+        media_message = {
+            "mediatype": media_type,
+            "media": media,
+            "caption": caption,
+        }
+        if file_name:
+            media_message["fileName"] = file_name
         payload = {
             "number": f"{to}@s.whatsapp.net",
             "options": {"delay": 1200},
-            "mediaMessage": {
-                "mediatype": media_type,
-                "media": media_url,
-                "caption": caption,
-            },
+            "mediaMessage": media_message,
         }
         try:
             resp = requests.post(url, json=payload, headers=self.headers, timeout=30)

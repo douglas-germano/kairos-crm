@@ -24,11 +24,15 @@ type Props = {
 };
 
 export function ChatWindow({ conversation, onConversationChange, onConversationDeleted }: Props) {
-  const { workspace } = useAuth(false);
+  const { workspace, user } = useAuth(false);
   const [sendError, setSendError] = useState<string | null>(null);
   const [syncState, setSyncState] = useState<SyncState>("idle");
   const [syncCount, setSyncCount] = useState<number | null>(null);
+  const [typingUser, setTypingUser] = useState<string | null>(null);
+  const [agentTyping, setAgentTyping] = useState(false);
   const autoSyncedRef = useRef<Set<number>>(new Set());
+  const readMarkedRef = useRef<Set<number>>(new Set());
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const prevScrollHeightRef = useRef<number>(0);
   const isLoadingMoreRef = useRef(false);
@@ -114,7 +118,19 @@ export function ChatWindow({ conversation, onConversationChange, onConversationD
     scrollToBottomRef.current = true;
     setSyncState("idle");
     setSyncCount(null);
+    setTypingUser(null);
+    setAgentTyping(false);
   }, [conversation?.id]);
+
+  // ── Marca a conversa como lida ao abrir (uma vez por conversa com não lidas) ──
+  useEffect(() => {
+    if (!conversation || !conversation.unread_count || readMarkedRef.current.has(conversation.id)) return;
+    readMarkedRef.current.add(conversation.id);
+    void apiFetch(`/api/conversations/${conversation.id}/read`, { method: "POST" }).then(() => {
+      onConversationChange();
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [conversation?.id, conversation?.unread_count]);
 
   // ── Scroll após mensagens carregarem ──────────────────────────────────────
   useEffect(() => {
@@ -167,11 +183,57 @@ export function ChatWindow({ conversation, onConversationChange, onConversationD
     [conversation?.id, mutate]
   );
 
+  const handleStatusUpdated = useCallback(
+    (payload: unknown) => {
+      const p = payload as { conversation_id?: number };
+      if (p?.conversation_id === conversation?.id) {
+        void mutate();
+      }
+    },
+    [conversation?.id, mutate]
+  );
+
+  const handleOperatorTyping = useCallback(
+    (payload: unknown) => {
+      const p = payload as { conversation_id?: number; user_id?: number; user_name?: string | null; is_typing?: boolean };
+      if (p?.conversation_id !== conversation?.id || p?.user_id === user?.id) return;
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+      if (p.is_typing) {
+        setTypingUser(p.user_name || "Alguém");
+        typingTimeoutRef.current = setTimeout(() => setTypingUser(null), 5000);
+      } else {
+        setTypingUser(null);
+      }
+    },
+    [conversation?.id, user?.id]
+  );
+
+  const handleAgentTyping = useCallback(
+    (payload: unknown) => {
+      const p = payload as { conversation_id?: number; is_typing?: boolean };
+      if (p?.conversation_id !== conversation?.id) return;
+      setAgentTyping(Boolean(p.is_typing));
+    },
+    [conversation?.id]
+  );
+
+  useEffect(() => {
+    return () => {
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    };
+  }, []);
+
   useSocket(
     workspace?.id,
     useMemo(
-      () => ({ onNewMessage: handleNewMessage, onAgentResponseSent: handleNewMessage }),
-      [handleNewMessage]
+      () => ({
+        onNewMessage: handleNewMessage,
+        onAgentResponseSent: handleNewMessage,
+        onMessageStatusUpdated: handleStatusUpdated,
+        onOperatorTyping: handleOperatorTyping,
+        onAgentTyping: handleAgentTyping,
+      }),
+      [handleNewMessage, handleStatusUpdated, handleOperatorTyping, handleAgentTyping]
     )
   );
 
@@ -184,19 +246,39 @@ export function ChatWindow({ conversation, onConversationChange, onConversationD
     onConversationChange();
   }
 
-  async function sendMessage(content: string, contentType = "text") {
+  async function sendMessage(
+    content: string,
+    contentType = "text",
+    options?: { caption?: string; fileName?: string }
+  ) {
     if (!conversation) return;
     setSendError(null);
     try {
       await apiFetch<Message>(`/api/messages/${conversation.id}`, {
         method: "POST",
-        body: JSON.stringify({ content, content_type: contentType }),
+        body: JSON.stringify({
+          content,
+          content_type: contentType,
+          caption: options?.caption,
+          file_name: options?.fileName,
+        }),
       });
     } catch (err: unknown) {
       setSendError(err instanceof Error ? err.message : "Falha ao enviar mensagem");
     } finally {
       await mutate();
       onConversationChange();
+    }
+  }
+
+  async function retryMessage(messageId: number) {
+    setSendError(null);
+    try {
+      await apiFetch<Message>(`/api/messages/${messageId}/retry`, { method: "POST" });
+    } catch (err: unknown) {
+      setSendError(err instanceof Error ? err.message : "Falha ao reenviar mensagem");
+    } finally {
+      await mutate();
     }
   }
 
@@ -334,7 +416,7 @@ export function ChatWindow({ conversation, onConversationChange, onConversationD
         ) : (
           <div className="space-y-3">
             {messages.map((message) => (
-              <MessageBubble key={message.id} message={message} />
+              <MessageBubble key={message.id} message={message} onRetry={retryMessage} />
             ))}
           </div>
         )}
@@ -342,6 +424,16 @@ export function ChatWindow({ conversation, onConversationChange, onConversationD
 
       {/* Rodapé */}
       <div className="shrink-0">
+        {(typingUser || agentTyping) && (
+          <div className="flex items-center gap-1.5 border-t border-brand-line bg-white/95 px-4 py-1.5 text-xs font-semibold text-brand-muted">
+            <span className="flex gap-0.5">
+              <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-current [animation-delay:-0.3s]" />
+              <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-current [animation-delay:-0.15s]" />
+              <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-current" />
+            </span>
+            {agentTyping ? "IA está digitando…" : `${typingUser} está digitando…`}
+          </div>
+        )}
         {sendError && (
           <div className="flex items-center gap-2 border-t border-brand-red200 bg-brand-red50 px-4 py-2 text-xs font-semibold text-brand-red">
             <AlertCircle size={14} className="shrink-0" />
@@ -351,7 +443,11 @@ export function ChatWindow({ conversation, onConversationChange, onConversationD
             </button>
           </div>
         )}
-        <MessageInput onSend={(content, type) => sendMessage(content, type)} />
+        <MessageInput
+          onSend={(content, type, options) => sendMessage(content, type, options)}
+          workspaceId={workspace?.id}
+          conversationId={conversation.id}
+        />
       </div>
     </section>
   );

@@ -62,6 +62,49 @@ def list_messages(conversation_id: int):
     return jsonify([m.to_dict() for m in messages])
 
 
+_MEDIA_TYPES = {"image", "video", "template"}  # "template" = documento, mesma convenção do inbound
+_MAX_MEDIA_BYTES = 16 * 1024 * 1024  # limite prático de mídia do WhatsApp/Instagram
+
+
+def _extract_base64_payload(content: str) -> str:
+    """Remove o prefixo "data:mime;base64," se presente, retornando o base64 puro."""
+    if content.startswith("data:") and ";base64," in content:
+        return content.split(",", 1)[1]
+    return content
+
+
+def _send_via_channel(integration: Integration, channel: str, contact, msg: "Message", file_name: str | None = None) -> str | None:
+    """Envia `msg` pelo canal correto. Retorna o external_id ou lança em caso de falha."""
+    content, content_type = msg.content, msg.content_type
+    if channel == "whatsapp":
+        from app.services.whatsapp_service import get_whatsapp_service
+        svc = get_whatsapp_service(integration)
+        if content_type == "audio":
+            result = svc.send_audio(contact.external_id, content)
+        elif content_type in _MEDIA_TYPES:
+            media_type = "document" if content_type == "template" else content_type
+            result = svc.send_media(
+                contact.external_id, _extract_base64_payload(content),
+                caption=msg.caption or "", media_type=media_type, file_name=file_name,
+            )
+        else:
+            result = svc.send_text(contact.external_id, content)
+        return result.get("key", {}).get("id") if isinstance(result, dict) else None
+
+    if channel == "instagram":
+        from app.services.instagram_service import get_instagram_service
+        svc = get_instagram_service(integration)
+        if content_type in {"image", "video"}:
+            result = svc.send_media(contact.external_id, _extract_base64_payload(content), media_type=content_type)
+        elif content_type in ("audio", "template"):
+            raise ValueError(f"Instagram não suporta envio de {content_type}")
+        else:
+            result = svc.send_text(contact.external_id, content)
+        return result.get("message_id") if isinstance(result, dict) else None
+
+    return None
+
+
 @bp.post("/<int:conversation_id>")
 @jwt_required()
 def send_message(conversation_id: int):
@@ -72,10 +115,14 @@ def send_message(conversation_id: int):
         return jsonify({"error": "Workspace não encontrado", "code": "NO_WORKSPACE"}), 404
 
     data = request.get_json() or {}
-    content = data.get("content", "").strip()
+    content = (data.get("content") or "").strip()
     content_type = data.get("content_type", "text")
+    caption = (data.get("caption") or "").strip() or None
+    file_name = (data.get("file_name") or "").strip() or None
     if not content:
         return jsonify({"error": "content é obrigatório", "code": "MISSING_CONTENT"}), 400
+    if content_type in _MEDIA_TYPES and len(content) > _MAX_MEDIA_BYTES * 4 // 3:
+        return jsonify({"error": "Arquivo excede o tamanho máximo permitido (16MB)", "code": "MEDIA_TOO_LARGE"}), 413
 
     conv = Conversation.query.filter_by(
         id=conversation_id, workspace_id=workspace_id
@@ -93,6 +140,8 @@ def send_message(conversation_id: int):
         direction="outbound",
         content=content,
         content_type=content_type,
+        caption=caption,
+        file_name=file_name,
         status="sent",
         external_id=None,
     )
@@ -103,21 +152,7 @@ def send_message(conversation_id: int):
     # Tenta enviar pelo canal — falhas não removem a mensagem do banco
     if integration:
         try:
-            if channel == "whatsapp":
-                from app.services.whatsapp_service import get_whatsapp_service
-                svc = get_whatsapp_service(integration)
-                if content_type == "audio":
-                    result = svc.send_audio(contact.external_id, content)
-                else:
-                    result = svc.send_text(contact.external_id, content)
-                ext_id = result.get("key", {}).get("id") if isinstance(result, dict) else None
-                msg.external_id = ext_id
-            elif channel == "instagram":
-                from app.services.instagram_service import get_instagram_service
-                svc = get_instagram_service(integration)
-                result = svc.send_text(contact.external_id, content)
-                ext_id = result.get("message_id") if isinstance(result, dict) else None
-                msg.external_id = ext_id
+            msg.external_id = _send_via_channel(integration, channel, contact, msg, file_name=file_name)
             db.session.commit()
         except Exception as exc:
             logger.error("Falha ao enviar mensagem pelo canal | channel=%s error=%s", channel, str(exc))
@@ -141,17 +176,66 @@ def send_message(conversation_id: int):
     return jsonify(msg.to_dict()), 201
 
 
+@bp.post("/<int:message_id>/retry")
+@jwt_required()
+def retry_message(message_id: int):
+    """Reenvia uma mensagem outbound que falhou anteriormente."""
+    user_id = int(get_jwt_identity())
+    workspace_id = _get_workspace_id(user_id)
+    if not workspace_id:
+        return jsonify({"error": "Workspace não encontrado", "code": "NO_WORKSPACE"}), 404
+
+    msg = (
+        Message.query.join(Conversation)
+        .filter(Message.id == message_id, Conversation.workspace_id == workspace_id)
+        .first()
+    )
+    if not msg:
+        return jsonify({"error": "Mensagem não encontrada", "code": "NOT_FOUND"}), 404
+    if msg.direction != "outbound" or msg.status != "failed":
+        return jsonify({"error": "Apenas mensagens com falha de envio podem ser reenviadas", "code": "INVALID_STATE"}), 400
+
+    conv = msg.conversation
+    channel = conv.channel
+    contact = conv.contact
+    integration = Integration.query.filter_by(
+        workspace_id=workspace_id, channel=channel, status="active"
+    ).first()
+    if not integration:
+        return jsonify({"error": "Nenhuma integração ativa para reenviar", "code": "NO_INTEGRATION"}), 400
+
+    try:
+        msg.external_id = _send_via_channel(integration, channel, contact, msg, file_name=msg.file_name)
+        msg.status = "sent"
+        db.session.commit()
+    except Exception as exc:
+        logger.error("Falha ao reenviar mensagem | message_id=%s error=%s", message_id, str(exc))
+        db.session.commit()
+        return jsonify({"error": "Falha ao reenviar mensagem", "code": "SEND_FAILED"}), 502
+
+    try:
+        socketio.emit(
+            "message_status_updated",
+            {"conversation_id": conv.id, "message_id": msg.id, "status": msg.status},
+            room=f"workspace_{workspace_id}",
+        )
+    except Exception as exc:
+        logger.warning("Falha ao emitir evento SocketIO | error=%s", exc)
+
+    return jsonify(msg.to_dict())
+
+
 # ── Helpers para parsear mensagens da Evolution API ────────────────────────────
 
-def _extract_content(msg_obj: dict, instance_name: str | None = None) -> tuple[str, str, str]:
+def _extract_content(msg_obj: dict, instance_name: str | None = None) -> tuple[str, str, str, str]:
     """
-    Extrai (content, content_type) de um objeto de mensagem da Evolution API.
-    Retorna ("", "text") se não reconhecer o tipo.
+    Extrai (content, content_type, caption, file_name) de um objeto de mensagem da Evolution API.
+    Retorna ("", "text", "", "") se não reconhecer o tipo.
     """
     m = msg_obj.get("message") or {}
 
     if text := (m.get("conversation") or (m.get("extendedTextMessage") or {}).get("text", "")):
-        return text, "text", ""
+        return text, "text", "", ""
     if img := m.get("imageMessage"):
         return _extract_media_content(msg_obj, img, "image", "[imagem]", instance_name)
     if sticker := m.get("stickerMessage"):
@@ -163,7 +247,7 @@ def _extract_content(msg_obj: dict, instance_name: str | None = None) -> tuple[s
     if doc := m.get("documentMessage"):
         return _extract_media_content(msg_obj, doc, "template", "[documento]", instance_name)
 
-    return "", "text", ""
+    return "", "text", "", ""
 
 
 def _extract_media_content(
@@ -172,17 +256,20 @@ def _extract_media_content(
     content_type: str,
     placeholder: str,
     instance_name: str | None = None,
-) -> tuple[str, str, str]:
+) -> tuple[str, str, str, str]:
     caption = _extract_caption(media_obj)
+    file_name = _extract_file_name(media_obj)
     if base64_content := media_obj.get("base64"):
-        return _media_data_url(base64_content, media_obj.get("mimetype") or media_obj.get("mimeType"), content_type), content_type, caption
+        content = _media_data_url(base64_content, media_obj.get("mimetype") or media_obj.get("mimeType"), content_type)
+        return content, content_type, caption, file_name
 
     if instance_name:
         try:
             from app.services import evolution as evo_svc
             media = evo_svc.get_media_base64(instance_name, raw_msg)
             if media.get("base64"):
-                return _media_data_url(media["base64"], media.get("mimetype") or media_obj.get("mimetype"), content_type), content_type, caption
+                content = _media_data_url(media["base64"], media.get("mimetype") or media_obj.get("mimetype"), content_type)
+                return content, content_type, caption, file_name
             logger.warning(
                 "Evolution não retornou base64 de mídia | ext_id=%s content_type=%s media_keys=%s",
                 (raw_msg.get("key") or {}).get("id"),
@@ -197,16 +284,20 @@ def _extract_media_content(
             )
 
     if thumbnail := _extract_thumbnail(media_obj):
-        return _media_data_url(thumbnail, "image/jpeg", "image"), content_type, caption
+        return _media_data_url(thumbnail, "image/jpeg", "image"), content_type, caption, file_name
 
     if direct_url := _extract_public_media_url(media_obj):
-        return direct_url, content_type, caption
+        return direct_url, content_type, caption, file_name
 
-    return caption or placeholder, content_type, ""
+    return caption or placeholder, content_type, "", file_name
 
 
 def _extract_caption(media_obj: dict) -> str:
     return (media_obj.get("caption") or media_obj.get("title") or "").strip()
+
+
+def _extract_file_name(media_obj: dict) -> str:
+    return (media_obj.get("fileName") or media_obj.get("filename") or "").strip()
 
 
 def _extract_public_media_url(media_obj: dict) -> str:
@@ -328,7 +419,7 @@ def sync_messages(conversation_id: int):
 
             existing_msg = existing_messages.get(ext_id)
             if existing_msg:
-                content, content_type, caption = _extract_content(raw, instance_name)
+                content, content_type, caption, file_name = _extract_content(raw, instance_name)
                 if _should_refresh_media(existing_msg):
                     if content and not _is_placeholder(content):
                         existing_msg.content = content
@@ -336,9 +427,11 @@ def sync_messages(conversation_id: int):
                         updated_media += 1
                 if caption and not existing_msg.caption:
                     existing_msg.caption = caption
+                if file_name and not existing_msg.file_name:
+                    existing_msg.file_name = file_name
                 continue
 
-            content, content_type, caption = _extract_content(raw, instance_name)
+            content, content_type, caption, file_name = _extract_content(raw, instance_name)
             if not content:
                 continue
 
@@ -352,6 +445,7 @@ def sync_messages(conversation_id: int):
                 content=content,
                 content_type=content_type,
                 caption=caption or None,
+                file_name=file_name or None,
                 status="read" if direction == "inbound" else "delivered",
                 external_id=ext_id,
                 created_at=created_at,
