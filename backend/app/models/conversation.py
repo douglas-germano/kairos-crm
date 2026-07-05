@@ -14,6 +14,7 @@ class Conversation(db.Model):
     assigned_to = db.Column(db.Integer, db.ForeignKey("users.id"))
     ai_enabled = db.Column(db.Boolean, default=False)
     synced_at = db.Column(db.DateTime, nullable=True)
+    unread_count = db.Column(db.Integer, default=0, nullable=False)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
     workspace = db.relationship("Workspace", back_populates="conversations")
@@ -31,6 +32,7 @@ class Conversation(db.Model):
             "assigned_to": self.assigned_to,
             "created_at": self.created_at.isoformat(),
             "synced_at": self.synced_at.isoformat() if self.synced_at else None,
+            "unread_count": self.unread_count or 0,
         }
         if include_contact:
             data["contact"] = self.contact.to_dict()

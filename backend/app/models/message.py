@@ -9,8 +9,9 @@ class Message(db.Model):
     conversation_id = db.Column(db.Integer, db.ForeignKey("conversations.id"), nullable=False)
     direction = db.Column(db.String(10), nullable=False)    # inbound | outbound
     content = db.Column(db.Text, nullable=False)
-    content_type = db.Column(db.String(20), default="text") # text | image | audio | video | template
+    content_type = db.Column(db.String(20), default="text") # text | image | audio | video | template | sticker
     caption = db.Column(db.Text)
+    file_name = db.Column(db.String(255))
     status = db.Column(db.String(20), default="sent")        # sent | delivered | read | failed
     external_id = db.Column(db.String(255))
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
@@ -25,6 +26,7 @@ class Message(db.Model):
             "content": self.content,
             "content_type": self.content_type,
             "caption": self.caption,
+            "file_name": self.file_name,
             "status": self.status,
             "external_id": self.external_id,
             "created_at": self.created_at.isoformat(),

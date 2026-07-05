@@ -15,6 +15,25 @@ bp = Blueprint("webhook_whatsapp", __name__)
 # Eventos que atualizam o status de conexão
 _MESSAGE_EVENTS = {"messages.upsert", "MESSAGES_UPSERT"}
 _CONNECTION_EVENTS = {"connection.update", "CONNECTION_UPDATE"}
+_STATUS_EVENTS = {"messages.update", "MESSAGES_UPDATE"}
+
+# Mapeia os status de ACK do WhatsApp (Baileys/Evolution API) para o nosso enum de status.
+# Baileys usa tanto strings quanto códigos numéricos dependendo da versão/evento.
+_ACK_STATUS_MAP = {
+    "ERROR": "failed",
+    "PENDING": "sent",
+    "SERVER_ACK": "sent",
+    "DELIVERY_ACK": "delivered",
+    "READ": "read",
+    "PLAYED": "read",
+    "0": "failed",
+    "1": "sent",
+    "2": "sent",
+    "3": "delivered",
+    "4": "read",
+    "5": "read",
+}
+_STATUS_ORDER = {"sent": 0, "delivered": 1, "read": 2}
 
 
 @bp.post("/whatsapp")
@@ -35,6 +54,8 @@ def receive():
             _handle_messages(instance_name, data.get("data", {}))
         elif event in _CONNECTION_EVENTS:
             _handle_connection_update(instance_name, data.get("data", {}))
+        elif event in _STATUS_EVENTS:
+            _handle_status_updates(instance_name, data.get("data", {}))
         else:
             logger.debug("Evento WhatsApp ignorado", extra={"event": event})
     except Exception as exc:
@@ -84,6 +105,66 @@ def _handle_connection_update(instance_name: str, data: dict):
     )
 
 
+def _handle_status_updates(instance_name: str, data: dict):
+    """Processa eventos de ACK (sent/delivered/read) de mensagens outbound."""
+    items: list[dict]
+    if isinstance(data, list):
+        items = [item for item in data if isinstance(item, dict)]
+    elif isinstance(data, dict):
+        nested = data.get("updates") or data.get("messages")
+        items = [item for item in nested if isinstance(item, dict)] if isinstance(nested, list) else [data]
+    else:
+        items = []
+
+    for item in items:
+        _handle_status_update(instance_name, item)
+
+
+def _handle_status_update(instance_name: str, item: dict):
+    key = item.get("key") or {}
+    ext_id = key.get("id") or item.get("keyId") or item.get("id")
+    if not ext_id:
+        return
+
+    raw_status = item.get("status") or (item.get("update") or {}).get("status") or key.get("status")
+    if raw_status is None:
+        return
+
+    new_status = _ACK_STATUS_MAP.get(str(raw_status).upper())
+    if not new_status:
+        logger.debug("Status de ACK desconhecido", extra={"status": raw_status, "ext_id": ext_id})
+        return
+
+    integration = _find_integration_any_status(instance_name)
+    if not integration:
+        return
+
+    msg = (
+        Message.query.join(Conversation)
+        .filter(Conversation.workspace_id == integration.workspace_id, Message.external_id == ext_id)
+        .first()
+    )
+    if not msg or msg.status == new_status:
+        return
+
+    # Evita regressão de status quando eventos chegam fora de ordem
+    if msg.status in _STATUS_ORDER and new_status in _STATUS_ORDER:
+        if _STATUS_ORDER[new_status] < _STATUS_ORDER[msg.status]:
+            return
+
+    msg.status = new_status
+    db.session.commit()
+
+    try:
+        socketio.emit(
+            "message_status_updated",
+            {"conversation_id": msg.conversation_id, "message_id": msg.id, "status": msg.status},
+            room=f"workspace_{integration.workspace_id}",
+        )
+    except Exception as exc:
+        logger.warning("Falha ao emitir message_status_updated | msg=%s error=%s", msg.id, exc)
+
+
 def _handle_messages(instance_name: str, data: dict):
     """Normaliza payloads da Evolution e processa uma ou mais mensagens."""
     handled = 0
@@ -126,7 +207,7 @@ def _handle_message(instance_name: str, msg_data: dict):
     message_obj = msg_data.get("message", {})
     push_name = msg_data.get("pushName", contact_external_id)
 
-    content, content_type, caption = _extract_message_content(message_obj, msg_data, instance_name)
+    content, content_type, caption, file_name = _extract_message_content(message_obj, msg_data, instance_name)
 
     if not content:
         _mark_webhook_ignored(
@@ -224,11 +305,14 @@ def _handle_message(instance_name: str, msg_data: dict):
         content=content,
         content_type=content_type,
         caption=caption or None,
+        file_name=file_name or None,
         status="sent" if from_me else "delivered",
         external_id=external_id,
     )
     db.session.add(msg)
     conversation.last_message_at = datetime.now(timezone.utc)
+    if not from_me:
+        conversation.unread_count = (conversation.unread_count or 0) + 1
     db.session.commit()
 
     logger.info(
@@ -282,8 +366,8 @@ def _message_items(data) -> list[dict]:
     return [data] if isinstance(data.get("key"), dict) or isinstance(data.get("message"), dict) else []
 
 
-def _extract_message_content(message_obj: dict, raw_msg: dict | None = None, instance_name: str | None = None) -> tuple[str, str, str]:
-    """Extrai (content, content_type) de um objeto de mensagem da Evolution API."""
+def _extract_message_content(message_obj: dict, raw_msg: dict | None = None, instance_name: str | None = None) -> tuple[str, str, str, str]:
+    """Extrai (content, content_type, caption, file_name) de um objeto de mensagem da Evolution API."""
     m = message_obj or {}
 
     for wrapper_key in ("ephemeralMessage", "viewOnceMessage", "documentWithCaptionMessage"):
@@ -292,7 +376,7 @@ def _extract_message_content(message_obj: dict, raw_msg: dict | None = None, ins
             return _extract_message_content(wrapped, raw_msg, instance_name)
 
     if text := (m.get("conversation") or (m.get("extendedTextMessage") or {}).get("text", "")):
-        return text, "text", ""
+        return text, "text", "", ""
 
     if img := m.get("imageMessage"):
         return _extract_media_content(raw_msg or {"message": message_obj}, img, "image", "[imagem]", instance_name)
@@ -311,9 +395,9 @@ def _extract_message_content(message_obj: dict, raw_msg: dict | None = None, ins
 
     if reaction := m.get("reactionMessage"):
         data = reaction.get("text") or ""
-        return data or "[reação]", "text", ""
+        return data or "[reação]", "text", "", ""
 
-    return "", "text", ""
+    return "", "text", "", ""
 
 
 def _extract_media_content(
@@ -322,17 +406,20 @@ def _extract_media_content(
     content_type: str,
     placeholder: str,
     instance_name: str | None = None,
-) -> tuple[str, str, str]:
+) -> tuple[str, str, str, str]:
     caption = _extract_caption(media_obj)
+    file_name = _extract_file_name(media_obj)
     if base64_content := media_obj.get("base64"):
-        return _media_data_url(base64_content, media_obj.get("mimetype") or media_obj.get("mimeType"), content_type), content_type, caption
+        content = _media_data_url(base64_content, media_obj.get("mimetype") or media_obj.get("mimeType"), content_type)
+        return content, content_type, caption, file_name
 
     if instance_name:
         try:
             from app.services import evolution as evo_svc
             media = evo_svc.get_media_base64(instance_name, raw_msg)
             if media.get("base64"):
-                return _media_data_url(media["base64"], media.get("mimetype") or media_obj.get("mimetype"), content_type), content_type, caption
+                content = _media_data_url(media["base64"], media.get("mimetype") or media_obj.get("mimetype"), content_type)
+                return content, content_type, caption, file_name
             logger.warning(
                 "Evolution não retornou base64 de mídia | ext_id=%s content_type=%s media_keys=%s",
                 (raw_msg.get("key") or {}).get("id"),
@@ -347,16 +434,20 @@ def _extract_media_content(
             )
 
     if thumbnail := _extract_thumbnail(media_obj):
-        return _media_data_url(thumbnail, "image/jpeg", "image"), content_type, caption
+        return _media_data_url(thumbnail, "image/jpeg", "image"), content_type, caption, file_name
 
     if direct_url := _extract_public_media_url(media_obj):
-        return direct_url, content_type, caption
+        return direct_url, content_type, caption, file_name
 
-    return caption or placeholder, content_type, ""
+    return caption or placeholder, content_type, "", file_name
 
 
 def _extract_caption(media_obj: dict) -> str:
     return (media_obj.get("caption") or media_obj.get("title") or "").strip()
+
+
+def _extract_file_name(media_obj: dict) -> str:
+    return (media_obj.get("fileName") or media_obj.get("filename") or "").strip()
 
 
 def _extract_public_media_url(media_obj: dict) -> str:
@@ -413,7 +504,7 @@ def _find_integration(instance_name: str) -> Integration | None:
     return Integration.query.filter(
         Integration.channel == "whatsapp",
         Integration.status == "active",
-        Integration.meta["instance_name"].astext == instance_name,
+        Integration.meta["instance_name"].as_string() == instance_name,
     ).first()
 
 
@@ -421,7 +512,7 @@ def _find_integration_any_status(instance_name: str) -> Integration | None:
     """Busca integração por instance_name independente do status."""
     return Integration.query.filter(
         Integration.channel == "whatsapp",
-        Integration.meta["instance_name"].astext == instance_name,
+        Integration.meta["instance_name"].as_string() == instance_name,
     ).first()
 
 

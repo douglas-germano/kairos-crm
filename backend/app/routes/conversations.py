@@ -369,6 +369,34 @@ def update_conversation(conversation_id: int):
     return jsonify(conv.to_dict(include_contact=True))
 
 
+@bp.post("/<int:conversation_id>/read")
+@jwt_required()
+def mark_read(conversation_id: int):
+    """Zera o contador de mensagens não lidas ao abrir a conversa."""
+    user_id = int(get_jwt_identity())
+    workspace_id = _get_workspace_id(user_id)
+    if not workspace_id:
+        return jsonify({"error": "Workspace nao encontrado", "code": "NO_WORKSPACE"}), 404
+
+    conv = Conversation.query.filter_by(
+        id=conversation_id, workspace_id=workspace_id
+    ).first_or_404()
+
+    if conv.unread_count:
+        conv.unread_count = 0
+        db.session.commit()
+        try:
+            socketio.emit(
+                "conversation_updated",
+                {"conversation_id": conv.id, "fields": {"unread_count": 0}},
+                room=f"workspace_{workspace_id}",
+            )
+        except Exception as exc:
+            logger.warning("Falha ao emitir evento SocketIO | error=%s", exc)
+
+    return jsonify({"id": conv.id, "unread_count": conv.unread_count})
+
+
 @bp.patch("/<int:conversation_id>/ai")
 @jwt_required()
 def toggle_ai(conversation_id: int):

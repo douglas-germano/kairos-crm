@@ -39,6 +39,7 @@ export type Conversation = {
   assigned_to: number | null;
   created_at: string;
   synced_at: string | null;
+  unread_count: number;
   contact?: Contact;
 };
 
@@ -63,6 +64,7 @@ export type Message = {
   content: string;
   content_type: "text" | "image" | "audio" | "video" | "template" | "sticker";
   caption: string | null;
+  file_name: string | null;
   status: "sent" | "delivered" | "read" | "failed";
   external_id: string | null;
   created_at: string;

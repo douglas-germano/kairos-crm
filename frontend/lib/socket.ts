@@ -32,3 +32,13 @@ export function joinWorkspace(workspaceId: number) {
 export function leaveWorkspace(workspaceId: number) {
   getSocket().emit("leave_workspace", { workspace_id: workspaceId });
 }
+
+export function emitTyping(workspaceId: number, conversationId: number, isTyping: boolean) {
+  const token = getAccessToken();
+  getSocket().emit("typing", {
+    workspace_id: workspaceId,
+    conversation_id: conversationId,
+    is_typing: isTyping,
+    token,
+  });
+}

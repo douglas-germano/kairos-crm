@@ -180,6 +180,7 @@ class FlowEngine:
 
     def _handle_ai_node(self, data: dict, node_id: str):
         """Aciona o agente de IA com prompt customizado para esse passo."""
+        from app.extensions import socketio
         from app.services.ai_agent_service import get_active_agent_for_conversation, generate_reply
         from app.models import Agent
 
@@ -188,23 +189,38 @@ class FlowEngine:
             logger.warning("Nenhum agente ativo encontrado para AINode", extra={"node_id": node_id})
             return
 
-        custom_prompt = data.get("system_prompt")
-        if custom_prompt:
-            # Usa o prompt customizado do node, mantendo os outros campos do agente
-            original_prompt = agent.system_prompt
-            agent.system_prompt = custom_prompt
-            try:
+        workspace_id = self.conversation.workspace_id
+        self._emit_agent_typing(socketio, workspace_id, True)
+        try:
+            custom_prompt = data.get("system_prompt")
+            if custom_prompt:
+                # Usa o prompt customizado do node, mantendo os outros campos do agente
+                original_prompt = agent.system_prompt
+                agent.system_prompt = custom_prompt
+                try:
+                    reply = generate_reply(agent, self.conversation)
+                finally:
+                    agent.system_prompt = original_prompt
+            else:
                 reply = generate_reply(agent, self.conversation)
-            finally:
-                agent.system_prompt = original_prompt
-        else:
-            reply = generate_reply(agent, self.conversation)
+        finally:
+            self._emit_agent_typing(socketio, workspace_id, False)
 
         if reply:
             self._send_reply(reply)
 
         for next_id in self._get_next_node_ids(node_id):
             self._execute_node(next_id)
+
+    def _emit_agent_typing(self, socketio, workspace_id: int, is_typing: bool):
+        try:
+            socketio.emit(
+                "agent_typing",
+                {"conversation_id": self.conversation.id, "is_typing": is_typing},
+                room=f"workspace_{workspace_id}",
+            )
+        except Exception:
+            pass
 
     def _handle_webhook_node(self, data: dict, node_id: str):
         """Chama URL externa via POST com payload configurável."""

@@ -36,16 +36,8 @@ def run(message_id: int):
             return
 
         workspace_id = conversation.workspace_id
-
-        # ── 1. Emite new_message para o frontend ──────────────────────────────
-        try:
-            socketio.emit(
-                "new_message",
-                {"conversation_id": conversation.id, "message": msg.to_dict()},
-                room=f"workspace_{workspace_id}",
-            )
-        except Exception as exc:
-            logger.debug("SocketIO emit falhou (provavelmente sem servidor rodando): %s", str(exc))
+        # new_message já foi emitido de forma síncrona pelo webhook (whatsapp.py /
+        # instagram.py) ao salvar a mensagem — não reemitir aqui.
 
         # ── 2. Verifica flows ativos ──────────────────────────────────────────
         from app.models import Flow, Agent
@@ -80,6 +72,17 @@ def run(message_id: int):
                 )
 
 
+def _emit_agent_typing(socketio, workspace_id: int, conversation_id: int, is_typing: bool):
+    try:
+        socketio.emit(
+            "agent_typing",
+            {"conversation_id": conversation_id, "is_typing": is_typing},
+            room=f"workspace_{workspace_id}",
+        )
+    except Exception:
+        pass
+
+
 def _process_ai_reply(agent, conversation, workspace_id: int, db, socketio):
     """Gera e envia resposta da IA, salva no banco e emite evento SocketIO."""
     from app.services.ai_agent_service import generate_reply
@@ -87,6 +90,7 @@ def _process_ai_reply(agent, conversation, workspace_id: int, db, socketio):
     from app.services.instagram_service import get_instagram_service
     from app.models import Message, Integration
 
+    _emit_agent_typing(socketio, workspace_id, conversation.id, True)
     try:
         reply_text = generate_reply(agent, conversation)
     except Exception as exc:
@@ -95,6 +99,8 @@ def _process_ai_reply(agent, conversation, workspace_id: int, db, socketio):
             extra={"agent_id": agent.id, "conversation_id": conversation.id, "error": str(exc)},
         )
         return
+    finally:
+        _emit_agent_typing(socketio, workspace_id, conversation.id, False)
 
     if not reply_text:
         return

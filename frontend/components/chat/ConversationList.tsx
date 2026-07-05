@@ -226,7 +226,9 @@ function ConversationItem({
         <div className="min-w-0 flex-1">
           {/* Row 1: name + time */}
           <div className="flex items-center justify-between gap-2">
-            <span className="item-title truncate">{name}</span>
+            <span className={cn("item-title truncate", conversation.unread_count > 0 && "font-black")}>
+              {name}
+            </span>
             <span className="ui-meta shrink-0">
               {formatRelativeTime(conversation.last_message_at)}
             </span>
@@ -244,6 +246,11 @@ function ConversationItem({
                 <span className="flex items-center gap-0.5 rounded-[32px] bg-red-50 px-1.5 py-0.5 text-[10px] font-extrabold text-brand-red">
                   <Bot size={9} />
                   IA
+                </span>
+              )}
+              {conversation.unread_count > 0 && (
+                <span className="flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-brand-red px-1 text-[10px] font-extrabold text-white">
+                  {conversation.unread_count > 99 ? "99+" : conversation.unread_count}
                 </span>
               )}
               <span
