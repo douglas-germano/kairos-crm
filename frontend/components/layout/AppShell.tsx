@@ -56,7 +56,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <SidebarProvider open={open} onOpenChange={handleOpenChange} className="app-canvas text-brand-charcoal">
-      <Sidebar collapsible="icon" className="bg-white/95 backdrop-blur">
+      <Sidebar collapsible="icon" className="border-r border-brand-line bg-brand-white/90 backdrop-blur">
         <SidebarHeader className="h-16 justify-center px-3">
           <Link href="/conversations" className="focus-ring flex h-11 items-center gap-3 overflow-hidden rounded-card px-2">
             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-card bg-brand-red text-xl font-bold leading-none text-white">
@@ -101,7 +101,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     className={cn(
                       "flex h-9 w-9 shrink-0 items-center justify-center rounded-full ring-1",
                       pathname.startsWith("/settings")
-                        ? "bg-red-100 text-brand-red ring-red-200"
+                        ? "bg-brand-red100 text-brand-red ring-brand-red200"
                         : "bg-brand-canvas text-brand-ink ring-brand-line"
                     )}
                   >
@@ -123,7 +123,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       <SidebarInset className="h-screen overflow-hidden">
         <div className="flex h-full flex-col">
-          <div className="flex h-14 items-center gap-3 border-b border-brand-line bg-white/80 px-4 backdrop-blur md:hidden">
+          <div className="flex h-14 items-center gap-3 border-b border-brand-line bg-brand-white/80 px-4 backdrop-blur md:hidden">
             <SidebarTrigger />
             <span className="text-xl font-bold text-brand-ink">Kairos</span>
           </div>
@@ -146,7 +146,7 @@ export function PageHeader({
   action?: React.ReactNode;
 }) {
   return (
-    <div className="flex h-16 items-center border-b border-brand-line bg-white/80 px-4 backdrop-blur sm:px-7">
+    <div className="flex h-16 items-center border-b border-brand-line bg-brand-white/80 px-4 backdrop-blur sm:px-7">
       <div className="flex w-full items-center justify-between gap-4">
         <div className="min-w-0">
           <p className="ui-label hidden sm:block">{eyebrow}</p>

@@ -8,17 +8,21 @@ import {
   Building2,
   CheckCircle2,
   ExternalLink,
+  Gauge,
+  Images,
   Instagram,
   KeyRound,
   Link2,
   Loader2,
   LogOut,
+  Pencil,
   Phone,
   Power,
   QrCode,
   RefreshCw,
   Save,
   User,
+  Users,
   Wifi,
 } from "lucide-react";
 import { PageHeader } from "@/components/layout/AppShell";
@@ -31,13 +35,13 @@ import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/useAuth";
 import { apiFetch, API_URL, swrFetcher } from "@/lib/api";
-import type { Integration, Workspace } from "@/lib/types";
+import type { Integration, MetaInsights, Workspace } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type QrData = { code: string; pairingCode?: string; count?: number };
-type ConnectResponse = { instance_name: string; qr: QrData };
+type ConnectResponse = { integration_id: number; instance_name: string; qr: QrData };
 type WaStatusResponse = {
   state: "open" | "close" | "connecting" | "not_configured";
   integration: Integration | null;
@@ -54,24 +58,32 @@ const NAV_ITEMS: { id: Section; label: string; icon: React.ReactNode }[] = [
   { id: "webhooks", label: "Webhooks", icon: <Link2 size={16} /> },
 ];
 
-// ─── WhatsApp Connection Card ─────────────────────────────────────────────────
+// ─── WhatsApp Connection Card (uma conexão/número) ────────────────────────────
 
-function WhatsAppConnectCard({ onConnected }: { onConnected: () => void }) {
-  const [phase, setPhase] = useState<"idle" | "loading" | "qr" | "polling" | "connected" | "error">("idle");
+function WhatsAppConnectionCard({ integration, onChanged }: { integration: Integration; onChanged: () => void }) {
+  const { data: status, mutate: mutateStatus } = useSWR<WaStatusResponse>(
+    `/api/settings/whatsapp/status?integration_id=${integration.id}`,
+    swrFetcher,
+    { refreshInterval: 0 }
+  );
+  const [phase, setPhase] = useState<"idle" | "loading" | "qr" | "polling" | "error">("idle");
   const [qrData, setQrData] = useState<QrData | null>(null);
-  const [instanceName, setInstanceName] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
   const [countdown, setCountdown] = useState(60);
+  const [renaming, setRenaming] = useState(false);
+  const [nameDraft, setNameDraft] = useState(integration.name || "");
+  const [disconnecting, setDisconnecting] = useState(false);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const connected = status?.state === "open";
 
   const stopPolling = useCallback(() => {
     if (pollingRef.current) clearInterval(pollingRef.current);
     if (countdownRef.current) clearInterval(countdownRef.current);
   }, []);
 
-  const startPolling = useCallback((name: string) => {
-    void name;
+  const startPolling = useCallback(() => {
     setPhase("polling");
     setCountdown(60);
     countdownRef.current = setInterval(() => {
@@ -82,71 +94,141 @@ function WhatsAppConnectCard({ onConnected }: { onConnected: () => void }) {
     }, 1000);
     pollingRef.current = setInterval(async () => {
       try {
-        const data = await apiFetch<WaStatusResponse>("/api/settings/whatsapp/status");
-        if (data.state === "open") { stopPolling(); setPhase("connected"); onConnected(); }
+        const data = await mutateStatus();
+        if (data?.state === "open") { stopPolling(); setPhase("idle"); onChanged(); }
       } catch { /* ignora erros transitórios */ }
     }, 3000);
-  }, [stopPolling, onConnected]);
+  }, [stopPolling, mutateStatus, onChanged]);
 
   useEffect(() => () => stopPolling(), [stopPolling]);
 
-  async function handleConnect() {
+  async function handleGenerateQr() {
     setPhase("loading"); setErrorMsg("");
     try {
-      const data = await apiFetch<ConnectResponse>("/api/settings/whatsapp/connect", { method: "POST" });
-      setInstanceName(data.instance_name); setQrData(data.qr); setPhase("qr");
-      startPolling(data.instance_name);
+      const data = await apiFetch<ConnectResponse>("/api/settings/whatsapp/connect", {
+        method: "POST",
+        body: JSON.stringify({ integration_id: integration.id }),
+      });
+      setQrData(data.qr); setPhase("qr");
+      stopPolling(); startPolling();
     } catch (err: unknown) {
       setErrorMsg(err instanceof Error ? err.message : "Erro ao conectar"); setPhase("error");
     }
   }
 
-  async function handleRefreshQr() {
-    setPhase("loading");
+  async function handleDisconnect() {
+    setDisconnecting(true);
     try {
-      const data = await apiFetch<ConnectResponse>("/api/settings/whatsapp/connect", { method: "POST" });
-      setInstanceName(data.instance_name); setQrData(data.qr); setPhase("qr");
-      stopPolling(); startPolling(data.instance_name);
-    } catch { setPhase("qr"); }
+      await apiFetch("/api/settings/whatsapp/disconnect", {
+        method: "POST",
+        body: JSON.stringify({ integration_id: integration.id }),
+      });
+      onChanged();
+    } finally {
+      setDisconnecting(false);
+    }
   }
 
-  if (phase === "idle" || phase === "error") return (
-    <div className="flex flex-col items-center gap-4 py-8 text-center">
-      <IconBadge size="xl">
-        <Phone size={28} className="text-brand-muted" />
-      </IconBadge>
-      <div>
-        <div className="item-title">Nenhum número conectado</div>
-        <div className="body-muted mt-1">Gere o QR code e escaneie com o WhatsApp para vincular</div>
+  async function handleRename() {
+    setRenaming(false);
+    const name = nameDraft.trim();
+    if (!name || name === integration.name) return;
+    await apiFetch(`/api/settings/whatsapp/${integration.id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ name }),
+    });
+    onChanged();
+  }
+
+  const health = getIntegrationHealth(integration);
+  const label = integration.name || `Número #${integration.id}`;
+
+  return (
+    <div className="surface-card rounded-panel p-4 sm:p-5">
+      <div className="mb-4 flex items-center justify-between gap-2">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-card bg-[#25D366] text-white">
+            <Phone size={18} />
+          </span>
+          <div className="min-w-0">
+            {renaming ? (
+              <Input
+                autoFocus
+                value={nameDraft}
+                onChange={(event) => setNameDraft(event.target.value)}
+                onBlur={() => void handleRename()}
+                onKeyDown={(event) => { if (event.key === "Enter") void handleRename(); }}
+                className="h-7 w-40 px-2 py-1 text-sm"
+              />
+            ) : (
+              <button
+                type="button"
+                onClick={() => { setNameDraft(integration.name || ""); setRenaming(true); }}
+                className="item-title flex items-center gap-1.5 truncate hover:text-brand-red"
+                title="Renomear conexão"
+              >
+                <span className="truncate">{label}</span>
+                <Pencil size={11} className="shrink-0 text-brand-muted" />
+              </button>
+            )}
+            <p className="ui-meta">Evolution API</p>
+          </div>
+        </div>
+        <Badge tone={connected ? "green" : "neutral"}>{connected ? "ativo" : integration.status}</Badge>
       </div>
-      {phase === "error" && <p className="text-xs font-semibold text-brand-red">{errorMsg}</p>}
-      <Button onClick={handleConnect} id="btn-wa-connect"><QrCode size={17} />Gerar QR Code</Button>
+
+      {connected ? (
+        <div className="flex flex-col gap-4">
+          <div className="flex items-center gap-3 rounded-card bg-brand-successSoft p-3">
+            <IconBadge tone="successGlass" shrink>
+              <Wifi size={18} className="text-brand-successStrong" />
+            </IconBadge>
+            <div className="min-w-0">
+              <div className="ui-label text-brand-successStrong">Conectado e ativo</div>
+              <div className="ui-meta truncate font-mono text-brand-successStrong">{String(integration.meta?.instance_name || "")}</div>
+            </div>
+          </div>
+          <div className="grid gap-2 rounded-card border border-brand-line bg-brand-canvas p-3 text-[11px] sm:grid-cols-2">
+            <HealthItem label="Webhook" value={formatMetaDate(health.last_webhook_at) || "sem chamadas"} />
+            <HealthItem label="Último sync" value={formatMetaDate(health.last_sync_at) || "não executado"} />
+            <HealthItem label="Status sync" value={String(health.last_sync_status || "aguardando")} />
+            <HealthItem label="Estado" value={String(health.connection_state || health.last_connection_state || "desconhecido")} />
+            <HealthItem label="Último JID" value={String(health.last_remote_jid || "-")} wide />
+            <HealthItem label="Erro" value={String(health.last_webhook_error || health.last_error || "-")} wide tone={health.last_webhook_error || health.last_error ? "error" : "normal"} />
+          </div>
+          <Button variant="ghost" onClick={handleDisconnect} disabled={disconnecting} className="w-full">
+            {disconnecting ? <Loader2 size={15} className="animate-spin" /> : <Power size={15} />}
+            {disconnecting ? "Desconectando" : "Desconectar"}
+          </Button>
+        </div>
+      ) : phase === "loading" ? (
+        <div className="flex flex-col items-center gap-3 py-10 text-center">
+          <Loader2 size={32} className="animate-spin text-brand-red" />
+          <div className="body-muted">Gerando QR code</div>
+        </div>
+      ) : phase === "qr" || phase === "polling" ? (
+        <WhatsAppQrPanel qrData={qrData} countdown={countdown} onRefresh={handleGenerateQr} />
+      ) : (
+        <div className="flex flex-col items-center gap-4 py-8 text-center">
+          <IconBadge size="xl">
+            <Phone size={28} className="text-brand-muted" />
+          </IconBadge>
+          <div>
+            <div className="item-title">Número desconectado</div>
+            <div className="body-muted mt-1">Gere o QR code e escaneie com o WhatsApp para vincular</div>
+          </div>
+          {phase === "error" && <p className="text-xs font-semibold text-brand-danger">{errorMsg}</p>}
+          <Button onClick={handleGenerateQr}><QrCode size={17} />Gerar QR Code</Button>
+        </div>
+      )}
     </div>
   );
+}
 
-  if (phase === "loading") return (
-    <div className="flex flex-col items-center gap-3 py-10 text-center">
-      <Loader2 size={32} className="animate-spin text-brand-red" />
-      <div className="body-muted">Gerando QR code</div>
-    </div>
-  );
-
-  if (phase === "connected") return (
-    <div className="flex flex-col items-center gap-3 py-8 text-center">
-      <IconBadge size="xl" tone="success">
-        <CheckCircle2 size={28} className="text-brand-successStrong" />
-      </IconBadge>
-      <div>
-        <div className="item-title text-brand-successStrong">WhatsApp conectado</div>
-        <div className="ui-meta mt-1 font-mono">{instanceName}</div>
-      </div>
-    </div>
-  );
-
+function WhatsAppQrPanel({ qrData, countdown, onRefresh }: { qrData: QrData | null; countdown: number; onRefresh: () => void }) {
   const qrSrc = qrData?.code
     ? qrData.code.startsWith("data:") ? qrData.code : `data:image/png;base64,${qrData.code}`
     : null;
-
   return (
     <div className="flex flex-col items-center gap-4">
       <div className="text-center">
@@ -170,47 +252,43 @@ function WhatsAppConnectCard({ onConnected }: { onConnected: () => void }) {
         <Loader2 size={13} className="animate-spin" />
         Aguardando conexão ({countdown}s)
       </div>
-      <button onClick={handleRefreshQr} className="ui-meta flex items-center gap-1.5 hover:text-brand-ink" id="btn-wa-refresh-qr">
+      <button onClick={onRefresh} className="ui-meta flex items-center gap-1.5 hover:text-brand-ink">
         <RefreshCw size={13} />Atualizar QR code
       </button>
     </div>
   );
 }
 
-// ─── WhatsApp Active Card ─────────────────────────────────────────────────────
+// ─── WhatsApp Add Card ─────────────────────────────────────────────────────────
 
-function WhatsAppActiveCard({ integration, onDisconnect }: { integration: Integration; onDisconnect: () => void }) {
-  const [disconnecting, setDisconnecting] = useState(false);
-  const health = getIntegrationHealth(integration);
-  async function handleDisconnect() {
-    setDisconnecting(true);
-    try { await apiFetch("/api/settings/whatsapp/disconnect", { method: "POST" }); onDisconnect(); }
-    finally { setDisconnecting(false); }
+function WhatsAppAddCard({ onCreated }: { onCreated: () => void }) {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  async function handleAdd() {
+    setLoading(true); setError("");
+    try {
+      await apiFetch("/api/settings/whatsapp/connect", { method: "POST", body: JSON.stringify({}) });
+      onCreated();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Erro ao criar conexão");
+    } finally {
+      setLoading(false);
+    }
   }
+
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex items-center gap-3 rounded-card bg-brand-successSoft p-3">
-        <IconBadge tone="successGlass" shrink>
-          <Wifi size={18} className="text-brand-successStrong" />
-        </IconBadge>
-        <div className="min-w-0">
-          <div className="ui-label text-brand-successStrong">Conectado e ativo</div>
-          <div className="ui-meta truncate font-mono text-brand-successStrong">{String(integration.meta?.instance_name || "")}</div>
-        </div>
-      </div>
-      <div className="grid gap-2 rounded-card border border-brand-line bg-brand-canvas p-3 text-[11px] sm:grid-cols-2">
-        <HealthItem label="Webhook" value={formatMetaDate(health.last_webhook_at) || "sem chamadas"} />
-        <HealthItem label="Último sync" value={formatMetaDate(health.last_sync_at) || "não executado"} />
-        <HealthItem label="Status sync" value={String(health.last_sync_status || "aguardando")} />
-        <HealthItem label="Estado" value={String(health.connection_state || health.last_connection_state || "desconhecido")} />
-        <HealthItem label="Último JID" value={String(health.last_remote_jid || "-")} wide />
-        <HealthItem label="Erro" value={String(health.last_webhook_error || health.last_error || "-")} wide tone={health.last_webhook_error || health.last_error ? "error" : "normal"} />
-      </div>
-      <Button variant="ghost" onClick={handleDisconnect} disabled={disconnecting} className="w-full" id="btn-wa-disconnect">
-        {disconnecting ? <Loader2 size={15} className="animate-spin" /> : <Power size={15} />}
-        {disconnecting ? "Desconectando" : "Desconectar WhatsApp"}
-      </Button>
-    </div>
+    <button
+      type="button"
+      onClick={() => void handleAdd()}
+      disabled={loading}
+      id="btn-wa-add"
+      className="focus-ring flex w-full flex-col items-center justify-center gap-2 rounded-panel border border-dashed border-brand-line p-6 text-center text-brand-muted transition hover:border-brand-red/40 hover:text-brand-red disabled:opacity-60"
+    >
+      {loading ? <Loader2 size={20} className="animate-spin" /> : <Phone size={20} />}
+      <span className="item-title">{loading ? "Criando conexão…" : "Adicionar número WhatsApp"}</span>
+      {error && <span className="text-xs font-semibold text-brand-danger">{error}</span>}
+    </button>
   );
 }
 
@@ -230,7 +308,7 @@ function HealthItem({
       <div className="ui-meta font-bold uppercase tracking-normal text-brand-muted">{label}</div>
       <div className={cn(
         "truncate font-mono text-[11px]",
-        tone === "error" ? "text-brand-red" : "text-brand-ink"
+        tone === "error" ? "text-brand-danger" : "text-brand-ink"
       )}>
         {value}
       </div>
@@ -297,6 +375,9 @@ function InstagramSection({ integration, onDisconnect }: { integration: Integrat
               <div className="ui-meta truncate font-mono text-brand-successStrong">ID: {String(integration.meta?.ig_user_id || "")}</div>
             </div>
           </div>
+
+          <MetaInsightsPanel integrationId={integration.id} />
+
           <Button variant="ghost" onClick={handleDisconnect} disabled={disconnecting} className="w-full" id="btn-ig-disconnect">
             {disconnecting ? <Loader2 size={15} className="animate-spin" /> : <Power size={15} />}
             {disconnecting ? "Desconectando" : "Desconectar Instagram"}
@@ -316,6 +397,108 @@ function InstagramSection({ integration, onDisconnect }: { integration: Integrat
           </a>
         </div>
       )}
+    </div>
+  );
+}
+
+// ─── Painel Meta (custo/limite/qualidade) ─────────────────────────────────────
+
+function MetaInsightsPanel({ integrationId }: { integrationId: number }) {
+  const { data, error, isLoading, mutate, isValidating } = useSWR<MetaInsights>(
+    `/api/integrations/${integrationId}/insights`,
+    swrFetcher,
+    { revalidateOnFocus: false, revalidateOnReconnect: false }
+  );
+
+  return (
+    <div className="surface-soft rounded-card p-4">
+      <div className="mb-3 flex items-center justify-between">
+        <div className="flex items-center gap-2 text-brand-ink">
+          <Gauge size={15} />
+          <span className="ui-label">Painel Meta</span>
+        </div>
+        <button
+          type="button"
+          onClick={() => void mutate()}
+          disabled={isValidating}
+          className="focus-ring flex items-center gap-1 rounded-pill border border-brand-line px-2 py-1 text-[11px] font-bold text-brand-muted hover:bg-brand-canvas disabled:opacity-50"
+        >
+          <RefreshCw size={11} className={isValidating ? "animate-spin" : ""} />
+          Atualizar
+        </button>
+      </div>
+
+      {isLoading ? (
+        <div className="flex items-center gap-2 py-4 text-brand-muted">
+          <Loader2 size={15} className="animate-spin" /> Carregando dados da Meta…
+        </div>
+      ) : error ? (
+        <p className="text-xs font-semibold text-brand-danger">
+          {error instanceof Error ? error.message : "Não foi possível carregar os dados da Meta"}
+        </p>
+      ) : data ? (
+        <div className="grid gap-3 sm:grid-cols-2">
+          <MetaStat icon={Users} label="Seguidores" value={data.account.followers_count ?? "—"} />
+          <MetaStat icon={Images} label="Publicações" value={data.account.media_count ?? "—"} />
+          {data.api_usage ? (
+            <>
+              <MetaUsageBar label="Uso da API (chamadas)" pct={data.api_usage.call_count_pct} />
+              <MetaUsageBar label="Uso da API (tempo de CPU)" pct={data.api_usage.total_cputime_pct} />
+            </>
+          ) : (
+            <p className="body-muted sm:col-span-2">Sem dados de limite de uso disponíveis no momento.</p>
+          )}
+        </div>
+      ) : null}
+
+      <p className="mt-3 text-[11px] text-brand-muted">
+        Custo por conversa e qualidade de número são conceitos da API Oficial do WhatsApp — passam a
+        aparecer aqui quando essa integração for adicionada ao Kairos. Por enquanto o painel cobre a
+        conta Instagram, que já usa a Meta Graph API de verdade.
+      </p>
+    </div>
+  );
+}
+
+function MetaStat({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: React.ComponentType<{ size?: number; className?: string }>;
+  label: string;
+  value: string | number;
+}) {
+  return (
+    <div className="flex items-center gap-2.5 rounded-card bg-brand-canvas p-3">
+      <IconBadge size="sm">
+        <Icon size={14} />
+      </IconBadge>
+      <div className="min-w-0">
+        <div className="ui-meta">{label}</div>
+        <div className="item-title">{value}</div>
+      </div>
+    </div>
+  );
+}
+
+function MetaUsageBar({ label, pct }: { label: string; pct: number | null }) {
+  const value = typeof pct === "number" ? Math.min(100, Math.max(0, pct)) : 0;
+  const warn = value >= 80;
+  return (
+    <div className="rounded-card bg-brand-canvas p-3">
+      <div className="mb-1.5 flex items-center justify-between">
+        <span className="ui-meta">{label}</span>
+        <span className={cn("text-xs font-bold", warn ? "text-brand-danger" : "text-brand-ink")}>
+          {typeof pct === "number" ? `${pct}%` : "—"}
+        </span>
+      </div>
+      <div className="h-1.5 w-full overflow-hidden rounded-full bg-brand-line">
+        <div
+          className={cn("h-full transition-all", warn ? "bg-brand-danger" : "bg-brand-red")}
+          style={{ width: `${value}%` }}
+        />
+      </div>
     </div>
   );
 }
@@ -380,7 +563,7 @@ function PerfilSection({ user, onSaved, onLogout }: { user: UserData | undefined
             type="button"
             variant="ghost"
             onClick={onLogout}
-            className="w-full border-brand-red200 text-brand-red hover:bg-brand-red50 sm:w-auto"
+            className="w-full border-brand-danger/30 text-brand-danger hover:bg-brand-dangerSoft sm:w-auto"
           >
             <LogOut size={16} />
             Sair da conta
@@ -400,7 +583,7 @@ function PerfilSection({ user, onSaved, onLogout }: { user: UserData | undefined
             <Input type="email" value={email ?? user?.email ?? ""} onChange={(e) => setEmail(e.target.value)} placeholder="seu@email.com" />
           </div>
           {infoMsg && (
-            <p className={`text-xs font-semibold ${infoMsg.includes("sucesso") ? "text-brand-successStrong" : "text-brand-red"}`}>{infoMsg}</p>
+            <p className={`text-xs font-semibold ${infoMsg.includes("sucesso") ? "text-brand-successStrong" : "text-brand-danger"}`}>{infoMsg}</p>
           )}
           <div className="flex justify-end pt-1">
             <Button type="submit" disabled={saving} id="btn-save-profile">
@@ -426,7 +609,7 @@ function PerfilSection({ user, onSaved, onLogout }: { user: UserData | undefined
             <Input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="Mínimo 8 caracteres" />
           </div>
           {pwMsg && (
-            <p className={`text-xs font-semibold ${pwMsg.includes("sucesso") ? "text-brand-successStrong" : "text-brand-red"}`}>{pwMsg}</p>
+            <p className={`text-xs font-semibold ${pwMsg.includes("sucesso") ? "text-brand-successStrong" : "text-brand-danger"}`}>{pwMsg}</p>
           )}
           <div className="flex justify-end pt-1">
             <Button type="submit" disabled={savingPw || !currentPassword || !newPassword} id="btn-save-password">
@@ -487,7 +670,7 @@ function WorkspaceSection({ workspace, onSaved }: { workspace: Workspace | undef
         )}
 
         {msg && (
-          <p className={`text-xs font-semibold ${msg.includes("sucesso") ? "text-brand-successStrong" : "text-brand-red"}`}>{msg}</p>
+          <p className={`text-xs font-semibold ${msg.includes("sucesso") ? "text-brand-successStrong" : "text-brand-danger"}`}>{msg}</p>
         )}
 
         <div className="flex justify-end">
@@ -504,40 +687,30 @@ function WorkspaceSection({ workspace, onSaved }: { workspace: Workspace | undef
 // ─── Section: Canais ──────────────────────────────────────────────────────────
 
 function CanaisSection({
-  waStatus, integrations, onWaConnected, onWaDisconnected, onIgDisconnected,
+  integrations, onWaChanged, onIgDisconnected,
 }: {
-  waStatus: WaStatusResponse | undefined;
   integrations: Integration[];
-  onWaConnected: () => void;
-  onWaDisconnected: () => void;
+  onWaChanged: () => void;
   onIgDisconnected: () => void;
 }) {
-  const whatsapp = waStatus?.integration ?? integrations.find((i) => i.channel === "whatsapp");
+  const whatsappConnections = integrations.filter((i) => i.channel === "whatsapp");
   const instagram = integrations.find((i) => i.channel === "instagram");
-  const waConnected = waStatus?.state === "open";
 
   return (
-    <div className="space-y-4">
-      <div className="surface-card rounded-panel p-4 sm:p-5">
-        <div className="mb-4 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <span className="flex h-9 w-9 items-center justify-center rounded-card bg-[#25D366] text-white">
-              <Phone size={18} />
-            </span>
-            <div>
-              <h3 className="item-title">WhatsApp</h3>
-              <p className="ui-meta">Evolution API</p>
-            </div>
-          </div>
-          <Badge tone={waConnected ? "green" : "neutral"}>
-            {waConnected ? "ativo" : whatsapp?.status || "inativo"}
-          </Badge>
+    <div className="space-y-6">
+      <div>
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="heading-md">WhatsApp</h2>
+          <span className="ui-meta">
+            {whatsappConnections.length} {whatsappConnections.length === 1 ? "número" : "números"}
+          </span>
         </div>
-        {waConnected && whatsapp ? (
-          <WhatsAppActiveCard integration={whatsapp} onDisconnect={onWaDisconnected} />
-        ) : (
-          <WhatsAppConnectCard onConnected={onWaConnected} />
-        )}
+        <div className="space-y-3">
+          {whatsappConnections.map((integration) => (
+            <WhatsAppConnectionCard key={integration.id} integration={integration} onChanged={onWaChanged} />
+          ))}
+          <WhatsAppAddCard onCreated={onWaChanged} />
+        </div>
       </div>
       <InstagramSection integration={instagram} onDisconnect={onIgDisconnected} />
     </div>
@@ -588,11 +761,6 @@ export default function SettingsPage() {
   const { data: meData, mutate: mutateMe } = useSWR<{ user: UserData }>("/auth/me", swrFetcher);
   const { data: workspace, mutate: mutateWorkspace } = useSWR<Workspace>("/api/settings/workspace", swrFetcher);
   const { data: integrations = [], mutate: mutateIntegrations } = useSWR<Integration[]>("/api/integrations", swrFetcher);
-  const { data: waStatus, mutate: mutateWaStatus } = useSWR<WaStatusResponse>(
-    "/api/settings/whatsapp/status",
-    swrFetcher,
-    { refreshInterval: 0 }
-  );
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
@@ -600,7 +768,7 @@ export default function SettingsPage() {
 
       <Tabs defaultValue="perfil" className="flex min-h-0 flex-1 flex-col overflow-hidden md:flex-row">
         {/* Sidebar desktop */}
-        <aside className="hidden w-52 shrink-0 flex-col border-r border-brand-line bg-white/60 p-4 md:flex">
+        <aside className="hidden w-52 shrink-0 flex-col border-r border-brand-line bg-brand-white/60 p-4 md:flex">
           <TabsList className="flex-col items-stretch gap-0.5 bg-transparent p-0 h-auto">
             {NAV_ITEMS.map((item) => (
               <TabsTrigger
@@ -616,7 +784,7 @@ export default function SettingsPage() {
         </aside>
 
         {/* Mobile tab strip */}
-        <div className="shrink-0 border-b border-brand-line bg-white md:hidden">
+        <div className="shrink-0 border-b border-brand-line bg-brand-white md:hidden">
           <TabsList className="h-auto w-full justify-start overflow-x-auto rounded-none bg-transparent px-4 py-0">
             {NAV_ITEMS.map((item) => (
               <TabsTrigger
@@ -642,10 +810,8 @@ export default function SettingsPage() {
             </TabsContent>
             <TabsContent value="canais" className="mt-0">
               <CanaisSection
-                waStatus={waStatus}
                 integrations={integrations}
-                onWaConnected={() => { mutateIntegrations(); void mutateWaStatus(); }}
-                onWaDisconnected={() => { mutateIntegrations(); void mutateWaStatus(); }}
+                onWaChanged={() => mutateIntegrations()}
                 onIgDisconnected={() => mutateIntegrations()}
               />
             </TabsContent>

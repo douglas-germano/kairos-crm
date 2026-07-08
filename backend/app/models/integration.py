@@ -11,6 +11,7 @@ class Integration(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     workspace_id = db.Column(db.Integer, db.ForeignKey("workspaces.id"), nullable=False)
     channel = db.Column(db.String(20), nullable=False)   # instagram | whatsapp
+    name = db.Column(db.String(100))  # rótulo amigável — só relevante quando há várias conexões do mesmo canal
     status = db.Column(db.String(20), default="inactive")  # active | inactive
     _credentials = db.Column("credentials", db.Text)       # JSON criptografado
     meta = db.Column(db.JSON, default=lambda: {})
@@ -40,6 +41,7 @@ class Integration(db.Model):
             "id": self.id,
             "workspace_id": self.workspace_id,
             "channel": self.channel,
+            "name": self.name,
             "status": self.status,
             "meta": self.meta,
             "created_at": self.created_at.isoformat(),

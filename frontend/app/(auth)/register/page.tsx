@@ -44,7 +44,7 @@ export default function RegisterPage() {
           <Label htmlFor="reg-password">Senha</Label>
           <Input id="reg-password" type="password" placeholder="Mínimo 6 caracteres" value={password} onChange={(event) => setPassword(event.target.value)} required minLength={6} />
         </div>
-        {error ? <p className="rounded-card border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-brand-red">{error}</p> : null}
+        {error ? <p className="rounded-card border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-brand-danger">{error}</p> : null}
         <Button type="submit" className="w-full" disabled={loading}>
           {loading ? "Criando..." : "Criar workspace"}
         </Button>

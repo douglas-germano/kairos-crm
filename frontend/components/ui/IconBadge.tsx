@@ -13,7 +13,7 @@ const TONES = {
   charcoal: "bg-brand-charcoal text-white",
   success: "bg-brand-successSoft text-brand-successStrong",
   // vidro translúcido sobre um fundo já colorido (ex: card de status verde)
-  successGlass: "bg-white/75 text-brand-successStrong",
+  successGlass: "bg-white/10 text-brand-successStrong",
   whatsapp: "bg-[#25D366] text-white",
   // gradiente real da marca Instagram — exceção documentada, não é gradiente decorativo nosso
   instagram: "bg-gradient-to-br from-[#f9ce34] via-[#ee2a7b] to-[#6228d7] text-white"

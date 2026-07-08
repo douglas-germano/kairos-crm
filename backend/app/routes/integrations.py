@@ -13,6 +13,7 @@ from flask import Blueprint, request, jsonify, redirect, current_app
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from app.extensions import db, redis_client
 from app.models import Integration, WorkspaceMember
+from app.services.meta_insights_service import get_instagram_insights, MetaInsightsError
 
 logger = logging.getLogger(__name__)
 bp = Blueprint("integrations", __name__)
@@ -208,3 +209,33 @@ def disconnect(integration_id: int):
     db.session.commit()
 
     return jsonify({"message": "Integração desconectada"})
+
+
+# ─── Painel Meta (custo/limite/qualidade) ─────────────────────────────────────
+
+@bp.get("/<int:integration_id>/insights")
+@jwt_required()
+def integration_insights(integration_id: int):
+    """Busca sob demanda dados operacionais da Meta Graph API para o painel de monitoramento."""
+    user_id = int(get_jwt_identity())
+    workspace_id = _get_workspace_id(user_id)
+
+    integration = Integration.query.filter_by(
+        id=integration_id, workspace_id=workspace_id
+    ).first_or_404()
+
+    if integration.channel != "instagram":
+        return jsonify({
+            "error": "Painel Meta disponível apenas para integrações Instagram no momento",
+            "code": "UNSUPPORTED_CHANNEL",
+        }), 400
+
+    if integration.status != "active":
+        return jsonify({"error": "Integração inativa", "code": "INTEGRATION_INACTIVE"}), 400
+
+    try:
+        data = get_instagram_insights(integration)
+    except MetaInsightsError as exc:
+        return jsonify({"error": str(exc), "code": "META_API_ERROR"}), exc.status
+
+    return jsonify(data)

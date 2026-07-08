@@ -4,80 +4,94 @@
 @tailwind utilities;
 
 :root {
-  /* brand palette */
-  --red: #e60000;
-  --red-dark: #ac1811;
-  --red-50: #fef2f2;
-  --red-100: #fee2e2;
-  --red-200: #fecaca;
-  --charcoal: #25282b;
-  --ink: #151719;
-  --grey: #7e7e7e;
-  /* 5.5:1 sobre branco — margem segura acima do mínimo AA (4.5:1) para texto pequeno de 10-12px */
-  --muted: #63697a;
-  --line: #e3e6ea;
-  --neutral: #f2f2f2;
-  --canvas: #f5f6f8;
-  --panel: #fbfcfd;
-  --white: #ffffff;
-  --success: #00a651;
-  --success-strong: #008f44;
-  --success-soft: #d9f7e3;
-  --warning: #f5a623;
-  --warning-strong: #d18910;
-  --warning-soft: #ffeccb;
-  --info: #1565d8;
-  --info-strong: #0d4ea9;
-  --info-soft: #d6e7ff;
-  --danger: var(--red);
-  --danger-soft: #ffe1e1;
-  /* Fonte única, conforme prompt/design-system.md §3 ("Note on Font Substitutes":
-     substituto de código aberto para a tipografia proprietária Vodafone é Inter).
-     Carregada via next/font/google em app/layout.tsx como --font-inter. */
+  /* brand palette — reskin "Leona Flow": dark glass, violeta/magenta/ciano.
+     Nomes de variável mantidos por compatibilidade; ver tailwind.config.ts. */
+  --red: #7c3aed;
+  --red-dark: #6d28d9;
+  --red-50: #1f1533;
+  --red-100: #2a1c47;
+  --red-200: #4c3380;
+  --charcoal: #e3ddf0;
+  --ink: #f5f3fa;
+  --grey: #a99fc4;
+  /* ~7:1 sobre --canvas — AA confortável em texto pequeno de 10-12px no tema escuro */
+  --muted: #9a8fb8;
+  --line: #2c2440;
+  --line-strong: #3d3153;
+  --neutral: #1b1726;
+  --canvas: #0a0812;
+  --panel: #15111f;
+  --white: #1c1729;
+  --success: #34d399;
+  --success-strong: #10b981;
+  --success-soft: #0f2e22;
+  --warning: #fbbf24;
+  --warning-strong: #f59e0b;
+  --warning-soft: #3a2c0d;
+  --info: #38bdf8;
+  --info-strong: #0ea5e9;
+  --info-soft: #0d2b3a;
+  --danger: #f87171;
+  --danger-soft: #2a1414;
+  /* novos tokens do reskin */
+  --highlight: #d946ef;
+  --highlight-soft: #33123a;
+  --cyan: #22d3ee;
+  --cyan-soft: #0d2f36;
+  --border-glow: rgba(124, 58, 237, 0.45);
+  --border-highlight-glow: rgba(217, 70, 239, 0.4);
+  --glass-fill: rgba(255, 255, 255, 0.04);
+  --glass-fill-hover: rgba(255, 255, 255, 0.07);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-border-hover: rgba(255, 255, 255, 0.15);
+
+  /* Corpo em Inter; títulos em Space Grotesk (var(--font-space-grotesk),
+     carregada via next/font/google em app/layout.tsx). Ver prompt/design-system.md §3
+     para o histórico do sistema anterior (Vodafone/Inter único). */
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
-  --font-display: var(--font-sans);
+  --font-display: var(--font-space-grotesk), var(--font-sans);
   --font-condensed: var(--font-sans);
   --font-serif: var(--font-sans);
-  --r-card: 6px;
-  --r-panel: 6px;
+  --r-card: 14px;
+  --r-panel: 16px;
   --r-pill: 32px;
-  /* Flat system — the only "elevation" is a crisp focus ring; hierarchy comes from
-     surface color and 1px borders, never box-shadow. See prompt/design-system.md §6. */
-  --shadow-focus: 0 0 0 2px rgba(230, 0, 0, 0.35), inset 0 0 0 1px var(--red);
+  /* Glow focus ring — a "elevação" do tema glass vem de blur + borda translúcida,
+     não de box-shadow de profundidade. */
+  --shadow-focus: 0 0 0 2px rgba(124, 58, 237, 0.45), inset 0 0 0 1px var(--red);
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
   --t-fast: 200ms;
   --t-base: 300ms;
   --t-slow: 500ms;
 
   /* shadcn tokens — mapped to brand design system */
-  --background: 214 20% 97%;        /* canvas #f5f6f8  */
-  --foreground: 222 12% 10%;        /* ink #151719     */
-  --card: 0 0% 100%;                /* white           */
-  --card-foreground: 222 12% 10%;
-  --popover: 0 0% 100%;
-  --popover-foreground: 222 12% 10%;
-  --primary: 0 100% 45%;            /* brand-red #e60000 */
+  --background: 252 38% 5%;         /* canvas #0a0812  */
+  --foreground: 257 41% 97%;        /* ink #f5f3fa     */
+  --card: 257 29% 9%;               /* panel #15111f   */
+  --card-foreground: 257 41% 97%;
+  --popover: 260 24% 10%;
+  --popover-foreground: 257 41% 97%;
+  --primary: 262 83% 58%;           /* brand-red (violeta) #7c3aed */
   --primary-foreground: 0 0% 100%;
-  --secondary: 216 8% 16%;          /* charcoal #25282b  */
-  --secondary-foreground: 0 0% 100%;
-  --muted: 220 10% 95%;             /* neutral #f2f2f2   */
-  --muted-foreground: 224 10% 43%;  /* muted #63697a     */
-  --accent: 220 10% 95%;
-  --accent-foreground: 222 12% 10%;
-  --destructive: 0 100% 45%;        /* same as primary   */
-  --destructive-foreground: 0 0% 100%;
-  --border: 216 14% 90%;            /* line #e3e6ea      */
-  --input: 216 14% 90%;
-  --ring: 0 100% 45%;               /* brand-red for focus */
-  --sidebar: 0 0% 100%;
-  --sidebar-foreground: 222 12% 10%;
-  --sidebar-primary: 0 100% 45%;
+  --secondary: 257 26% 14%;         /* elevated #1f1a2c  */
+  --secondary-foreground: 257 41% 97%;
+  --muted: 256 25% 12%;             /* neutral #1b1726   */
+  --muted-foreground: 256 22% 64%;  /* muted #9a8fb8     */
+  --accent: 255 24% 16%;            /* elevated-hover #241f33 */
+  --accent-foreground: 257 41% 97%;
+  --destructive: 0 91% 71%;         /* danger real, desacoplado do primary */
+  --destructive-foreground: 0 0% 12%;
+  --border: 257 28% 20%;            /* line #2c2440      */
+  --input: 257 28% 20%;
+  --ring: 262 83% 58%;              /* brand-red (violeta) para foco */
+  --sidebar: 260 32% 7%;
+  --sidebar-foreground: 257 41% 97%;
+  --sidebar-primary: 262 83% 58%;
   --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 0 100% 97%;
-  --sidebar-accent-foreground: 0 100% 45%;
-  --sidebar-border: 216 14% 90%;
-  --sidebar-ring: 0 100% 45%;
-  --radius: 8px;
+  --sidebar-accent: 255 24% 16%;
+  --sidebar-accent-foreground: 292 84% 61%;
+  --sidebar-border: 257 28% 20%;
+  --sidebar-ring: 262 83% 58%;
+  --radius: 14px;
 }
 
 * {
@@ -91,7 +105,11 @@ body {
 
 body {
   margin: 0;
-  background: var(--canvas);
+  background:
+    radial-gradient(ellipse 900px 500px at 15% -10%, rgba(124, 58, 237, 0.16), transparent 60%),
+    radial-gradient(ellipse 700px 500px at 100% 0%, rgba(217, 70, 239, 0.1), transparent 55%),
+    var(--canvas);
+  background-attachment: fixed;
   color: var(--charcoal);
   font-family: var(--font-sans);
   font-smoothing: antialiased;
@@ -117,14 +135,14 @@ button:disabled {
 
 .display-title {
   font-family: var(--font-display);
-  font-weight: 800;
+  font-weight: 600;
   line-height: 1.02;
-  letter-spacing: 0;
+  letter-spacing: -0.01em;
 }
 
 .red-band {
   height: 48px;
-  background: var(--red);
+  background: linear-gradient(90deg, var(--red), var(--highlight));
 }
 
 .focus-ring:focus-visible {
@@ -137,16 +155,28 @@ button:disabled {
     background: var(--canvas);
   }
 
+  /* Glass elevado — vidro translúcido de verdade (fundo semi-transparente +
+     blur do que está atrás), usado nas superfícies mais destacadas (hero,
+     painéis de destaque). Precisa ficar sobre o fundo com gradiente do body
+     para o efeito aparecer — não empilhar vários por cima um do outro. */
   .surface-card {
-    border: 1px solid var(--line);
+    border: 1px solid var(--glass-border);
     border-radius: var(--r-panel);
-    background: var(--white);
+    background: var(--glass-fill);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
   }
 
+  /* Glass denso — mesma linguagem, sem blur, para telas de lista/tabela onde
+     performance e legibilidade em massa importam mais que o efeito de vidro. */
   .surface-soft {
     border: 1px solid var(--line);
     border-radius: var(--r-card);
-    background: var(--panel);
+    background: var(--white);
+  }
+
+  .surface-glow {
+    box-shadow: 0 0 0 1px var(--border-glow), 0 8px 32px -12px var(--border-glow);
   }
 
   .section-pad {
@@ -173,29 +203,31 @@ button:disabled {
     color: var(--ink);
     font-family: var(--font-display);
     font-size: clamp(1.45rem, 1.9vw, 2.15rem);
-    font-weight: 800;
+    font-weight: 600;
     line-height: 1.05;
+    letter-spacing: -0.01em;
   }
 
   .heading-md {
     color: var(--ink);
     font-family: var(--font-display);
     font-size: 1rem;
-    font-weight: 800;
+    font-weight: 600;
     line-height: 1.15;
   }
 
   .card-title {
     color: var(--ink);
+    font-family: var(--font-display);
     font-size: 1rem;
-    font-weight: 800;
+    font-weight: 600;
     line-height: 1.2;
   }
 
   .item-title {
     color: var(--ink);
     font-size: 0.875rem;
-    font-weight: 800;
+    font-weight: 700;
     line-height: 1.25;
   }
 
@@ -237,14 +269,14 @@ button:disabled {
     flex-shrink: 0;
     align-items: center;
     justify-content: center;
-    border-radius: 8px;
-    background: var(--charcoal);
+    border-radius: 10px;
+    background: var(--line-strong);
     color: white;
     box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.12);
   }
 
   .icon-tile-red {
-    background: var(--red);
+    background: linear-gradient(135deg, var(--red), var(--highlight));
   }
 }
 
@@ -257,7 +289,7 @@ button:disabled {
 
 .scrollbar-thin {
   scrollbar-width: thin;
-  scrollbar-color: #bebebe transparent;
+  scrollbar-color: #453a5e transparent;
 }
 
 .scrollbar-thin::-webkit-scrollbar {
@@ -266,14 +298,18 @@ button:disabled {
 }
 
 .scrollbar-thin::-webkit-scrollbar-thumb {
-  background: #bebebe;
+  background: #453a5e;
   border-radius: 32px;
 }
 
 .react-flow__node {
-  border-radius: 6px;
-  border: 1.5px solid rgba(21, 23, 25, 0.16);
+  border-radius: 10px;
+  border: 1.5px solid var(--glass-border-hover);
   font-family: var(--font-sans);
+}
+
+.react-flow__background {
+  background-color: var(--canvas);
 }
 
 .react-flow__handle {
@@ -281,4 +317,30 @@ button:disabled {
   height: 9px;
   border: 2px solid #ffffff;
   background: var(--red);
+}
+
+.react-flow__controls {
+  box-shadow: none;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+}
+
+.react-flow__controls-button {
+  background: var(--white);
+  border-bottom: 1px solid var(--line);
+  color: var(--charcoal);
+}
+
+.react-flow__controls-button:hover {
+  background: var(--neutral);
+}
+
+.react-flow__controls-button svg {
+  fill: var(--charcoal);
+}
+
+.react-flow__attribution {
+  background: var(--glass-fill);
+  color: var(--muted);
 }

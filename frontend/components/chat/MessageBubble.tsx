@@ -147,7 +147,7 @@ function DocumentFile({ content, fileName }: { content: string; fileName?: strin
       download={fileName || "documento"}
       target="_blank"
       rel="noopener noreferrer"
-      className="flex items-center gap-2 rounded-card border border-brand-line/60 bg-black/5 px-3 py-2 hover:bg-black/10"
+      className="flex items-center gap-2 rounded-card border border-brand-line/60 bg-white/5 px-3 py-2 hover:bg-white/10"
     >
       <FileText size={20} className="shrink-0" />
       <span className="ui-body truncate">{fileName || "Documento"}</span>
@@ -186,16 +186,16 @@ export function MessageBubble({
     isNakedMedia ? "" : "px-3.5 py-2.5",
     outbound
       ? failed
-        ? "bg-brand-red100 text-brand-red"
-        : "bg-brand-charcoal text-white"
+        ? "bg-brand-dangerSoft text-brand-danger"
+        : "bg-brand-red text-white"
       : isNakedMedia
         ? ""
-        : "border border-brand-line bg-white text-brand-ink"
+        : "border border-brand-line bg-brand-white text-brand-ink"
   );
 
   const metaClass = cn(
     "mt-1.5 flex items-center gap-1 text-[11px]",
-    outbound ? (failed ? "text-brand-red" : "text-white/60") : "text-brand-muted"
+    outbound ? (failed ? "text-brand-danger" : "text-white/60") : "text-brand-muted"
   );
 
   function renderContent() {
@@ -252,7 +252,7 @@ export function MessageBubble({
               <button
                 type="button"
                 onClick={() => onRetry(message.id)}
-                className="focus-ring ml-1 flex items-center gap-1 rounded-pill bg-brand-red/10 px-1.5 py-0.5 font-bold text-brand-red hover:bg-brand-red/20"
+                className="focus-ring ml-1 flex items-center gap-1 rounded-pill bg-brand-danger/10 px-1.5 py-0.5 font-bold text-brand-danger hover:bg-brand-danger/20"
               >
                 <RefreshCw size={10} /> Reenviar
               </button>

@@ -1,12 +1,20 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import useSWR from "swr";
 import { MessageCircle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { IconBadge } from "@/components/ui/IconBadge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -15,8 +23,8 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { apiFetch, ApiError } from "@/lib/api";
-import type { Conversation } from "@/lib/types";
+import { apiFetch, ApiError, swrFetcher } from "@/lib/api";
+import type { Conversation, Integration } from "@/lib/types";
 
 type Props = {
   open: boolean;
@@ -28,15 +36,20 @@ export function NewConversationModal({ open, onClose, onCreated }: Props) {
   const [phone, setPhone] = useState("");
   const [name, setName] = useState("");
   const [message, setMessage] = useState("");
+  const [integrationId, setIntegrationId] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const phoneRef = useRef<HTMLInputElement>(null);
+
+  const { data: integrations = [] } = useSWR<Integration[]>("/api/integrations", swrFetcher);
+  const whatsappConnections = integrations.filter((i) => i.channel === "whatsapp" && i.status === "active");
 
   useEffect(() => {
     if (open) {
       setPhone("");
       setName("");
       setMessage("");
+      setIntegrationId("");
       setError(null);
       setTimeout(() => phoneRef.current?.focus(), 50);
     }
@@ -53,6 +66,7 @@ export function NewConversationModal({ open, onClose, onCreated }: Props) {
           phone_number: phone.trim(),
           name: name.trim() || undefined,
           message: message.trim() || undefined,
+          integration_id: integrationId ? Number(integrationId) : undefined,
         }),
       });
       onCreated(conv);
@@ -80,7 +94,7 @@ export function NewConversationModal({ open, onClose, onCreated }: Props) {
         <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4 px-5 py-4">
           <div className="space-y-1.5">
             <Label htmlFor="phone">
-              Número <span className="text-brand-red">*</span>
+              Número <span className="text-brand-danger">*</span>
             </Label>
             <Input
               id="phone"
@@ -96,6 +110,24 @@ export function NewConversationModal({ open, onClose, onCreated }: Props) {
               DDI + DDD + número sem espaços ou hífens. Ex: 5511999999999
             </p>
           </div>
+
+          {whatsappConnections.length > 1 && (
+            <div className="space-y-1.5">
+              <Label htmlFor="wa-connection">Enviar pelo número</Label>
+              <Select value={integrationId} onValueChange={setIntegrationId}>
+                <SelectTrigger id="wa-connection">
+                  <SelectValue placeholder="Escolher conexão (padrão: a primeira ativa)" />
+                </SelectTrigger>
+                <SelectContent>
+                  {whatsappConnections.map((integration) => (
+                    <SelectItem key={integration.id} value={String(integration.id)}>
+                      {integration.name || `Número #${integration.id}`}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           <div className="space-y-1.5">
             <Label htmlFor="contact-name">
@@ -127,7 +159,7 @@ export function NewConversationModal({ open, onClose, onCreated }: Props) {
           </div>
 
           {error && (
-            <p className="rounded-card border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-brand-red">
+            <p className="rounded-card border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-brand-danger">
               {error}
             </p>
           )}

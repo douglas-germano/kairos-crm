@@ -318,9 +318,9 @@ export function ChatWindow({ conversation, onConversationChange, onConversationD
   const isWhatsApp = conversation.channel === "whatsapp";
 
   return (
-    <section className="flex h-full flex-col overflow-hidden bg-white/90">
+    <section className="flex h-full flex-col overflow-hidden bg-brand-white/90">
       {/* Header */}
-      <header className="shrink-0 border-b border-brand-line bg-white/92 p-4 backdrop-blur">
+      <header className="shrink-0 border-b border-brand-line bg-brand-white/92 p-4 backdrop-blur">
         <div className="flex items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
             <ChannelIcon channel={conversation.channel} className="h-9 w-9 shrink-0" />
@@ -345,7 +345,7 @@ export function ChatWindow({ conversation, onConversationChange, onConversationD
 
             <button
               onClick={() => void deleteConversation()}
-              className="focus-ring rounded-card bg-brand-canvas p-2 text-brand-muted transition hover:bg-brand-red50 hover:text-brand-red"
+              className="focus-ring rounded-card bg-brand-canvas p-2 text-brand-muted transition hover:bg-brand-dangerSoft hover:text-brand-danger"
               aria-label="Excluir conversa"
               title="Excluir conversa"
             >
@@ -389,12 +389,12 @@ export function ChatWindow({ conversation, onConversationChange, onConversationD
 
         {error ? (
           <div className="flex h-full flex-col items-center justify-center gap-3 text-center">
-            <AlertCircle size={32} className="text-brand-red" />
+            <AlertCircle size={32} className="text-brand-danger" />
             <p className="item-title">Erro ao carregar mensagens</p>
             <p className="ui-meta">{String(error?.message ?? error)}</p>
             <button
               onClick={() => void mutate()}
-              className="focus-ring flex items-center gap-1.5 rounded-card border border-brand-line bg-white px-3 py-1.5 ui-meta font-bold hover:bg-brand-canvas"
+              className="focus-ring flex items-center gap-1.5 rounded-card border border-brand-line bg-brand-white px-3 py-1.5 ui-meta font-bold hover:bg-brand-canvas"
             >
               <RefreshCw size={13} /> Tentar novamente
             </button>
@@ -425,7 +425,7 @@ export function ChatWindow({ conversation, onConversationChange, onConversationD
       {/* Rodapé */}
       <div className="shrink-0">
         {(typingUser || agentTyping) && (
-          <div className="flex items-center gap-1.5 border-t border-brand-line bg-white/95 px-4 py-1.5 text-xs font-semibold text-brand-muted">
+          <div className="flex items-center gap-1.5 border-t border-brand-line bg-brand-white/95 px-4 py-1.5 text-xs font-semibold text-brand-muted">
             <span className="flex gap-0.5">
               <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-current [animation-delay:-0.3s]" />
               <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-current [animation-delay:-0.15s]" />
@@ -435,7 +435,7 @@ export function ChatWindow({ conversation, onConversationChange, onConversationD
           </div>
         )}
         {sendError && (
-          <div className="flex items-center gap-2 border-t border-brand-red200 bg-brand-red50 px-4 py-2 text-xs font-semibold text-brand-red">
+          <div className="flex items-center gap-2 border-t border-brand-danger/30 bg-brand-dangerSoft px-4 py-2 text-xs font-semibold text-brand-danger">
             <AlertCircle size={14} className="shrink-0" />
             <span className="flex-1">{sendError}</span>
             <button onClick={() => setSendError(null)} aria-label="Fechar erro">
