@@ -263,7 +263,8 @@ class FlowEngine:
     def _send_reply(self, text: str):
         """Envia resposta pelo canal correto e salva no banco."""
         from app.extensions import db, socketio
-        from app.models import Message, Contact, Integration
+        from app.models import Message, Contact
+        from app.services.channel_routing import resolve_channel_integration
         from app.services.whatsapp_service import get_whatsapp_service
         from app.services.instagram_service import get_instagram_service
 
@@ -271,9 +272,7 @@ class FlowEngine:
         contact: Contact = self.conversation.contact
         workspace_id = self.conversation.workspace_id
 
-        integration = Integration.query.filter_by(
-            workspace_id=workspace_id, channel=channel, status="active"
-        ).first()
+        integration = resolve_channel_integration(workspace_id, channel, contact=contact)
 
         if not integration:
             logger.warning("Integração não encontrada para envio de resposta", extra={"channel": channel})

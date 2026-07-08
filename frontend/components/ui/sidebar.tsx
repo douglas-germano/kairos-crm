@@ -169,7 +169,7 @@ export function SidebarTrigger({ className, onClick, ...props }: React.Component
       type="button"
       variant="ghost"
       size="icon"
-      className={cn("h-9 w-9 border-brand-line bg-white text-brand-muted md:bg-white", className)}
+      className={cn("h-9 w-9 border-brand-line bg-brand-white text-brand-muted md:bg-brand-white", className)}
       onClick={(event) => {
         if (window.matchMedia("(max-width: 767px)").matches) {
           setOpenMobile(true);

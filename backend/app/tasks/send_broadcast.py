@@ -17,8 +17,8 @@ def run(broadcast_id: int):
     """Entry point chamado pelo RQ worker."""
     from app import create_app
     from app.extensions import db, socketio
-    from app.models import Integration
     from app.models.broadcast import Broadcast, BroadcastRecipient
+    from app.services.channel_routing import resolve_channel_integration
     from app.services.whatsapp_service import get_whatsapp_service
 
     app = create_app()
@@ -38,19 +38,25 @@ def run(broadcast_id: int):
         broadcast.failed_count = 0
         db.session.commit()
 
-        integration = Integration.query.filter_by(
-            workspace_id=broadcast.workspace_id,
-            channel="whatsapp",
-            status="active",
-        ).first()
-
-        if not integration:
+        default_integration = resolve_channel_integration(broadcast.workspace_id, "whatsapp")
+        if not default_integration:
             broadcast.status = "failed"
             db.session.commit()
             logger.error("Nenhuma integração WhatsApp ativa para o broadcast | id=%s", broadcast_id)
             return
 
-        svc = get_whatsapp_service(integration)
+        # Um workspace pode ter mais de um número WhatsApp ativo — cada destinatário é
+        # enviado pela conexão de onde o contato foi visto primeiro (fallback: a primeira
+        # integração ativa, para compatibilidade com workspaces de conexão única).
+        services_by_integration: dict[int, object] = {}
+
+        def _service_for(contact) -> object:
+            integration = resolve_channel_integration(
+                broadcast.workspace_id, "whatsapp", contact=contact
+            ) or default_integration
+            if integration.id not in services_by_integration:
+                services_by_integration[integration.id] = get_whatsapp_service(integration)
+            return services_by_integration[integration.id]
 
         recipients = BroadcastRecipient.query.filter_by(
             broadcast_id=broadcast_id,
@@ -60,6 +66,7 @@ def run(broadcast_id: int):
         for recipient in recipients:
             contact = recipient.contact
             try:
+                svc = _service_for(contact)
                 result = svc.send_text(contact.external_id, broadcast.message)
                 recipient.status = "sent"
                 recipient.sent_at = datetime.now(timezone.utc)

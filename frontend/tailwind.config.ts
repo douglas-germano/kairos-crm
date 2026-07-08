@@ -54,38 +54,58 @@ const config: Config = {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))"
         },
-        // brand palette
+        // brand palette — reskin "Leona Flow" (violeta/magenta/ciano, dark glass).
+        // Nomes de chave mantidos (red/redDark/red50…) por compatibilidade com as
+        // classes já usadas em toda a UI; os valores agora são a paleta violeta.
         brand: {
-          red: "#e60000",
-          redDark: "#ac1811",
-          red50: "#fef2f2",
-          red100: "#fee2e2",
-          red200: "#fecaca",
-          charcoal: "#25282b",
-          ink: "#151719",
-          grey: "#7e7e7e",
-          muted: "#63697a", // 5.5:1 on white — margem segura acima do mínimo AA (4.5:1) para texto pequeno
-          line: "#e3e6ea",
-          neutral: "#f2f2f2",
-          canvas: "#f5f6f8",
-          panel: "#fbfcfd",
-          white: "#ffffff",
-          success: "#00a651",
-          successStrong: "#008f44",
-          successSoft: "#d9f7e3",
-          warning: "#f5a623",
-          warningStrong: "#d18910",
-          warningSoft: "#ffeccb",
-          info: "#1565d8",
-          infoStrong: "#0d4ea9",
-          infoSoft: "#d6e7ff",
-          danger: "#e60000",
-          dangerSoft: "#ffe1e1"
+          red: "#7c3aed",
+          redDark: "#6d28d9",
+          red50: "#1f1533",
+          red100: "#2a1c47",
+          red200: "#4c3380",
+          charcoal: "#e3ddf0",
+          ink: "#f5f3fa",
+          grey: "#a99fc4",
+          muted: "#9a8fb8", // ~7:1 sobre --canvas — AA confortável em texto pequeno no tema escuro
+          line: "#2c2440",
+          lineStrong: "#3d3153",
+          neutral: "#1b1726",
+          canvas: "#0a0812",
+          panel: "#15111f",
+          white: "#1c1729",
+          success: "#34d399",
+          successStrong: "#10b981",
+          successSoft: "#0f2e22",
+          warning: "#fbbf24",
+          warningStrong: "#f59e0b",
+          warningSoft: "#3a2c0d",
+          info: "#38bdf8",
+          infoStrong: "#0ea5e9",
+          infoSoft: "#0d2b3a",
+          danger: "#f87171",
+          dangerSoft: "#2a1414",
+          // novos tokens do reskin — sem equivalente no sistema Vodafone anterior
+          highlight: "#d946ef",
+          highlightSoft: "#33123a",
+          cyan: "#22d3ee",
+          cyanSoft: "#0d2f36"
+        },
+        // Override da escala vermelha padrão do Tailwind — usada hoje só em
+        // banners de erro (bg-red-50/border-red-200/text-red-600); vira o
+        // "danger" real, desacoplado do brand.red (que agora é violeta).
+        red: {
+          50: "#2a1414",
+          100: "#3a1a1a",
+          200: "#5c2626",
+          300: "#7a2f2f",
+          600: "#f87171",
+          700: "#fca5a5"
         }
       },
       fontFamily: {
-        // Fonte única (Inter) — ver "Note on Font Substitutes" em prompt/design-system.md §3.
-        sans: ["var(--font-sans)"]
+        // Corpo/UI em Inter; títulos em Space Grotesk — ver app/layout.tsx.
+        sans: ["var(--font-sans)"],
+        display: ["var(--font-display)"]
       },
       borderRadius: {
         lg: "var(--radius)",

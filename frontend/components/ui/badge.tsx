@@ -12,12 +12,12 @@ const badgeVariants = cva(
         default: "rounded-[32px] border-transparent bg-primary text-primary-foreground",
         secondary: "rounded-[32px] border-transparent bg-secondary text-secondary-foreground",
         destructive: "rounded-[32px] border-transparent bg-destructive text-destructive-foreground",
-        neutral: "rounded-[32px] border-brand-line bg-white text-brand-muted",
+        neutral: "rounded-[32px] border-brand-line bg-brand-white text-brand-muted",
         dark: "rounded-[32px] border-transparent bg-brand-charcoal text-white",
         green: "rounded-[32px] border-transparent bg-brand-successSoft text-brand-successStrong",
         // Outlined red pill (2px) — inline metadata tags per design-system.md
-        outline: "rounded-[2px] border-brand-line bg-white text-brand-muted",
-        red: "rounded-[2px] border-brand-red bg-white/80 text-brand-red"
+        outline: "rounded-[2px] border-brand-line bg-brand-white text-brand-muted",
+        red: "rounded-[2px] border-brand-red bg-brand-white/80 text-brand-red"
       }
     },
     defaultVariants: {

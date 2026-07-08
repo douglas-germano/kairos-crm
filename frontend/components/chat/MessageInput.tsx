@@ -211,10 +211,10 @@ export function MessageInput({ onSend, disabled, workspaceId, conversationId }: 
     `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
 
   return (
-    <form onSubmit={onSubmit} className="border-t border-brand-line bg-white/95 p-3 backdrop-blur">
+    <form onSubmit={onSubmit} className="border-t border-brand-line bg-brand-white/95 p-3 backdrop-blur">
       <div className="mx-auto max-w-4xl">
         {attachmentError && (
-          <div className="mb-2 flex items-center justify-between rounded-card bg-brand-red50 px-3 py-1.5 text-xs font-semibold text-brand-red">
+          <div className="mb-2 flex items-center justify-between rounded-card bg-brand-dangerSoft px-3 py-1.5 text-xs font-semibold text-brand-danger">
             <span>{attachmentError}</span>
             <button type="button" onClick={() => setAttachmentError(null)} aria-label="Fechar erro">
               <X size={13} />
@@ -248,9 +248,9 @@ export function MessageInput({ onSend, disabled, workspaceId, conversationId }: 
           {recording ? (
             // Estado de gravação
             <>
-              <div className="flex flex-1 items-center gap-3 rounded-card border border-brand-red200 bg-brand-red50 px-3 py-2.5">
-                <span className="flex h-2 w-2 rounded-full bg-brand-red animate-pulse" />
-                <span className="item-title text-brand-red">{formatTime(recordingSeconds)}</span>
+              <div className="flex flex-1 items-center gap-3 rounded-card border border-brand-danger/30 bg-brand-dangerSoft px-3 py-2.5">
+                <span className="flex h-2 w-2 rounded-full bg-brand-danger animate-pulse" />
+                <span className="item-title text-brand-danger">{formatTime(recordingSeconds)}</span>
                 <span className="ui-meta">Gravando</span>
               </div>
               {/* Cancelar */}

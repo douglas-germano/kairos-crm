@@ -18,11 +18,11 @@ const buttonVariants = cva(
         secondary:
           "border border-secondary bg-secondary text-secondary-foreground hover:bg-secondary/80 active:opacity-90",
         ghost:
-          "border border-brand-line bg-white text-brand-ink hover:border-brand-charcoal/25 hover:bg-brand-canvas active:opacity-90",
+          "border border-brand-line bg-brand-white text-brand-ink hover:border-brand-charcoal/25 hover:bg-brand-canvas active:opacity-90",
         link: "rounded-none border-0 text-primary underline-offset-4 hover:underline",
         pill: "rounded-[60px] border border-brand-red bg-brand-red text-white hover:bg-brand-redDark active:opacity-90",
         dark: "border border-brand-charcoal bg-brand-charcoal text-white hover:bg-brand-ink active:opacity-90",
-        subtle: "rounded-[60px] border border-transparent bg-red-50 text-brand-red hover:bg-red-100 active:opacity-90"
+        subtle: "rounded-[60px] border border-transparent bg-brand-red50 text-brand-red hover:bg-brand-red100 active:opacity-90"
       },
       size: {
         default: "min-h-10 px-3.5 py-2.5",

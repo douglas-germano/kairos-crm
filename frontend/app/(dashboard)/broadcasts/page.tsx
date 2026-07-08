@@ -31,7 +31,7 @@ const STATUS_CONFIG = {
   draft:     { label: "Rascunho",    color: "text-brand-muted",         bg: "bg-brand-canvas",      icon: Clock },
   sending:   { label: "Enviando…",   color: "text-brand-warningStrong", bg: "bg-brand-warningSoft",  icon: Loader2 },
   completed: { label: "Concluído",   color: "text-brand-successStrong", bg: "bg-brand-successSoft",  icon: CheckCircle2 },
-  failed:    { label: "Falhou",      color: "text-brand-red",           bg: "bg-red-50",             icon: XCircle },
+  failed:    { label: "Falhou",      color: "text-brand-danger",        bg: "bg-red-50",             icon: XCircle },
 } as const;
 
 function StatusBadge({ status }: { status: Broadcast["status"] }) {
@@ -52,7 +52,7 @@ function ProgressBar({ sent, failed, total }: { sent: number; failed: number; to
   return (
     <div className="mt-2 flex h-1.5 w-full overflow-hidden rounded-full bg-brand-line">
       <div className="bg-brand-success transition-all" style={{ width: `${sentPct}%` }} />
-      <div className="bg-brand-red transition-all" style={{ width: `${failedPct}%` }} />
+      <div className="bg-brand-danger transition-all" style={{ width: `${failedPct}%` }} />
     </div>
   );
 }
@@ -170,7 +170,7 @@ function BroadcastRow({
             {(b.status === "sending" || b.status === "completed") && (
               <>
                 <span className="text-brand-success">{b.sent_count} enviados</span>
-                {b.failed_count > 0 && <span className="text-brand-red">{b.failed_count} falhas</span>}
+                {b.failed_count > 0 && <span className="text-brand-danger">{b.failed_count} falhas</span>}
               </>
             )}
             <span>· {formatRelativeTime(b.created_at)}</span>
@@ -197,7 +197,7 @@ function BroadcastRow({
             <Button
               variant="outline"
               size="icon"
-              className="h-8 w-8 hover:border-red-200 hover:bg-red-50 hover:text-brand-red"
+              className="h-8 w-8 hover:border-red-200 hover:bg-red-50 hover:text-brand-danger"
               onClick={onDelete}
               disabled={deleting}
               title="Excluir"
@@ -237,7 +237,7 @@ function BroadcastRow({
                       <p className="truncate text-[11px] text-brand-muted">{r.contact.external_id}</p>
                     )}
                     {r.error_message && (
-                      <p className="truncate text-[11px] text-brand-red">{r.error_message}</p>
+                      <p className="truncate text-[11px] text-brand-danger">{r.error_message}</p>
                     )}
                   </div>
                   <RecipientStatus status={r.status} />
@@ -258,7 +258,7 @@ function BroadcastRow({
 
 function RecipientStatus({ status }: { status: "pending" | "sent" | "failed" }) {
   if (status === "sent") return <CheckCircle2 size={14} className="shrink-0 text-brand-success" />;
-  if (status === "failed") return <XCircle size={14} className="shrink-0 text-brand-red" />;
+  if (status === "failed") return <XCircle size={14} className="shrink-0 text-brand-danger" />;
   return <Clock size={14} className="shrink-0 text-brand-muted" />;
 }
 
@@ -345,7 +345,7 @@ function CreateBroadcastModal({ open, onClose, onCreated }: {
           <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-5 py-4">
             <div className="space-y-1.5">
               <Label htmlFor="broadcast-name">
-                Nome do broadcast <span className="text-brand-red">*</span>
+                Nome do broadcast <span className="text-brand-danger">*</span>
               </Label>
               <Input
                 id="broadcast-name"
@@ -358,7 +358,7 @@ function CreateBroadcastModal({ open, onClose, onCreated }: {
 
             <div className="space-y-1.5">
               <Label htmlFor="broadcast-message">
-                Mensagem <span className="text-brand-red">*</span>
+                Mensagem <span className="text-brand-danger">*</span>
               </Label>
               <Textarea
                 id="broadcast-message"
@@ -419,7 +419,7 @@ function CreateBroadcastModal({ open, onClose, onCreated }: {
             </div>
 
             {apiError && (
-              <p className="rounded-card border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-brand-red">
+              <p className="rounded-card border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-brand-danger">
                 {apiError}
               </p>
             )}
@@ -478,7 +478,7 @@ function EmptyState({ onNew }: { onNew: () => void }) {
 function ErrorState() {
   return (
     <div className="flex h-64 flex-col items-center justify-center gap-3">
-      <AlertCircle size={28} className="text-brand-red" />
+      <AlertCircle size={28} className="text-brand-danger" />
       <p className="text-sm text-brand-muted">Erro ao carregar broadcasts</p>
     </div>
   );

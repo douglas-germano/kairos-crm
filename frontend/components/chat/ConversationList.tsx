@@ -30,7 +30,7 @@ const FILTERS: Array<{ label: string; value: Channel | "all" }> = [
 const AVATAR_PALETTES = [
   "bg-brand-canvas text-brand-charcoal",
   "bg-brand-charcoal text-white",
-  "bg-red-50 text-brand-red",
+  "bg-brand-red50 text-brand-red",
   "bg-brand-neutral text-brand-ink",
 ];
 
@@ -74,7 +74,7 @@ export function ConversationList({
         }}
       />
 
-    <section className="flex h-full flex-col overflow-hidden border-r border-brand-line bg-white/95">
+    <section className="flex h-full flex-col overflow-hidden border-r border-brand-line bg-brand-white/95">
       {/* Header */}
       <div className="border-b border-brand-line px-4 pb-4 pt-5">
         <div className="mb-3 flex items-center justify-between">
@@ -208,8 +208,8 @@ function ConversationItem({
       className={cn(
         "focus-ring w-full border-b border-brand-line/70 px-4 py-3.5 text-left transition-colors",
         active
-          ? "border-l-4 border-l-brand-red bg-red-50/80"
-          : "border-l-4 border-l-transparent bg-white hover:bg-brand-canvas"
+          ? "border-l-4 border-l-brand-red bg-brand-red50/80"
+          : "border-l-4 border-l-transparent bg-brand-white hover:bg-brand-canvas"
       )}
     >
       <div className="flex items-start gap-3">
@@ -243,7 +243,7 @@ function ConversationItem({
 
             <span className="ml-auto flex items-center gap-1.5">
               {conversation.ai_enabled && (
-                <span className="flex items-center gap-0.5 rounded-[32px] bg-red-50 px-1.5 py-0.5 text-[10px] font-extrabold text-brand-red">
+                <span className="flex items-center gap-0.5 rounded-[32px] bg-brand-red50 px-1.5 py-0.5 text-[10px] font-extrabold text-brand-red">
                   <Bot size={9} />
                   IA
                 </span>
@@ -273,7 +273,7 @@ function Pill({ label, value, tone }: { label: string; value: number; tone: "gre
     <div
       className={cn(
         "flex items-center gap-1 rounded-card px-2 py-1 text-[10px] font-extrabold",
-        tone === "green" ? "bg-brand-successSoft text-brand-successStrong" : "bg-red-50 text-brand-red"
+        tone === "green" ? "bg-brand-successSoft text-brand-successStrong" : "bg-brand-red50 text-brand-red"
       )}
     >
       <span>{value}</span>
@@ -302,7 +302,7 @@ function EmptyState({ search }: { search: string }) {
 
 function LoadingSkeleton() {
   return (
-    <div className="divide-y divide-black/[0.06]">
+    <div className="divide-y divide-white/[0.06]">
       {Array.from({ length: 6 }).map((_, i) => (
         <div key={i} className="flex items-start gap-3 px-4 py-3">
           <div className="h-9 w-9 shrink-0 animate-pulse rounded-full bg-brand-neutral" />

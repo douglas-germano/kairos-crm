@@ -256,6 +256,7 @@ def _handle_message(instance_name: str, msg_data: dict):
             channel="whatsapp",
             external_id=contact_external_id,
             name=push_name,
+            integration_id=integration.id,
         )
         db.session.add(contact)
         db.session.flush()

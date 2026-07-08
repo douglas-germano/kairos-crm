@@ -39,7 +39,7 @@ export default function LoginPage() {
           <Label htmlFor="login-password">Senha</Label>
           <Input id="login-password" type="password" placeholder="••••••••" value={password} onChange={(event) => setPassword(event.target.value)} required />
         </div>
-        {error ? <p className="rounded-card border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-brand-red">{error}</p> : null}
+        {error ? <p className="rounded-card border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-brand-danger">{error}</p> : null}
         <Button type="submit" className="w-full" disabled={loading}>
           {loading ? "Entrando..." : "Entrar"}
         </Button>

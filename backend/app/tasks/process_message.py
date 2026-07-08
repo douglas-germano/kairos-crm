@@ -86,9 +86,10 @@ def _emit_agent_typing(socketio, workspace_id: int, conversation_id: int, is_typ
 def _process_ai_reply(agent, conversation, workspace_id: int, db, socketio):
     """Gera e envia resposta da IA, salva no banco e emite evento SocketIO."""
     from app.services.ai_agent_service import generate_reply
+    from app.services.channel_routing import resolve_channel_integration
     from app.services.whatsapp_service import get_whatsapp_service
     from app.services.instagram_service import get_instagram_service
-    from app.models import Message, Integration
+    from app.models import Message
 
     _emit_agent_typing(socketio, workspace_id, conversation.id, True)
     try:
@@ -108,9 +109,7 @@ def _process_ai_reply(agent, conversation, workspace_id: int, db, socketio):
     # Envia pelo canal correto
     channel = conversation.channel
     contact = conversation.contact
-    integration = Integration.query.filter_by(
-        workspace_id=workspace_id, channel=channel, status="active"
-    ).first()
+    integration = resolve_channel_integration(workspace_id, channel, contact=contact)
 
     ext_id = None
     if integration:

@@ -98,6 +98,7 @@ export type Integration = {
   id: number;
   workspace_id: number;
   channel: Channel;
+  name: string | null;
   status: "active" | "inactive";
   meta: Record<string, unknown>;
   created_at: string;
@@ -131,4 +132,20 @@ export type BroadcastRecipient = {
 
 export type BroadcastDetail = Broadcast & {
   recipients: BroadcastRecipient[];
+};
+
+export type MetaApiUsage = {
+  call_count_pct: number | null;
+  total_cputime_pct: number | null;
+  total_time_pct: number | null;
+} | null;
+
+export type MetaInsights = {
+  account: {
+    username: string | null;
+    name: string | null;
+    followers_count: number | null;
+    media_count: number | null;
+  };
+  api_usage: MetaApiUsage;
 };

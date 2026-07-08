@@ -34,7 +34,7 @@ import { cn, initials, formatRelativeTime } from "@/lib/utils";
 const AVATAR_PALETTES = [
   "bg-brand-canvas text-brand-charcoal",
   "bg-brand-charcoal text-white",
-  "bg-red-50 text-brand-red",
+  "bg-brand-red50 text-brand-red",
   "bg-brand-neutral text-brand-ink",
   "bg-brand-red text-white",
 ];
@@ -107,7 +107,7 @@ export default function ContactsPage() {
         />
 
         {/* Filters */}
-        <div className="border-b border-brand-line bg-white px-4 py-3 sm:px-7">
+        <div className="border-b border-brand-line bg-brand-white px-4 py-3 sm:px-7">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             <div className="relative flex-1">
               <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-muted" />
@@ -143,7 +143,7 @@ export default function ContactsPage() {
             <LoadingSkeleton />
           ) : error ? (
             <div className="flex h-64 flex-col items-center justify-center gap-3 text-center">
-              <AlertCircle size={28} className="text-brand-red" />
+              <AlertCircle size={28} className="text-brand-danger" />
               <p className="ui-meta">Erro ao carregar contatos</p>
             </div>
           ) : contacts.length === 0 ? (
@@ -151,7 +151,7 @@ export default function ContactsPage() {
           ) : (
             <>
               <table className="w-full text-sm">
-                <thead className="sticky top-0 z-10 border-b border-brand-line bg-white/95 backdrop-blur">
+                <thead className="sticky top-0 z-10 border-b border-brand-line bg-brand-white/95 backdrop-blur">
                   <tr>
                     <th className="px-4 py-3 text-left text-[11px] font-extrabold uppercase tracking-wider text-brand-muted sm:px-7">
                       Contato
@@ -236,7 +236,7 @@ export default function ContactsPage() {
                                 <Button
                                   variant="outline"
                                   size="icon"
-                                  className="h-8 w-8 hover:border-brand-red/30 hover:bg-brand-red50 hover:text-brand-red"
+                                  className="h-8 w-8 hover:border-brand-danger/30 hover:bg-brand-dangerSoft hover:text-brand-danger"
                                   onClick={() => void deleteContact(contact)}
                                   disabled={deletingContact === contact.id}
                                 >
@@ -375,7 +375,7 @@ function EditContactModal({
               />
             </div>
             {error && (
-              <p className="rounded-card border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-brand-red">
+              <p className="rounded-card border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-brand-danger">
                 {error}
               </p>
             )}
@@ -468,7 +468,7 @@ function ImportModal({
 
           <div className="space-y-1.5">
             <Label htmlFor="csv-file">
-              Arquivo CSV <span className="text-brand-red">*</span>
+              Arquivo CSV <span className="text-brand-danger">*</span>
             </Label>
             <Input
               id="csv-file"
@@ -487,7 +487,7 @@ function ImportModal({
                 {result.skipped > 0 && `, ${result.skipped} ignorado${result.skipped !== 1 ? "s" : ""}`}
               </p>
               {result.errors.length > 0 && (
-                <ul className="mt-1.5 space-y-0.5 text-[11px] text-brand-red">
+                <ul className="mt-1.5 space-y-0.5 text-[11px] text-brand-danger">
                   {result.errors.slice(0, 5).map((e) => (
                     <li key={e.row}>Linha {e.row}: {e.reason}</li>
                   ))}

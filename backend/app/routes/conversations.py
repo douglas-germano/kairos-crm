@@ -16,6 +16,7 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from sqlalchemy.orm import joinedload
 from app.extensions import db, socketio
 from app.models import Contact, Conversation, Integration, Message, WorkspaceMember
+from app.services.channel_routing import resolve_channel_integration
 from app.services.whatsapp_identity import (
     canonical_external_id,
     lookup_external_ids,
@@ -93,9 +94,8 @@ def sync_whatsapp_conversations():
     if not workspace_id:
         return jsonify({"error": "Workspace não encontrado", "code": "NO_WORKSPACE"}), 404
 
-    integration = Integration.query.filter_by(
-        workspace_id=workspace_id, channel="whatsapp", status="active"
-    ).first()
+    integration_id = request.args.get("integration_id", type=int)
+    integration = resolve_channel_integration(workspace_id, "whatsapp", integration_id=integration_id)
     if not integration:
         return jsonify({"error": "Nenhuma integração WhatsApp ativa", "code": "NO_INTEGRATION"}), 400
 
@@ -143,6 +143,7 @@ def sync_whatsapp_conversations():
                 channel="whatsapp",
                 external_id=contact_external_id,
                 name=name,
+                integration_id=integration.id,
             )
             db.session.add(contact)
             db.session.flush()
@@ -221,6 +222,7 @@ def initiate_conversation():
     phone_raw = data.get("phone_number", "").strip()
     name = data.get("name", "").strip()
     message = data.get("message", "").strip()
+    integration_id = data.get("integration_id")
 
     if not phone_raw:
         return jsonify({"error": "phone_number é obrigatório", "code": "MISSING_PHONE"}), 400
@@ -229,9 +231,7 @@ def initiate_conversation():
     if len(phone_number) < 8:
         return jsonify({"error": "Número de telefone inválido", "code": "INVALID_PHONE"}), 400
 
-    integration = Integration.query.filter_by(
-        workspace_id=workspace_id, channel="whatsapp", status="active"
-    ).first()
+    integration = resolve_channel_integration(workspace_id, "whatsapp", integration_id=integration_id)
     if not integration:
         return jsonify({"error": "Nenhuma integração WhatsApp ativa", "code": "NO_WHATSAPP_INTEGRATION"}), 400
 
@@ -251,6 +251,7 @@ def initiate_conversation():
             channel="whatsapp",
             external_id=phone_number,
             name=name or phone_number,
+            integration_id=integration.id,
         )
         db.session.add(contact)
         db.session.flush()

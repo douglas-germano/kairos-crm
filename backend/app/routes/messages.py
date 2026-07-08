@@ -13,6 +13,7 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from sqlalchemy.exc import IntegrityError
 from app.extensions import db, socketio
 from app.models import Conversation, Message, Integration, WorkspaceMember
+from app.services.channel_routing import resolve_channel_integration
 from app.services.whatsapp_identity import remote_jids_for_contact
 
 logger = logging.getLogger(__name__)
@@ -130,9 +131,7 @@ def send_message(conversation_id: int):
 
     channel = conv.channel
     contact = conv.contact
-    integration = Integration.query.filter_by(
-        workspace_id=workspace_id, channel=channel, status="active"
-    ).first()
+    integration = resolve_channel_integration(workspace_id, channel, contact=contact)
 
     # Salva a mensagem antes de enviar — o operador vê o que digitou independente do resultado
     msg = Message(
@@ -198,9 +197,7 @@ def retry_message(message_id: int):
     conv = msg.conversation
     channel = conv.channel
     contact = conv.contact
-    integration = Integration.query.filter_by(
-        workspace_id=workspace_id, channel=channel, status="active"
-    ).first()
+    integration = resolve_channel_integration(workspace_id, channel, contact=contact)
     if not integration:
         return jsonify({"error": "Nenhuma integração ativa para reenviar", "code": "NO_INTEGRATION"}), 400
 
@@ -356,14 +353,12 @@ def sync_messages(conversation_id: int):
         if conv.channel != "whatsapp":
             return jsonify({"error": "Sync disponível apenas para WhatsApp", "code": "UNSUPPORTED_CHANNEL"}), 400
 
-        integration = Integration.query.filter_by(
-            workspace_id=workspace_id, channel="whatsapp", status="active"
-        ).first()
+        integration = resolve_channel_integration(workspace_id, "whatsapp", contact=conv.contact)
         if not integration:
             return jsonify({"error": "Nenhuma integração WhatsApp ativa", "code": "NO_INTEGRATION"}), 400
 
         remote_jids = remote_jids_for_contact(conv.contact)
-        instance_name = f"kairos-crm-{user_id}"
+        instance_name = (integration.meta or {}).get("instance_name") or f"kairos-crm-{user_id}"
 
         logger.debug("Buscando mensagens | instance=%s jids=%s", instance_name, remote_jids)
 

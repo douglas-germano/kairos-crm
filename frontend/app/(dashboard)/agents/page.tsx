@@ -222,14 +222,14 @@ export default function AgentsPage() {
                         onClick={() => toggleChannel(channel)}
                         className={`focus-ring flex h-10 items-center justify-between rounded-card border px-3 text-sm font-bold transition-colors ${
                           channels.includes(channel)
-                            ? "border-brand-red bg-white text-brand-red"
-                            : "border-brand-line bg-white text-brand-ink"
+                            ? "border-brand-red bg-brand-white text-brand-red"
+                            : "border-brand-line bg-brand-white text-brand-ink"
                         }`}
                       >
                         <span>{channel === "whatsapp" ? "WhatsApp" : "Instagram"}</span>
                         <span
                           className={`h-2.5 w-2.5 rounded-full transition-colors ${
-                            channels.includes(channel) ? "bg-brand-red" : "bg-[#bebebe]"
+                            channels.includes(channel) ? "bg-brand-red" : "bg-brand-lineStrong"
                           }`}
                         />
                       </button>

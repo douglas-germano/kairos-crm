@@ -105,7 +105,7 @@ export function FlowEditor({ flow, onSaved }: { flow: Flow; onSaved: (flow: Flow
       </div>
 
       <div className="hidden h-[calc(100vh-112px)] grid-cols-[280px_1fr_360px] app-canvas lg:grid">
-      <aside className="border-r border-brand-line bg-white/95">
+      <aside className="border-r border-brand-line bg-brand-white/95">
         <div className="border-b border-brand-line p-4">
           <div className="heading-md">Blocos do fluxo</div>
           <p className="body-muted mt-1">Adicione etapas e conecte os blocos no canvas.</p>
@@ -127,7 +127,7 @@ export function FlowEditor({ flow, onSaved }: { flow: Flow; onSaved: (flow: Flow
         </div>
       </aside>
 
-      <section className="relative overflow-hidden bg-[#eef1f4]">
+      <section className="relative overflow-hidden bg-brand-canvas">
         <div className="surface-card absolute left-5 right-5 top-5 z-10 flex items-center justify-between rounded-panel p-3 backdrop-blur">
           <div className="flex min-w-0 items-center gap-3">
             <div className="icon-tile icon-tile-red">
@@ -160,13 +160,13 @@ export function FlowEditor({ flow, onSaved }: { flow: Flow; onSaved: (flow: Flow
           fitView
           className="pt-20"
         >
-          <Background color="#cfd4da" gap={22} />
+          <Background color="#3d3153" gap={22} />
           <Controls />
-          <MiniMap nodeColor="#e60000" maskColor="rgba(37,40,43,0.08)" />
+          <MiniMap nodeColor="#7c3aed" maskColor="rgba(10,8,18,0.65)" />
         </ReactFlow>
       </section>
 
-      <aside className="border-l border-brand-line bg-white/95">
+      <aside className="border-l border-brand-line bg-brand-white/95">
         <div className="border-b border-brand-line p-4">
           <div className="item-title flex items-center gap-2">
             <Zap size={15} className="text-brand-red" />
@@ -203,7 +203,7 @@ export function FlowEditor({ flow, onSaved }: { flow: Flow; onSaved: (flow: Flow
                   <select
                     value={String(selectedNode.data?.condition_type || "contains")}
                     onChange={(event) => updateSelectedData("condition_type", event.target.value)}
-                    className="focus-ring h-11 w-full rounded-card border border-brand-line bg-white px-3 text-sm"
+                    className="focus-ring h-11 w-full rounded-card border border-brand-line bg-brand-white px-3 text-sm"
                   >
                     <option value="contains">Contem</option>
                     <option value="equals">Igual</option>
@@ -226,7 +226,7 @@ export function FlowEditor({ flow, onSaved }: { flow: Flow; onSaved: (flow: Flow
               Conecte este bloco arrastando a alca inferior para o proximo passo. Em condicoes, use saidas true/false no canvas.
             </div>
 
-            <Button type="button" variant="ghost" className="w-full border-brand-red text-brand-red" onClick={deleteSelectedNode}>
+            <Button type="button" variant="ghost" className="w-full border-brand-danger text-brand-danger hover:bg-brand-dangerSoft" onClick={deleteSelectedNode}>
               <Trash2 size={16} />
               Remover bloco
             </Button>
