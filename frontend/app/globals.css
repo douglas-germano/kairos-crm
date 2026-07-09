@@ -3,95 +3,98 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+  Sistema de design "Kairos Light" — claro, minimalista e sóbrio, com accent
+  violeta refinado. A hierarquia vem de tipografia, espaçamento e bordas finas;
+  sombras são muito sutis e reservadas a overlays/hover. Os nomes de variável são
+  mantidos por compatibilidade com o histórico do projeto (ver tailwind.config.ts).
+*/
 :root {
-  /* brand palette — reskin "Leona Flow": dark glass, violeta/magenta/ciano.
-     Nomes de variável mantidos por compatibilidade; ver tailwind.config.ts. */
-  --red: #7c3aed;
-  --red-dark: #6d28d9;
-  --red-50: #1f1533;
-  --red-100: #2a1c47;
-  --red-200: #4c3380;
-  --charcoal: #e3ddf0;
-  --ink: #f5f3fa;
-  --grey: #a99fc4;
-  /* ~7:1 sobre --canvas — AA confortável em texto pequeno de 10-12px no tema escuro */
-  --muted: #9a8fb8;
-  --line: #2c2440;
-  --line-strong: #3d3153;
-  --neutral: #1b1726;
-  --canvas: #0a0812;
-  --panel: #15111f;
-  --white: #1c1729;
-  --success: #34d399;
-  --success-strong: #10b981;
-  --success-soft: #0f2e22;
-  --warning: #fbbf24;
-  --warning-strong: #f59e0b;
-  --warning-soft: #3a2c0d;
-  --info: #38bdf8;
-  --info-strong: #0ea5e9;
-  --info-soft: #0d2b3a;
-  --danger: #f87171;
-  --danger-soft: #2a1414;
-  /* novos tokens do reskin */
-  --highlight: #d946ef;
-  --highlight-soft: #33123a;
-  --cyan: #22d3ee;
-  --cyan-soft: #0d2f36;
-  --border-glow: rgba(124, 58, 237, 0.45);
-  --border-highlight-glow: rgba(217, 70, 239, 0.4);
-  --glass-fill: rgba(255, 255, 255, 0.04);
-  --glass-fill-hover: rgba(255, 255, 255, 0.07);
-  --glass-border: rgba(255, 255, 255, 0.08);
-  --glass-border-hover: rgba(255, 255, 255, 0.15);
+  /* accent violeta sóbrio */
+  --red: #6e56cf;
+  --red-dark: #5b47b8;
+  --red-50: #f4f2fb;
+  --red-100: #e9e4f8;
+  --red-200: #d7cef1;
 
-  /* Corpo em Inter; títulos em Space Grotesk (var(--font-space-grotesk),
-     carregada via next/font/google em app/layout.tsx). Ver prompt/design-system.md §3
-     para o histórico do sistema anterior (Vodafone/Inter único). */
+  /* tinta / texto */
+  --ink: #18161f;
+  --charcoal: #2a2833;
+  --grey: #8a8792;
+  --muted: #6b6975;
+  --faint: #9895a2;
+
+  /* superfícies e linhas */
+  --canvas: #f6f6f9;
+  --panel: #ffffff;
+  --white: #ffffff;
+  --neutral: #eeedf3;
+  --line: #eae9f0;
+  --line-strong: #dcdae4;
+
+  /* semânticos */
+  --success: #16a34a;
+  --success-strong: #15803d;
+  --success-soft: #e8f6ee;
+  --warning: #c2760b;
+  --warning-strong: #a1620a;
+  --warning-soft: #fbf1df;
+  --info: #2563eb;
+  --info-strong: #1d4ed8;
+  --info-soft: #e9f0fe;
+  --danger: #dc2626;
+  --danger-soft: #fdeceb;
+  --highlight: #8b5cf6;
+  --highlight-soft: #f1ecfd;
+  --cyan: #0891b2;
+  --cyan-soft: #e2f4f8;
+
+  /* Uma família só (Inter) — títulos usam a mesma face com peso/tracking próprios. */
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
-  --font-display: var(--font-space-grotesk), var(--font-sans);
+  --font-display: var(--font-sans);
   --font-condensed: var(--font-sans);
   --font-serif: var(--font-sans);
-  --r-card: 14px;
-  --r-panel: 16px;
-  --r-pill: 32px;
-  /* Glow focus ring — a "elevação" do tema glass vem de blur + borda translúcida,
-     não de box-shadow de profundidade. */
-  --shadow-focus: 0 0 0 2px rgba(124, 58, 237, 0.45), inset 0 0 0 1px var(--red);
-  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
-  --t-fast: 200ms;
-  --t-base: 300ms;
-  --t-slow: 500ms;
 
-  /* shadcn tokens — mapped to brand design system */
-  --background: 252 38% 5%;         /* canvas #0a0812  */
-  --foreground: 257 41% 97%;        /* ink #f5f3fa     */
-  --card: 257 29% 9%;               /* panel #15111f   */
-  --card-foreground: 257 41% 97%;
-  --popover: 260 24% 10%;
-  --popover-foreground: 257 41% 97%;
-  --primary: 262 83% 58%;           /* brand-red (violeta) #7c3aed */
+  --r-card: 10px;
+  --r-panel: 14px;
+  --r-pill: 999px;
+
+  /* Anel de foco discreto com o accent. */
+  --shadow-focus: 0 0 0 2px var(--white), 0 0 0 4px rgba(110, 86, 207, 0.35);
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --t-fast: 150ms;
+  --t-base: 240ms;
+  --t-slow: 420ms;
+
+  /* shadcn tokens — mapeados para o tema claro */
+  --background: 248 22% 97%;        /* canvas #f6f6f9 */
+  --foreground: 250 16% 11%;        /* ink #18161f */
+  --card: 0 0% 100%;                /* white */
+  --card-foreground: 250 16% 11%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 250 16% 11%;
+  --primary: 252 54% 58%;           /* accent violeta #6e56cf */
   --primary-foreground: 0 0% 100%;
-  --secondary: 257 26% 14%;         /* elevated #1f1a2c  */
-  --secondary-foreground: 257 41% 97%;
-  --muted: 256 25% 12%;             /* neutral #1b1726   */
-  --muted-foreground: 256 22% 64%;  /* muted #9a8fb8     */
-  --accent: 255 24% 16%;            /* elevated-hover #241f33 */
-  --accent-foreground: 257 41% 97%;
-  --destructive: 0 91% 71%;         /* danger real, desacoplado do primary */
-  --destructive-foreground: 0 0% 12%;
-  --border: 257 28% 20%;            /* line #2c2440      */
-  --input: 257 28% 20%;
-  --ring: 262 83% 58%;              /* brand-red (violeta) para foco */
-  --sidebar: 260 32% 7%;
-  --sidebar-foreground: 257 41% 97%;
-  --sidebar-primary: 262 83% 58%;
+  --secondary: 250 24% 96%;         /* neutro claro */
+  --secondary-foreground: 250 14% 20%;
+  --muted: 250 24% 96%;
+  --muted-foreground: 252 5% 44%;   /* muted #6b6975 */
+  --accent: 252 46% 96%;            /* hover/soft violeta */
+  --accent-foreground: 252 42% 32%;
+  --destructive: 0 72% 51%;         /* danger #dc2626 */
+  --destructive-foreground: 0 0% 100%;
+  --border: 250 20% 92%;            /* line #eae9f0 */
+  --input: 250 20% 92%;
+  --ring: 252 54% 58%;
+  --sidebar: 0 0% 100%;             /* sidebar branca */
+  --sidebar-foreground: 250 16% 11%;
+  --sidebar-primary: 252 54% 58%;
   --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 255 24% 16%;
-  --sidebar-accent-foreground: 292 84% 61%;
-  --sidebar-border: 257 28% 20%;
-  --sidebar-ring: 262 83% 58%;
-  --radius: 14px;
+  --sidebar-accent: 252 46% 96%;
+  --sidebar-accent-foreground: 252 48% 42%;
+  --sidebar-border: 250 20% 92%;
+  --sidebar-ring: 252 54% 58%;
+  --radius: 10px;
 }
 
 * {
@@ -105,74 +108,13 @@ body {
 
 body {
   margin: 0;
-  position: relative;
-  background:
-    radial-gradient(ellipse 800px 600px at 45% 105%, rgba(34, 211, 238, 0.07), transparent 60%),
-    var(--canvas);
-  background-attachment: fixed;
-  color: var(--charcoal);
+  background: var(--canvas);
+  color: var(--ink);
   font-family: var(--font-sans);
-  font-smoothing: antialiased;
   -webkit-font-smoothing: antialiased;
-  text-rendering: geometricPrecision;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
   overflow-x: hidden;
-}
-
-/* Atmosfera viva — dois blobs de glow derivando devagar atrás de tudo.
-   É a diferença entre um fundo roxo estático e um ambiente que respira. */
-body::before,
-body::after {
-  content: "";
-  position: fixed;
-  z-index: -1;
-  border-radius: 50%;
-  filter: blur(90px);
-  pointer-events: none;
-  will-change: transform;
-}
-
-body::before {
-  top: -14rem;
-  left: -10rem;
-  width: 36rem;
-  height: 36rem;
-  background: radial-gradient(circle, rgba(124, 58, 237, 0.38), transparent 70%);
-  animation: drift-a 26s ease-in-out infinite alternate;
-}
-
-body::after {
-  top: 6rem;
-  right: -12rem;
-  width: 32rem;
-  height: 32rem;
-  background: radial-gradient(circle, rgba(217, 70, 239, 0.24), transparent 70%);
-  animation: drift-b 32s ease-in-out infinite alternate;
-}
-
-@keyframes drift-a {
-  0% { transform: translate(0, 0) scale(1); }
-  100% { transform: translate(4rem, 5rem) scale(1.18); }
-}
-
-@keyframes drift-b {
-  0% { transform: translate(0, 0) scale(1); }
-  100% { transform: translate(-5rem, 4rem) scale(1.12); }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  body::before,
-  body::after {
-    animation: none;
-  }
-}
-
-/* Texto com gradiente da marca — para o único destaque por tela que deve
-   "brilhar de verdade", não usar em mais de um trecho por página. */
-.text-gradient-brand {
-  background: linear-gradient(90deg, var(--red), var(--highlight));
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
 }
 
 button,
@@ -188,19 +130,23 @@ button {
 
 button:disabled {
   cursor: not-allowed;
-  opacity: 0.55;
+}
+
+/* Emphasis word — accent sólido; num sistema sóbrio evitamos texto arco-íris. */
+.text-gradient-brand {
+  color: var(--red);
 }
 
 .display-title {
   font-family: var(--font-display);
-  font-weight: 600;
-  line-height: 1.02;
-  letter-spacing: -0.01em;
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
 }
 
 .red-band {
-  height: 48px;
-  background: linear-gradient(90deg, var(--red), var(--highlight));
+  height: 3px;
+  background: var(--red);
 }
 
 .focus-ring:focus-visible {
@@ -213,43 +159,35 @@ button:disabled {
     background: var(--canvas);
   }
 
-  /* Glass elevado — vidro translúcido de verdade (fundo semi-transparente +
-     blur do que está atrás), usado nas superfícies mais destacadas (hero,
-     painéis de destaque). Precisa ficar sobre o fundo com gradiente do body
-     para o efeito aparecer — não empilhar vários por cima um do outro. O
-     highlight interno no topo é o que faz parecer vidro de verdade, não só
-     "preto translúcido". */
+  /* Cartão base — branco, borda fina, sombra quase imperceptível. Sem vidro. */
   .surface-card {
-    border: 1px solid var(--glass-border);
+    border: 1px solid var(--line);
     border-radius: var(--r-panel);
-    background: var(--glass-fill);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
+    background: var(--white);
+    box-shadow: 0 1px 2px rgba(24, 22, 34, 0.04);
   }
 
-  /* Glass denso — mesma linguagem, sem blur, para telas de lista/tabela onde
-     performance e legibilidade em massa importam mais que o efeito de vidro. */
+  /* Painel interno/aninhado — preenchimento neutro sobre o cartão branco. */
   .surface-soft {
     border: 1px solid var(--line);
     border-radius: var(--r-card);
-    background: var(--white);
+    background: var(--canvas);
   }
 
+  /* Elevação de destaque (cartão de login, callout) — sombra suave, sem glow. */
   .surface-glow {
-    box-shadow: 0 0 0 1px var(--border-glow), 0 8px 32px -12px var(--border-glow);
+    box-shadow: 0 1px 2px rgba(24, 22, 34, 0.04), 0 18px 40px -24px rgba(24, 22, 34, 0.22);
   }
 
-  /* Levanta e brilha no hover — só em superfícies clicáveis (cards de lista,
-     linhas de conversa, itens de navegação), nunca em containers estáticos. */
+  /* Hover discreto para superfícies clicáveis — realça borda + sombra leve. */
   .lift-on-hover {
-    transition: transform var(--t-base) var(--ease-out-expo), box-shadow var(--t-base) var(--ease-out-expo), border-color var(--t-base) var(--ease-out-expo);
+    transition: box-shadow var(--t-base) var(--ease-out-expo), border-color var(--t-base) var(--ease-out-expo), transform var(--t-base) var(--ease-out-expo);
   }
 
   .lift-on-hover:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 14px 32px -12px rgba(124, 58, 237, 0.4);
-    border-color: var(--glass-border-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(24, 22, 34, 0.05), 0 12px 28px -16px rgba(24, 22, 34, 0.24);
+    border-color: var(--line-strong);
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -267,50 +205,52 @@ button:disabled {
 
   @screen sm {
     .section-pad {
-      padding: 1.25rem;
+      padding: 1.5rem;
     }
   }
 
   .eyebrow {
     color: var(--muted);
     font-family: var(--font-condensed);
-    font-size: 0.75rem;
-    font-weight: 700;
+    font-size: 0.6875rem;
+    font-weight: 600;
     line-height: 1.2;
     text-transform: uppercase;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.08em;
   }
 
   .heading-xl {
     color: var(--ink);
     font-family: var(--font-display);
-    font-size: clamp(1.6rem, 2.4vw, 2.5rem);
+    font-size: clamp(1.5rem, 2.2vw, 2.15rem);
     font-weight: 700;
-    line-height: 1.03;
+    line-height: 1.08;
     letter-spacing: -0.02em;
   }
 
   .heading-md {
     color: var(--ink);
     font-family: var(--font-display);
-    font-size: 1rem;
-    font-weight: 600;
-    line-height: 1.15;
+    font-size: 1.0625rem;
+    font-weight: 650;
+    line-height: 1.2;
+    letter-spacing: -0.01em;
   }
 
   .card-title {
     color: var(--ink);
     font-family: var(--font-display);
-    font-size: 1rem;
-    font-weight: 600;
-    line-height: 1.2;
+    font-size: 0.9375rem;
+    font-weight: 650;
+    line-height: 1.25;
+    letter-spacing: -0.006em;
   }
 
   .item-title {
     color: var(--ink);
     font-size: 0.875rem;
-    font-weight: 700;
-    line-height: 1.25;
+    font-weight: 600;
+    line-height: 1.3;
   }
 
   .ui-body {
@@ -328,22 +268,22 @@ button:disabled {
   .ui-meta {
     color: var(--muted);
     font-family: var(--font-condensed);
-    font-size: 0.8125rem;
-    font-weight: 500;
+    font-size: 0.75rem;
+    font-weight: 450;
     line-height: 1.4;
-    letter-spacing: 0.01em;
   }
 
   .ui-label {
     color: var(--muted);
     font-family: var(--font-condensed);
-    font-size: 0.75rem;
-    font-weight: 700;
+    font-size: 0.6875rem;
+    font-weight: 600;
     line-height: 1.2;
     text-transform: uppercase;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.06em;
   }
 
+  /* Crachá de ícone neutro. */
   .icon-tile {
     display: inline-flex;
     height: 2.5rem;
@@ -352,41 +292,42 @@ button:disabled {
     align-items: center;
     justify-content: center;
     border-radius: 10px;
-    background: var(--line-strong);
-    color: white;
-    box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.12);
+    background: var(--neutral);
+    color: var(--ink);
   }
 
+  /* Crachá de ícone do accent — violeta sólido, sem gradiente. */
   .icon-tile-red {
-    background: linear-gradient(135deg, var(--red), var(--highlight));
-  }
-}
-
-@layer components {
-  .k-button {
-    border-style: solid;
-    border-width: 1.5px;
+    background: var(--red);
+    color: #ffffff;
   }
 }
 
 .scrollbar-thin {
   scrollbar-width: thin;
-  scrollbar-color: #453a5e transparent;
+  scrollbar-color: #cfcdd8 transparent;
 }
 
 .scrollbar-thin::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 10px;
+  height: 10px;
 }
 
 .scrollbar-thin::-webkit-scrollbar-thumb {
-  background: #453a5e;
-  border-radius: 32px;
+  background: #d6d4de;
+  border-radius: 999px;
+  border: 3px solid transparent;
+  background-clip: padding-box;
 }
 
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: #c3c1cd;
+  background-clip: padding-box;
+}
+
+/* ── React Flow (editor de fluxo) — tema claro ─────────────────────────────── */
 .react-flow__node {
-  border-radius: 10px;
-  border: 1.5px solid var(--glass-border-hover);
+  border-radius: 8px;
   font-family: var(--font-sans);
 }
 
@@ -402,7 +343,7 @@ button:disabled {
 }
 
 .react-flow__controls {
-  box-shadow: none;
+  box-shadow: 0 1px 2px rgba(24, 22, 34, 0.05), 0 4px 12px rgba(24, 22, 34, 0.07);
   border-radius: 10px;
   overflow: hidden;
   border: 1px solid var(--line);
@@ -411,18 +352,24 @@ button:disabled {
 .react-flow__controls-button {
   background: var(--white);
   border-bottom: 1px solid var(--line);
-  color: var(--charcoal);
+  color: var(--muted);
 }
 
 .react-flow__controls-button:hover {
-  background: var(--neutral);
+  background: var(--canvas);
 }
 
 .react-flow__controls-button svg {
-  fill: var(--charcoal);
+  fill: var(--muted);
+}
+
+.react-flow__minimap {
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  overflow: hidden;
 }
 
 .react-flow__attribution {
-  background: var(--glass-fill);
-  color: var(--muted);
+  background: rgba(255, 255, 255, 0.7);
+  color: var(--faint);
 }

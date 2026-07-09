@@ -299,10 +299,12 @@ export function ChatWindow({ conversation, onConversationChange, onConversationD
   if (!conversation) {
     return (
       <section className="flex h-full items-center justify-center app-canvas p-6">
-        <div className="surface-card max-w-md rounded-panel p-8 text-center">
-          <CircleSlash className="mx-auto mb-4 text-brand-red" size={34} />
+        <div className="max-w-md text-center">
+          <span className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-full bg-brand-white shadow-sm ring-1 ring-brand-line">
+            <CircleSlash className="text-brand-red" size={26} />
+          </span>
           <h2 className="heading-xl">Selecione uma conversa</h2>
-          <p className="body-muted mt-2">
+          <p className="body-muted mx-auto mt-2 max-w-sm">
             A janela de atendimento mostra o histórico, o canal e o controle de IA por conversa.
           </p>
         </div>
@@ -318,12 +320,14 @@ export function ChatWindow({ conversation, onConversationChange, onConversationD
   const isWhatsApp = conversation.channel === "whatsapp";
 
   return (
-    <section className="flex h-full flex-col overflow-hidden bg-brand-white/90">
+    <section className="flex h-full flex-col overflow-hidden bg-brand-canvas">
       {/* Header */}
-      <header className="shrink-0 border-b border-brand-line bg-brand-white/92 p-4 backdrop-blur">
+      <header className="shrink-0 border-b border-brand-line bg-brand-white px-4 py-3">
         <div className="flex items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
-            <ChannelIcon channel={conversation.channel} className="h-9 w-9 shrink-0" />
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-canvas ring-1 ring-brand-line">
+              <ChannelIcon channel={conversation.channel} className="h-[18px] w-[18px]" />
+            </span>
             <div className="min-w-0">
               <h2 className="card-title truncate">{name}</h2>
               <div className="ui-meta mt-0.5">
@@ -331,7 +335,7 @@ export function ChatWindow({ conversation, onConversationChange, onConversationD
               </div>
             </div>
           </div>
-          <div className="flex shrink-0 items-center gap-3">
+          <div className="flex shrink-0 items-center gap-2 sm:gap-3">
             <Toggle checked={conversation.ai_enabled} onChange={toggleAi} label="IA ativa" />
 
             {/* Sync button — WhatsApp only */}
@@ -345,18 +349,18 @@ export function ChatWindow({ conversation, onConversationChange, onConversationD
 
             <button
               onClick={() => void deleteConversation()}
-              className="focus-ring rounded-card bg-brand-canvas p-2 text-brand-muted transition hover:bg-brand-dangerSoft hover:text-brand-danger"
+              className="focus-ring rounded-card border border-brand-line bg-brand-white p-2 text-brand-muted transition-colors hover:border-red-200 hover:bg-red-50 hover:text-brand-danger"
               aria-label="Excluir conversa"
               title="Excluir conversa"
             >
-              <Trash2 size={18} />
+              <Trash2 size={17} />
             </button>
 
             <button
-              className="focus-ring rounded-card bg-brand-canvas p-2 text-brand-muted transition hover:text-brand-ink"
+              className="focus-ring rounded-card border border-brand-line bg-brand-white p-2 text-brand-muted transition-colors hover:border-brand-lineStrong hover:text-brand-ink"
               aria-label="Mais opções"
             >
-              <MoreHorizontal size={18} />
+              <MoreHorizontal size={17} />
             </button>
           </div>
         </div>
@@ -425,7 +429,7 @@ export function ChatWindow({ conversation, onConversationChange, onConversationD
       {/* Rodapé */}
       <div className="shrink-0">
         {(typingUser || agentTyping) && (
-          <div className="flex items-center gap-1.5 border-t border-brand-line bg-brand-white/95 px-4 py-1.5 text-xs font-semibold text-brand-muted">
+          <div className="flex items-center gap-1.5 border-t border-brand-line bg-brand-white px-4 py-1.5 text-xs font-medium text-brand-muted">
             <span className="flex gap-0.5">
               <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-current [animation-delay:-0.3s]" />
               <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-current [animation-delay:-0.15s]" />
@@ -479,12 +483,12 @@ function SyncButton({
       onClick={onSync}
       disabled={state === "syncing"}
       title={label}
-      className={`focus-ring flex items-center gap-1.5 rounded-card border px-2.5 py-1.5 text-[11px] font-extrabold transition
+      className={`focus-ring flex items-center gap-1.5 rounded-card border px-2.5 py-1.5 text-[11px] font-semibold transition-colors
         ${state === "done"
           ? "border-brand-success/30 bg-brand-successSoft text-brand-successStrong"
           : state === "error"
-            ? "border-brand-red/30 bg-brand-red50 text-brand-red"
-            : "border-brand-line bg-brand-canvas text-brand-muted hover:text-brand-ink"
+            ? "border-red-200 bg-red-50 text-brand-danger"
+            : "border-brand-line bg-brand-white text-brand-muted hover:border-brand-lineStrong hover:text-brand-ink"
         } disabled:opacity-60`}
     >
       <RefreshCw size={12} className={state === "syncing" ? "animate-spin" : ""} />

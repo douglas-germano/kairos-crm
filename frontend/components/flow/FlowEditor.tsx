@@ -67,8 +67,8 @@ export function FlowEditor({ flow, onSaved }: { flow: Flow; onSaved: (flow: Flow
         return {
           ...edge,
           style: active
-            ? { stroke: "#7c3aed", strokeWidth: 2.5 }
-            : { stroke: "#3d3153", strokeWidth: 1.5, opacity: 0.5 }
+            ? { stroke: "#6e56cf", strokeWidth: 2 }
+            : { stroke: "#cdcbd8", strokeWidth: 1.5, opacity: 0.7 }
         };
       }),
     [edges, selectedNodeId]
@@ -140,7 +140,7 @@ export function FlowEditor({ flow, onSaved }: { flow: Flow; onSaved: (flow: Flow
       </div>
 
       <div className="hidden h-[calc(100vh-112px)] grid-cols-[280px_1fr_360px] app-canvas lg:grid">
-      <aside className="border-r border-brand-line bg-brand-white/95">
+      <aside className="border-r border-brand-line bg-brand-white">
         <div className="border-b border-brand-line p-4">
           <div className="heading-md">Blocos do fluxo</div>
           <p className="body-muted mt-1">Adicione etapas e conecte os blocos no canvas.</p>
@@ -163,7 +163,7 @@ export function FlowEditor({ flow, onSaved }: { flow: Flow; onSaved: (flow: Flow
       </aside>
 
       <section className="relative overflow-hidden bg-brand-canvas">
-        <div className="surface-card absolute left-5 right-5 top-5 z-10 flex items-center justify-between rounded-panel p-3 backdrop-blur">
+        <div className="surface-card absolute left-5 right-5 top-5 z-10 flex items-center justify-between rounded-panel p-3">
           <div className="flex min-w-0 items-center gap-3">
             <div className="icon-tile icon-tile-red">
               <Zap size={17} />
@@ -196,13 +196,13 @@ export function FlowEditor({ flow, onSaved }: { flow: Flow; onSaved: (flow: Flow
           fitView
           className="pt-20"
         >
-          <Background color="#3d3153" gap={22} />
+          <Background color="#dcdae4" gap={22} />
           <Controls />
-          <MiniMap nodeColor={(node) => nodeDotColor(node.type)} maskColor="rgba(10,8,18,0.65)" />
+          <MiniMap nodeColor={(node) => nodeDotColor(node.type)} maskColor="rgba(246,246,249,0.6)" />
         </ReactFlow>
       </section>
 
-      <aside className="border-l border-brand-line bg-brand-white/95">
+      <aside className="border-l border-brand-line bg-brand-white">
         <div className="border-b border-brand-line p-4">
           <div className="item-title flex items-center gap-2">
             <Zap size={15} className="text-brand-red" />

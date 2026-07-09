@@ -5,30 +5,29 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "focus-ring inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-card text-sm font-extrabold transition duration-fast ease-brand hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97] disabled:pointer-events-none disabled:opacity-55 disabled:hover:translate-y-0 disabled:hover:shadow-none [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+  "focus-ring inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-card text-sm font-semibold transition duration-fast ease-brand active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
   {
     variants: {
       variant: {
-        default: "border border-brand-red bg-brand-red text-white hover:bg-brand-redDark hover:shadow-glow active:opacity-90",
-        red: "border border-brand-red bg-brand-red text-white hover:bg-brand-redDark hover:shadow-glow active:opacity-90",
-        destructive:
-          "border border-destructive bg-destructive text-destructive-foreground hover:bg-destructive/90 active:opacity-90",
-        outline:
-          "border border-input bg-background text-foreground hover:bg-accent hover:text-accent-foreground active:opacity-90",
-        secondary:
-          "border border-secondary bg-secondary text-secondary-foreground hover:bg-secondary/80 active:opacity-90",
-        ghost:
-          "border border-brand-line bg-brand-white text-brand-ink hover:border-brand-charcoal/25 hover:bg-brand-canvas active:opacity-90",
-        link: "rounded-none border-0 text-primary underline-offset-4 hover:underline hover:translate-y-0 active:scale-100",
-        pill: "rounded-[60px] border border-brand-red bg-brand-red text-white hover:bg-brand-redDark hover:shadow-glow active:opacity-90",
-        dark: "border border-brand-charcoal bg-brand-charcoal text-white hover:bg-brand-ink active:opacity-90",
-        subtle: "rounded-[60px] border border-transparent bg-brand-red50 text-brand-red hover:bg-brand-red100 active:opacity-90"
+        // Primário — accent violeta sólido.
+        default: "bg-brand-red text-white hover:bg-brand-redDark hover:shadow-glow",
+        red: "bg-brand-red text-white hover:bg-brand-redDark hover:shadow-glow",
+        destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90",
+        // Contorno neutro — botões de ícone/ação secundária.
+        outline: "border border-brand-line bg-brand-white text-brand-ink hover:border-brand-lineStrong hover:bg-brand-canvas",
+        secondary: "border border-brand-line bg-brand-canvas text-brand-ink hover:bg-brand-neutral",
+        // Secundário/cancelar — branco com borda fina.
+        ghost: "border border-brand-line bg-brand-white text-brand-ink hover:border-brand-lineStrong hover:bg-brand-canvas",
+        link: "text-brand-red underline-offset-4 hover:underline",
+        pill: "rounded-pill bg-brand-red text-white hover:bg-brand-redDark hover:shadow-glow",
+        dark: "bg-brand-charcoal text-white hover:bg-brand-ink",
+        subtle: "bg-brand-red50 text-brand-red hover:bg-brand-red100"
       },
       size: {
-        default: "min-h-10 px-3.5 py-2.5",
+        default: "h-10 px-3.5 py-2",
         sm: "h-9 px-3",
-        lg: "h-11 px-8",
-        icon: "h-10 w-10 rounded-full p-0"
+        lg: "h-11 px-6",
+        icon: "h-10 w-10 p-0"
       }
     },
     defaultVariants: {

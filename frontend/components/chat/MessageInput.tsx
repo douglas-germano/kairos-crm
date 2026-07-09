@@ -211,7 +211,7 @@ export function MessageInput({ onSend, disabled, workspaceId, conversationId }: 
     `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
 
   return (
-    <form onSubmit={onSubmit} className="border-t border-brand-line bg-brand-white/95 p-3 backdrop-blur">
+    <form onSubmit={onSubmit} className="border-t border-brand-line bg-brand-white p-3">
       <div className="mx-auto max-w-4xl">
         {attachmentError && (
           <div className="mb-2 flex items-center justify-between rounded-card bg-brand-dangerSoft px-3 py-1.5 text-xs font-semibold text-brand-danger">

@@ -259,11 +259,11 @@ export function SidebarMenuButton({
       data-active={isActive}
       title={state === "collapsed" ? tooltip : undefined}
       className={cn(
-        "focus-ring relative flex h-11 w-full items-center gap-3 overflow-hidden rounded-card px-3 text-left text-sm font-bold outline-none transition-all duration-200 ease-brand",
-        "before:absolute before:inset-y-2 before:left-0 before:w-[3px] before:rounded-full before:bg-brand-highlight before:transition-transform before:duration-200 before:ease-brand before:content-['']",
+        "focus-ring relative flex h-10 w-full items-center gap-3 overflow-hidden rounded-card px-3 text-left text-sm font-medium outline-none transition-colors duration-fast ease-brand",
+        "before:absolute before:inset-y-[7px] before:left-0 before:w-[3px] before:rounded-full before:bg-brand-red before:transition-transform before:duration-fast before:ease-brand before:content-['']",
         isActive
-          ? "bg-sidebar-accent text-sidebar-accent-foreground before:scale-y-100"
-          : "text-sidebar-foreground/72 before:scale-y-0 hover:translate-x-0.5 hover:bg-sidebar-accent/70 hover:text-sidebar-foreground",
+          ? "bg-sidebar-accent font-semibold text-sidebar-accent-foreground before:scale-y-100"
+          : "text-brand-muted before:scale-y-0 hover:bg-brand-canvas hover:text-brand-ink",
         "group-data-[state=collapsed]/sidebar-wrapper:justify-center group-data-[state=collapsed]/sidebar-wrapper:px-0",
         "[&_svg]:size-[18px] [&_svg]:shrink-0",
         className
