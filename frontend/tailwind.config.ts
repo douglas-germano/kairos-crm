@@ -111,12 +111,14 @@ const config: Config = {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
-        // Vodafone-inspired scale: 2px sharp utility controls, 6px cards/containers,
-        // 32px filled badge pills, 60px editorial CTA pills, 50%/100% circles/portraits
-        tight: "2px",
-        card: "6px",
-        panel: "6px",
-        pill: "32px"
+        // Reskin "Leona Flow" — controles e cartões seguem a mesma curva suave
+        // do vidro (--r-card/--r-panel em globals.css); só pills continuam
+        // totalmente arredondadas. "tight" existe para os poucos elementos que
+        // ainda querem um canto quase reto (ex.: badge outline denso).
+        tight: "4px",
+        card: "var(--r-card)",
+        panel: "var(--r-panel)",
+        pill: "var(--r-pill)"
       },
       borderWidth: {
         control: "1px"
