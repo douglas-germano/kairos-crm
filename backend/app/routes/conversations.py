@@ -97,6 +97,8 @@ def sync_whatsapp_conversations():
     integration_id = request.args.get("integration_id", type=int)
     integration = resolve_channel_integration(workspace_id, "whatsapp", integration_id=integration_id)
     if not integration:
+        if integration_id:
+            return jsonify({"error": "Conexão informada não está ativa neste workspace", "code": "INTEGRATION_NOT_FOUND"}), 404
         return jsonify({"error": "Nenhuma integração WhatsApp ativa", "code": "NO_INTEGRATION"}), 400
 
     meta = integration.meta or {}
@@ -147,8 +149,13 @@ def sync_whatsapp_conversations():
             )
             db.session.add(contact)
             db.session.flush()
-        elif name and (not contact.name or contact.name == contact.external_id):
-            contact.name = name
+        else:
+            if name and (not contact.name or contact.name == contact.external_id):
+                contact.name = name
+            # O chat apareceu na lista desta conexão — é dela que a próxima
+            # resposta deve sair, mesmo que o contato tenha sido visto antes
+            # por outro número.
+            contact.integration_id = integration.id
 
         remember_contact_identity(contact, remote_jid, None, name)
 
@@ -233,6 +240,8 @@ def initiate_conversation():
 
     integration = resolve_channel_integration(workspace_id, "whatsapp", integration_id=integration_id)
     if not integration:
+        if integration_id:
+            return jsonify({"error": "Conexão escolhida não está ativa neste workspace", "code": "INTEGRATION_NOT_FOUND"}), 404
         return jsonify({"error": "Nenhuma integração WhatsApp ativa", "code": "NO_WHATSAPP_INTEGRATION"}), 400
 
     # Encontra ou cria contato
@@ -255,8 +264,12 @@ def initiate_conversation():
         )
         db.session.add(contact)
         db.session.flush()
-    elif name and not contact.name:
-        contact.name = name
+    else:
+        if name and not contact.name:
+            contact.name = name
+        # O operador escolheu (ou o sistema resolveu) explicitamente esta conexão
+        # para iniciar a conversa — é dela que as próximas respostas devem sair.
+        contact.integration_id = integration.id
     remember_contact_identity(contact, f"{phone_number}@s.whatsapp.net", f"{phone_number}@s.whatsapp.net", name or None)
 
     # Reabre conversa existente ou cria nova

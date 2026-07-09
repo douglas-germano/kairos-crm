@@ -60,14 +60,20 @@ const NAV_ITEMS: { id: Section; label: string; icon: React.ReactNode }[] = [
 
 // ─── WhatsApp Connection Card (uma conexão/número) ────────────────────────────
 
-function WhatsAppConnectionCard({ integration, onChanged }: { integration: Integration; onChanged: () => void }) {
+function WhatsAppConnectionCard({
+  integration, onChanged, initialQr,
+}: {
+  integration: Integration;
+  onChanged: () => void;
+  initialQr?: QrData;
+}) {
   const { data: status, mutate: mutateStatus } = useSWR<WaStatusResponse>(
     `/api/settings/whatsapp/status?integration_id=${integration.id}`,
     swrFetcher,
     { refreshInterval: 0 }
   );
-  const [phase, setPhase] = useState<"idle" | "loading" | "qr" | "polling" | "error">("idle");
-  const [qrData, setQrData] = useState<QrData | null>(null);
+  const [phase, setPhase] = useState<"idle" | "loading" | "qr" | "polling" | "error">(initialQr ? "qr" : "idle");
+  const [qrData, setQrData] = useState<QrData | null>(initialQr ?? null);
   const [errorMsg, setErrorMsg] = useState("");
   const [countdown, setCountdown] = useState(60);
   const [renaming, setRenaming] = useState(false);
@@ -100,7 +106,13 @@ function WhatsAppConnectionCard({ integration, onChanged }: { integration: Integ
     }, 3000);
   }, [stopPolling, mutateStatus, onChanged]);
 
-  useEffect(() => () => stopPolling(), [stopPolling]);
+  // Se este card já nasce com um QR (conexão recém-criada em "Adicionar número"),
+  // começa a torcer pela conexão imediatamente em vez de mostrar "desconectado".
+  useEffect(() => {
+    if (initialQr) startPolling();
+    return () => stopPolling();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function handleGenerateQr() {
     setPhase("loading"); setErrorMsg("");
@@ -261,15 +273,15 @@ function WhatsAppQrPanel({ qrData, countdown, onRefresh }: { qrData: QrData | nu
 
 // ─── WhatsApp Add Card ─────────────────────────────────────────────────────────
 
-function WhatsAppAddCard({ onCreated }: { onCreated: () => void }) {
+function WhatsAppAddCard({ onCreated }: { onCreated: (integrationId: number, qr: QrData) => void }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   async function handleAdd() {
     setLoading(true); setError("");
     try {
-      await apiFetch("/api/settings/whatsapp/connect", { method: "POST", body: JSON.stringify({}) });
-      onCreated();
+      const data = await apiFetch<ConnectResponse>("/api/settings/whatsapp/connect", { method: "POST", body: JSON.stringify({}) });
+      onCreated(data.integration_id, data.qr);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erro ao criar conexão");
     } finally {
@@ -695,6 +707,9 @@ function CanaisSection({
 }) {
   const whatsappConnections = integrations.filter((i) => i.channel === "whatsapp");
   const instagram = integrations.find((i) => i.channel === "instagram");
+  // QR já gerado pelo "Adicionar número", repassado ao card assim que ele aparecer
+  // na lista — evita que o operador tenha que clicar em "Gerar QR Code" de novo.
+  const [justCreated, setJustCreated] = useState<{ integrationId: number; qr: QrData } | null>(null);
 
   return (
     <div className="space-y-6">
@@ -707,9 +722,19 @@ function CanaisSection({
         </div>
         <div className="space-y-3">
           {whatsappConnections.map((integration) => (
-            <WhatsAppConnectionCard key={integration.id} integration={integration} onChanged={onWaChanged} />
+            <WhatsAppConnectionCard
+              key={integration.id}
+              integration={integration}
+              onChanged={onWaChanged}
+              initialQr={justCreated?.integrationId === integration.id ? justCreated.qr : undefined}
+            />
           ))}
-          <WhatsAppAddCard onCreated={onWaChanged} />
+          <WhatsAppAddCard
+            onCreated={(integrationId, qr) => {
+              setJustCreated({ integrationId, qr });
+              onWaChanged();
+            }}
+          />
         </div>
       </div>
       <InstagramSection integration={instagram} onDisconnect={onIgDisconnected} />

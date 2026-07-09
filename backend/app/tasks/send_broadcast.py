@@ -38,22 +38,20 @@ def run(broadcast_id: int):
         broadcast.failed_count = 0
         db.session.commit()
 
-        default_integration = resolve_channel_integration(broadcast.workspace_id, "whatsapp")
-        if not default_integration:
+        if not resolve_channel_integration(broadcast.workspace_id, "whatsapp"):
             broadcast.status = "failed"
             db.session.commit()
             logger.error("Nenhuma integração WhatsApp ativa para o broadcast | id=%s", broadcast_id)
             return
 
         # Um workspace pode ter mais de um número WhatsApp ativo — cada destinatário é
-        # enviado pela conexão de onde o contato foi visto primeiro (fallback: a primeira
-        # integração ativa, para compatibilidade com workspaces de conexão única).
+        # enviado pela conexão de onde o contato foi visto por último (resolve_channel_integration
+        # já cai para a primeira integração ativa quando o contato não aponta pra nenhuma,
+        # cobrindo workspaces de conexão única e contatos migrados antes dessa coluna existir).
         services_by_integration: dict[int, object] = {}
 
         def _service_for(contact) -> object:
-            integration = resolve_channel_integration(
-                broadcast.workspace_id, "whatsapp", contact=contact
-            ) or default_integration
+            integration = resolve_channel_integration(broadcast.workspace_id, "whatsapp", contact=contact)
             if integration.id not in services_by_integration:
                 services_by_integration[integration.id] = get_whatsapp_service(integration)
             return services_by_integration[integration.id]
