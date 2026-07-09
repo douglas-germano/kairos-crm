@@ -1,81 +1,126 @@
 "use client";
 
 import { Handle, Position, NodeProps } from "@xyflow/react";
-import { Bot, GitBranch, MessageSquare, Radio, Webhook } from "lucide-react";
+import { Bot, GitBranch, MessageSquare, Radio, Webhook, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const baseClass =
-  "min-w-[180px] rounded-card border border-brand-line bg-brand-white px-3.5 py-3 font-sans text-sm transition-shadow hover:shadow-glow";
+type NodeKind = "TriggerNode" | "MessageNode" | "ConditionNode" | "AINode" | "WebhookNode";
 
-// Cada tipo de bloco tem sua própria cor — a tela do editor de fluxo devia
-// parecer um mapa colorido, não uma coluna de caixas cinzas iguais.
-export function TriggerNode({ data }: NodeProps) {
+// Cor só no crachá do ícone, não no bloco inteiro — o canvas precisa parecer
+// um diagrama técnico (tipo n8n/Temporal), não uma fileira de cards de vidro.
+const NODE_META: Record<NodeKind, { icon: LucideIcon; tint: string; iconColor: string; kind: string }> = {
+  TriggerNode: { icon: Radio, tint: "bg-brand-red/12", iconColor: "text-brand-red", kind: "Gatilho" },
+  MessageNode: { icon: MessageSquare, tint: "bg-brand-info/12", iconColor: "text-brand-info", kind: "Mensagem" },
+  ConditionNode: { icon: GitBranch, tint: "bg-brand-warning/12", iconColor: "text-brand-warning", kind: "Condição" },
+  AINode: { icon: Bot, tint: "bg-brand-highlight/12", iconColor: "text-brand-highlight", kind: "IA" },
+  WebhookNode: { icon: Webhook, tint: "bg-brand-cyan/12", iconColor: "text-brand-cyan", kind: "Webhook" }
+};
+
+function NodeShell({
+  kind,
+  label,
+  selected,
+  caption,
+  children
+}: {
+  kind: NodeKind;
+  label: string;
+  selected?: boolean;
+  caption?: string;
+  children?: React.ReactNode;
+}) {
+  const meta = NODE_META[kind];
+  const Icon = meta.icon;
   return (
-    <div className={cn(baseClass, "border-t-[3px] border-t-brand-red")}>
-      <div className="flex items-center gap-2 mb-1">
-        <Radio size={14} className="text-brand-red shrink-0" />
-        <span className="font-extrabold text-brand-ink text-xs truncate">{String(data.label ?? "Gatilho")}</span>
+    <div
+      className={cn(
+        "min-w-[192px] rounded-md border bg-brand-white px-3 py-2.5 font-sans text-sm transition-colors",
+        selected ? "border-brand-red ring-2 ring-brand-red/25" : "border-brand-line hover:border-brand-lineStrong"
+      )}
+    >
+      <div className="flex items-center gap-2">
+        <span className={cn("flex h-6 w-6 shrink-0 items-center justify-center rounded", meta.tint)}>
+          <Icon size={13} className={meta.iconColor} />
+        </span>
+        <span className="min-w-0 flex-1 truncate text-xs font-bold text-brand-ink">{label}</span>
       </div>
-      <p className="text-[10px] text-brand-muted capitalize">{String(data.trigger_type ?? "first_message").replace(/_/g, " ")}</p>
-      <Handle type="source" position={Position.Bottom} />
+      {caption ? (
+        <p className="mt-1.5 truncate pl-8 font-mono text-[10px] text-brand-muted">{caption}</p>
+      ) : null}
+      {children}
     </div>
   );
 }
 
-export function MessageNode({ data }: NodeProps) {
+export function TriggerNode({ data, selected }: NodeProps) {
   return (
-    <div className={cn(baseClass, "border-t-[3px] border-t-brand-info")}>
-      <Handle type="target" position={Position.Top} />
-      <div className="flex items-center gap-2 mb-1">
-        <MessageSquare size={14} className="text-brand-info shrink-0" />
-        <span className="font-extrabold text-brand-ink text-xs truncate">{String(data.label ?? "Mensagem")}</span>
-      </div>
-      <p className="text-[10px] text-brand-muted line-clamp-2">{String(data.message ?? "")}</p>
+    <NodeShell
+      kind="TriggerNode"
+      selected={selected}
+      label={String(data.label ?? "Gatilho")}
+      caption={String(data.trigger_type ?? "first_message").replace(/_/g, " ")}
+    >
       <Handle type="source" position={Position.Bottom} />
-    </div>
+    </NodeShell>
   );
 }
 
-export function ConditionNode({ data }: NodeProps) {
+export function MessageNode({ data, selected }: NodeProps) {
   return (
-    <div className={cn(baseClass, "border-t-[3px] border-t-brand-warning")}>
+    <NodeShell
+      kind="MessageNode"
+      selected={selected}
+      label={String(data.label ?? "Mensagem")}
+      caption={String(data.message ?? "") || undefined}
+    >
       <Handle type="target" position={Position.Top} />
-      <div className="flex items-center gap-2 mb-1">
-        <GitBranch size={14} className="text-brand-warning shrink-0" />
-        <span className="font-extrabold text-brand-ink text-xs truncate">{String(data.label ?? "Condição")}</span>
-      </div>
-      <p className="text-[10px] text-brand-muted">{String(data.condition ?? "")}</p>
+      <Handle type="source" position={Position.Bottom} />
+    </NodeShell>
+  );
+}
+
+export function ConditionNode({ data, selected }: NodeProps) {
+  const conditionType = String(data.condition_type ?? "contains");
+  const value = String(data.value ?? "");
+  const caption = value ? `${conditionType} "${value}"` : undefined;
+  return (
+    <NodeShell kind="ConditionNode" selected={selected} label={String(data.label ?? "Condição")} caption={caption}>
+      <Handle type="target" position={Position.Top} />
       <Handle type="source" position={Position.Bottom} id="yes" style={{ left: "30%" }} />
       <Handle type="source" position={Position.Bottom} id="no" style={{ left: "70%" }} />
-    </div>
+      <div className="mt-1.5 flex justify-between pl-8 text-[9px] font-bold uppercase tracking-wide text-brand-muted">
+        <span>sim</span>
+        <span>não</span>
+      </div>
+    </NodeShell>
   );
 }
 
-export function AINode({ data }: NodeProps) {
+export function AINode({ data, selected }: NodeProps) {
   return (
-    <div className={cn(baseClass, "border-t-[3px] border-t-brand-highlight")}>
+    <NodeShell
+      kind="AINode"
+      selected={selected}
+      label={String(data.label ?? "IA")}
+      caption={String(data.prompt ?? data.system_prompt ?? "") || undefined}
+    >
       <Handle type="target" position={Position.Top} />
-      <div className="flex items-center gap-2 mb-1">
-        <Bot size={14} className="text-brand-highlight shrink-0" />
-        <span className="font-extrabold text-brand-ink text-xs truncate">{String(data.label ?? "IA")}</span>
-      </div>
-      <p className="text-[10px] text-brand-muted line-clamp-2">{String(data.prompt ?? "")}</p>
       <Handle type="source" position={Position.Bottom} />
-    </div>
+    </NodeShell>
   );
 }
 
-export function WebhookNode({ data }: NodeProps) {
+export function WebhookNode({ data, selected }: NodeProps) {
   return (
-    <div className={cn(baseClass, "border-t-[3px] border-t-brand-cyan")}>
+    <NodeShell
+      kind="WebhookNode"
+      selected={selected}
+      label={String(data.label ?? "Webhook")}
+      caption={String(data.url ?? "") || undefined}
+    >
       <Handle type="target" position={Position.Top} />
-      <div className="flex items-center gap-2 mb-1">
-        <Webhook size={14} className="text-brand-cyan shrink-0" />
-        <span className="font-extrabold text-brand-ink text-xs truncate">{String(data.label ?? "Webhook")}</span>
-      </div>
-      <p className="text-[10px] text-brand-muted truncate">{String(data.url ?? "")}</p>
       <Handle type="source" position={Position.Bottom} />
-    </div>
+    </NodeShell>
   );
 }
 
@@ -84,18 +129,11 @@ export const nodeTypes = {
   MessageNode,
   ConditionNode,
   AINode,
-  WebhookNode,
-};
-
-const NODE_ICONS: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {
-  TriggerNode: Radio,
-  MessageNode: MessageSquare,
-  ConditionNode: GitBranch,
-  AINode: Bot,
-  WebhookNode: Webhook,
+  WebhookNode
 };
 
 export function SmallNodeIcon({ type, className }: { type: string; className?: string }) {
-  const Icon = NODE_ICONS[type] ?? Radio;
-  return <Icon size={14} className={className} />;
+  const meta = NODE_META[type as NodeKind] ?? NODE_META.TriggerNode;
+  const Icon = meta.icon;
+  return <Icon size={14} className={className ?? meta.iconColor} />;
 }
