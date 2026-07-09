@@ -15,9 +15,10 @@ const badgeVariants = cva(
         neutral: "rounded-[32px] border-brand-line bg-brand-white text-brand-muted",
         dark: "rounded-[32px] border-transparent bg-brand-charcoal text-white",
         green: "rounded-[32px] border-transparent bg-brand-successSoft text-brand-successStrong",
-        // Outlined red pill (2px) — inline metadata tags per design-system.md
-        outline: "rounded-[2px] border-brand-line bg-brand-white text-brand-muted",
-        red: "rounded-[2px] border-brand-red bg-brand-white/80 text-brand-red"
+        // Todo badge é uma pill no reskin "Leona Flow" — cantos retos não
+        // combinam com o resto do vidro (ver globals.css / tailwind.config.ts).
+        outline: "rounded-[32px] border-brand-line bg-brand-white text-brand-muted",
+        red: "rounded-[32px] border-brand-red bg-brand-white/80 text-brand-red"
       }
     },
     defaultVariants: {
