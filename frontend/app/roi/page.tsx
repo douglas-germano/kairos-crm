@@ -68,7 +68,7 @@ export default function RoiCalculatorPage() {
           <Sparkles size={13} /> Calculadora de impacto
         </p>
         <h1 className="display-title text-balance text-[2rem] text-brand-ink sm:text-[2.75rem]">
-          Quanto você perde <span className="text-brand-red">sem automação?</span>
+          Quanto você perde <span className="text-gradient-brand">sem automação?</span>
         </h1>
         <p className="body-muted mx-auto mt-4 max-w-xl text-[15px]">
           Leads que esperam resposta desistem. Carrinhos abandonados não voltam sozinhos.
@@ -120,15 +120,16 @@ export default function RoiCalculatorPage() {
               </div>
             </div>
 
-            <div className="rounded-panel border border-brand-red/40 bg-brand-red50 p-5">
-              <div className="mb-3 flex items-center gap-2 text-brand-red">
+            <div className="relative overflow-hidden rounded-panel border border-brand-red/40 bg-brand-red50 p-5 shadow-glow">
+              <div className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-brand-highlight/20 blur-2xl" />
+              <div className="relative mb-3 flex items-center gap-2 text-brand-red">
                 <TrendingUp size={16} />
                 <span className="ui-label text-brand-red">Com Kairos</span>
               </div>
-              <p className="font-display text-2xl font-semibold text-brand-ink">
+              <p className="relative font-display text-2xl font-semibold text-brand-ink">
                 {currency.format(result.revenueWith)}
               </p>
-              <p className="mt-1 font-semibold text-brand-red">
+              <p className="relative mt-1 font-semibold text-gradient-brand">
                 +{currency.format(result.gain)} em vendas
               </p>
               <div className="mt-4 space-y-1 text-sm text-brand-muted">
