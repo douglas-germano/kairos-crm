@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { apiFetch } from "@/lib/api";
 import type { Flow } from "@/lib/types";
-import { nodeTypes, SmallNodeIcon } from "@/components/flow/nodes/FlowNodes";
+import { nodeDotColor, nodeTypes, SmallNodeIcon } from "@/components/flow/nodes/FlowNodes";
 
 const palette = [
   { type: "TriggerNode", label: "Gatilho", description: "Inicia por primeira mensagem ou palavra-chave", icon: Radio },
@@ -38,6 +38,41 @@ export function FlowEditor({ flow, onSaved }: { flow: Flow; onSaved: (flow: Flow
   const selectedNode = useMemo(() => nodes.find((node) => node.id === selectedNodeId), [nodes, selectedNodeId]);
 
   const onConnect = useCallback((connection: Connection) => setEdges((current: Edge[]) => addEdge(connection, current)), [setEdges]);
+
+  // Ao selecionar um bloco, destaca ele + vizinhos diretos e esmaece o resto do
+  // canvas — mesma leitura de "caminho ativo" de diagramas de pipeline técnicos.
+  const connectedNodeIds = useMemo(() => {
+    if (!selectedNodeId) return null;
+    const ids = new Set<string>([selectedNodeId]);
+    for (const edge of edges) {
+      if (edge.source === selectedNodeId) ids.add(edge.target);
+      if (edge.target === selectedNodeId) ids.add(edge.source);
+    }
+    return ids;
+  }, [edges, selectedNodeId]);
+
+  const displayNodes = useMemo(
+    () =>
+      nodes.map((node) => ({
+        ...node,
+        data: { ...node.data, dimmed: connectedNodeIds ? !connectedNodeIds.has(node.id) : false }
+      })),
+    [nodes, connectedNodeIds]
+  );
+
+  const displayEdges = useMemo(
+    () =>
+      edges.map((edge) => {
+        const active = !selectedNodeId || edge.source === selectedNodeId || edge.target === selectedNodeId;
+        return {
+          ...edge,
+          style: active
+            ? { stroke: "#7c3aed", strokeWidth: 2.5 }
+            : { stroke: "#3d3153", strokeWidth: 1.5, opacity: 0.5 }
+        };
+      }),
+    [edges, selectedNodeId]
+  );
 
   async function save() {
     setSaving(true);
@@ -150,19 +185,20 @@ export function FlowEditor({ flow, onSaved }: { flow: Flow; onSaved: (flow: Flow
           </div>
         </div>
         <ReactFlow
-          nodes={nodes}
-          edges={edges}
+          nodes={displayNodes}
+          edges={displayEdges}
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
           nodeTypes={nodeTypes}
           onNodeClick={(_: React.MouseEvent, node: Node) => setSelectedNodeId(node.id)}
+          onPaneClick={() => setSelectedNodeId(null)}
           fitView
           className="pt-20"
         >
           <Background color="#3d3153" gap={22} />
           <Controls />
-          <MiniMap nodeColor="#7c3aed" maskColor="rgba(10,8,18,0.65)" />
+          <MiniMap nodeColor={(node) => nodeDotColor(node.type)} maskColor="rgba(10,8,18,0.65)" />
         </ReactFlow>
       </section>
 
