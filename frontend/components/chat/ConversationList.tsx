@@ -206,10 +206,10 @@ function ConversationItem({
     <button
       onClick={onClick}
       className={cn(
-        "focus-ring w-full border-b border-brand-line/70 px-4 py-3.5 text-left transition-colors",
+        "focus-ring w-full border-b border-brand-line/70 px-4 py-3.5 text-left transition-all duration-200 ease-brand",
         active
-          ? "border-l-4 border-l-brand-red bg-brand-red50/80"
-          : "border-l-4 border-l-transparent bg-brand-white hover:bg-brand-canvas"
+          ? "border-l-4 border-l-brand-red bg-brand-red50/80 shadow-[inset_0_0_24px_-16px_rgba(124,58,237,0.6)]"
+          : "border-l-4 border-l-transparent bg-brand-white hover:border-l-brand-red/40 hover:bg-brand-canvas"
       )}
     >
       <div className="flex items-start gap-3">
@@ -249,7 +249,7 @@ function ConversationItem({
                 </span>
               )}
               {conversation.unread_count > 0 && (
-                <span className="flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-brand-red px-1 text-[10px] font-extrabold text-white">
+                <span className="flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-brand-red px-1 text-[10px] font-extrabold text-white shadow-glow">
                   {conversation.unread_count > 99 ? "99+" : conversation.unread_count}
                 </span>
               )}

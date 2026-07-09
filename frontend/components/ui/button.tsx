@@ -5,12 +5,12 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "focus-ring inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-card text-sm font-extrabold transition duration-fast ease-brand disabled:pointer-events-none disabled:opacity-55 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+  "focus-ring inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-card text-sm font-extrabold transition duration-fast ease-brand hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97] disabled:pointer-events-none disabled:opacity-55 disabled:hover:translate-y-0 disabled:hover:shadow-none [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
   {
     variants: {
       variant: {
-        default: "border border-brand-red bg-brand-red text-white hover:bg-brand-redDark active:opacity-90",
-        red: "border border-brand-red bg-brand-red text-white hover:bg-brand-redDark active:opacity-90",
+        default: "border border-brand-red bg-brand-red text-white hover:bg-brand-redDark hover:shadow-glow active:opacity-90",
+        red: "border border-brand-red bg-brand-red text-white hover:bg-brand-redDark hover:shadow-glow active:opacity-90",
         destructive:
           "border border-destructive bg-destructive text-destructive-foreground hover:bg-destructive/90 active:opacity-90",
         outline:
@@ -19,8 +19,8 @@ const buttonVariants = cva(
           "border border-secondary bg-secondary text-secondary-foreground hover:bg-secondary/80 active:opacity-90",
         ghost:
           "border border-brand-line bg-brand-white text-brand-ink hover:border-brand-charcoal/25 hover:bg-brand-canvas active:opacity-90",
-        link: "rounded-none border-0 text-primary underline-offset-4 hover:underline",
-        pill: "rounded-[60px] border border-brand-red bg-brand-red text-white hover:bg-brand-redDark active:opacity-90",
+        link: "rounded-none border-0 text-primary underline-offset-4 hover:underline hover:translate-y-0 active:scale-100",
+        pill: "rounded-[60px] border border-brand-red bg-brand-red text-white hover:bg-brand-redDark hover:shadow-glow active:opacity-90",
         dark: "border border-brand-charcoal bg-brand-charcoal text-white hover:bg-brand-ink active:opacity-90",
         subtle: "rounded-[60px] border border-transparent bg-brand-red50 text-brand-red hover:bg-brand-red100 active:opacity-90"
       },

@@ -124,9 +124,10 @@ const config: Config = {
         control: "1px"
       },
       boxShadow: {
-        // Flat system — the only permitted "elevation" is a crisp focus ring.
-        // No card/lift/sidebar/node shadows: surface color and 1px borders carry hierarchy.
-        focus: "0 0 0 2px rgba(230, 0, 0, 0.35), inset 0 0 0 1px #e60000"
+        // Glow violeta usado em hover de botão/card — a "elevação" do reskin
+        // vem de luz, não de sombra cinza tradicional.
+        glow: "0 8px 24px -8px rgba(124, 58, 237, 0.55)",
+        "glow-lg": "0 16px 40px -12px rgba(124, 58, 237, 0.5)"
       },
       transitionTimingFunction: {
         brand: "var(--ease-out-expo)"
