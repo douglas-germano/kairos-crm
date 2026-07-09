@@ -147,10 +147,10 @@ function DocumentFile({ content, fileName }: { content: string; fileName?: strin
       download={fileName || "documento"}
       target="_blank"
       rel="noopener noreferrer"
-      className="flex items-center gap-2 rounded-card border border-brand-line/60 bg-white/5 px-3 py-2 hover:bg-white/10"
+      className="flex items-center gap-2 rounded-card border border-black/10 bg-black/[0.04] px-3 py-2 transition-colors hover:bg-black/[0.07]"
     >
       <FileText size={20} className="shrink-0" />
-      <span className="ui-body truncate">{fileName || "Documento"}</span>
+      <span className="truncate text-sm font-medium">{fileName || "Documento"}</span>
     </a>
   );
 }
@@ -182,15 +182,15 @@ export function MessageBubble({
   const isNakedMedia = isSticker;
 
   const bubbleClass = cn(
-    "max-w-[78%] rounded-panel",
+    "max-w-[78%] rounded-2xl",
     isNakedMedia ? "" : "px-3.5 py-2.5",
     outbound
       ? failed
-        ? "bg-brand-dangerSoft text-brand-danger"
-        : "bg-brand-red text-white"
+        ? "border border-red-200 bg-red-50 text-brand-danger"
+        : "bg-brand-red text-white shadow-xs"
       : isNakedMedia
         ? ""
-        : "border border-brand-line bg-brand-white text-brand-ink"
+        : "border border-brand-line bg-brand-white text-brand-ink shadow-xs"
   );
 
   const metaClass = cn(

@@ -64,7 +64,7 @@ export default function RoiCalculatorPage() {
       </header>
 
       <section className="mx-auto max-w-3xl px-6 pb-4 pt-10 text-center sm:pt-16">
-        <p className="eyebrow mb-4 justify-center text-[#a78bfa]" style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
+        <p className="eyebrow mb-4 justify-center text-brand-red" style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
           <Sparkles size={13} /> Calculadora de impacto
         </p>
         <h1 className="display-title text-balance text-[2rem] text-brand-ink sm:text-[2.75rem]">
@@ -120,8 +120,8 @@ export default function RoiCalculatorPage() {
               </div>
             </div>
 
-            <div className="relative overflow-hidden rounded-panel border border-brand-red/40 bg-brand-red50 p-5 shadow-glow">
-              <div className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-brand-highlight/20 blur-2xl" />
+            <div className="relative overflow-hidden rounded-panel border border-brand-red200 bg-brand-red50 p-5">
+              <div className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-brand-highlight/10 blur-2xl" />
               <div className="relative mb-3 flex items-center gap-2 text-brand-red">
                 <TrendingUp size={16} />
                 <span className="ui-label text-brand-red">Com Kairos</span>

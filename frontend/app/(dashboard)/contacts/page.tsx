@@ -30,13 +30,12 @@ import {
 import { PageHeader } from "@/components/layout/AppShell";
 import { cn, initials, formatRelativeTime } from "@/lib/utils";
 
-// Sem segunda cor de marca — só variações de charcoal/neutro/vermelho (design-system.md §7)
+// Avatares neutros — cinza, accent suave e escuro; sem cores aleatórias.
 const AVATAR_PALETTES = [
-  "bg-brand-canvas text-brand-charcoal",
-  "bg-brand-charcoal text-white",
-  "bg-brand-red50 text-brand-red",
   "bg-brand-neutral text-brand-ink",
-  "bg-brand-red text-white",
+  "bg-brand-red50 text-brand-red",
+  "bg-brand-charcoal text-white",
+  "bg-brand-canvas text-brand-charcoal",
 ];
 
 function avatarColor(name: string) {
@@ -124,10 +123,10 @@ export default function ContactsPage() {
                   key={ch}
                   onClick={() => { setChannel(ch); setPage(1); }}
                   className={cn(
-                    "focus-ring rounded-card px-3 py-1.5 text-[11px] font-extrabold transition",
+                    "focus-ring rounded-card px-3 py-1.5 text-xs font-semibold transition-colors",
                     channel === ch
-                      ? "bg-brand-charcoal text-white"
-                      : "bg-brand-canvas text-brand-muted hover:bg-brand-neutral hover:text-brand-ink"
+                      ? "bg-brand-red text-white"
+                      : "border border-brand-line bg-brand-white text-brand-muted hover:border-brand-lineStrong hover:text-brand-ink"
                   )}
                 >
                   {ch === "" ? "Todos" : ch === "whatsapp" ? "WhatsApp" : "Instagram"}
@@ -151,7 +150,7 @@ export default function ContactsPage() {
           ) : (
             <>
               <table className="w-full text-sm">
-                <thead className="sticky top-0 z-10 border-b border-brand-line bg-brand-white/95 backdrop-blur">
+                <thead className="sticky top-0 z-10 border-b border-brand-line bg-brand-white">
                   <tr>
                     <th className="px-4 py-3 text-left text-[11px] font-extrabold uppercase tracking-wider text-brand-muted sm:px-7">
                       Contato
