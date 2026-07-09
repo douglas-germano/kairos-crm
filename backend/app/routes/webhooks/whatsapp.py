@@ -264,6 +264,10 @@ def _handle_message(instance_name: str, msg_data: dict):
         # Atualiza o nome se ainda não estava definido
         if not contact.name and push_name:
             contact.name = push_name
+        # Reatribui à conexão que recebeu esta mensagem — um contato pode falar
+        # com números diferentes do mesmo workspace, e a resposta deve sair
+        # sempre pelo número que ele acabou de usar, não pelo primeiro que o viu.
+        contact.integration_id = integration.id
     remember_contact_identity(contact, remote_jid, sender_pn, push_name)
 
     # Cria ou localiza a conversa aberta
